@@ -6,7 +6,7 @@ const landingHtml = `<div class="loader"><div class="loader-brand">NABI</div><di
   <div class="cursor" id="cursor"></div><div class="glow" id="glow"></div><div class="noise"></div>
 
   <nav class="nav">
-    <div class="logo"><div class="mark"></div>NABI</div>
+    <div class="logo" aria-label="NABI"><img class="logo-img" src="/nabi-logo-cropped.png" alt="NABI" /></div>
     <div class="nav-links"><a href="#problem">Problem</a><a href="#journey">Journey</a><a href="#simulator">Experience</a></div>
     <a class="cta magnetic" href="${calendlyUrl}" target="_blank" rel="noreferrer"><span class="btn-text">Request a Demo</span></a>
   </nav>
