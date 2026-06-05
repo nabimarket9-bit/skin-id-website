@@ -2,6 +2,374 @@ import { useEffect } from "react";
 
 const calendlyUrl = "https://calendly.com/nabi_";
 
+type ConcernMode = "hydration" | "sensitivity" | "acne" | "aging";
+type FacePoint = [number, number, number, number, number, number];
+type FaceMeshAsset = { count: number; scale: number; points: FacePoint[] };
+
+type ConcernMeta = {
+  concern: string;
+  focus: string;
+  reading: string;
+  summary: string;
+  depth: string;
+  lens: string;
+  primaryColor: string;
+  glowColor: string;
+  pitch: number;
+  hotspot: (x: number, y: number, z: number) => number;
+};
+
+const regionFalloff = (
+  x: number,
+  y: number,
+  centerX: number,
+  centerY: number,
+  radius: number,
+) => Math.max(0, 1 - Math.hypot(x - centerX, y - centerY) / radius);
+
+const concernMeta: Record<ConcernMode, ConcernMeta> = {
+  hydration: {
+    concern: "Hydration depletion",
+    focus: "Barrier + cheeks",
+    reading: "The routine starts by restoring comfort before actives.",
+    summary:
+      "The 3D face gives a concrete visual anchor, so the diagnosis feels guided rather than guessed.",
+    depth: "Barrier-first scan",
+    lens: "Hydration mapping",
+    primaryColor: "115,169,255",
+    glowColor: "244,221,176",
+    pitch: 0.03,
+    hotspot: (x, y) =>
+      Math.max(
+        regionFalloff(x, y, -0.1, 0.02, 0.12),
+        regionFalloff(x, y, 0.1, 0.02, 0.12),
+        regionFalloff(x, y, 0, -0.05, 0.1) * 0.72,
+      ),
+  },
+  sensitivity: {
+    concern: "Reactivity pattern",
+    focus: "Cheeks + nose bridge",
+    reading: "The visual scan frames irritation as a pattern, not a generic skin type.",
+    summary:
+      "Instead of forcing the visitor into a quiz answer, the interface isolates where reactivity is likely to appear.",
+    depth: "Comfort-led analysis",
+    lens: "Sensitivity zoning",
+    primaryColor: "184,242,255",
+    glowColor: "244,221,176",
+    pitch: 0.02,
+    hotspot: (x, y) =>
+      Math.max(
+        regionFalloff(x, y, -0.12, 0.03, 0.11),
+        regionFalloff(x, y, 0.12, 0.03, 0.11),
+        regionFalloff(x, y, 0, 0.02, 0.08) * 0.88,
+      ),
+  },
+  acne: {
+    concern: "Breakout pressure",
+    focus: "T-zone + lower face",
+    reading: "The system can show imbalance without defaulting to harsh treatment logic.",
+    summary:
+      "The face model makes the concern feel located and specific, which creates confidence in the routine direction.",
+    depth: "Congestion sweep",
+    lens: "Sebum + inflammation",
+    primaryColor: "255,115,132",
+    glowColor: "244,221,176",
+    pitch: 0.05,
+    hotspot: (x, y) =>
+      Math.max(
+        regionFalloff(x, y, 0, 0.08, 0.09),
+        regionFalloff(x, y, 0, -0.02, 0.1),
+        regionFalloff(x, y, -0.08, -0.1, 0.1) * 0.84,
+        regionFalloff(x, y, 0.08, -0.1, 0.1) * 0.84,
+      ),
+  },
+  aging: {
+    concern: "Texture + fine-line focus",
+    focus: "Forehead + eye contour",
+    reading: "The model turns fine lines into a premium care pathway instead of a vague anti-age claim.",
+    summary:
+      "This keeps the story aspirational while still feeling diagnostic, which fits a higher-value skincare positioning.",
+    depth: "Texture contouring",
+    lens: "Renewal support",
+    primaryColor: "244,221,176",
+    glowColor: "184,242,255",
+    pitch: 0.01,
+    hotspot: (x, y) =>
+      Math.max(
+        regionFalloff(x, y, 0, 0.18, 0.12),
+        regionFalloff(x, y, -0.08, 0.08, 0.08),
+        regionFalloff(x, y, 0.08, 0.08, 0.08),
+      ),
+  },
+};
+
+let faceMeshPromise: Promise<FaceMeshAsset> | null = null;
+
+function isConcernMode(value: string | undefined): value is ConcernMode {
+  return value === "hydration" || value === "sensitivity" || value === "acne" || value === "aging";
+}
+
+function loadFaceMesh() {
+  if (!faceMeshPromise) {
+    faceMeshPromise = fetch("/visitor-face-points.json").then((response) => {
+      if (!response.ok) {
+        throw new Error("Unable to load face mesh");
+      }
+      return response.json() as Promise<FaceMeshAsset>;
+    });
+  }
+
+  return faceMeshPromise;
+}
+
+function setupVisitorFaceSection() {
+  const choicePanel = document.querySelector<HTMLElement>(".choice-panel");
+  const stage = document.querySelector<HTMLElement>(".mesh-stage");
+  const canvas = document.getElementById("faceMeshCanvas") as HTMLCanvasElement | null;
+  const emptyState = document.getElementById("meshEmpty");
+  const concernNode = document.getElementById("meshConcern");
+  const focusNode = document.getElementById("meshFocus");
+  const readingNode = document.getElementById("meshReading");
+  const summaryNode = document.getElementById("meshSummary");
+  const depthNode = document.getElementById("meshDepth");
+  const lensNode = document.getElementById("meshLens");
+
+  if (
+    !choicePanel ||
+    !stage ||
+    !canvas ||
+    !emptyState ||
+    !concernNode ||
+    !focusNode ||
+    !readingNode ||
+    !summaryNode ||
+    !depthNode ||
+    !lensNode
+  ) {
+    return () => undefined;
+  }
+
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    return () => undefined;
+  }
+
+  let mode: ConcernMode = "hydration";
+  let frameId = 0;
+  let destroyed = false;
+  let width = 0;
+  let height = 0;
+  let points: FacePoint[] = [];
+
+  const pointer = { x: 0.5, y: 0.5, active: false };
+
+  const applyMode = (nextMode: ConcernMode) => {
+    mode = nextMode;
+    choicePanel.dataset.concern = nextMode;
+
+    const meta = concernMeta[nextMode];
+    concernNode.textContent = meta.concern;
+    focusNode.textContent = meta.focus;
+    readingNode.textContent = meta.reading;
+    summaryNode.textContent = meta.summary;
+    depthNode.textContent = meta.depth;
+    lensNode.textContent = meta.lens;
+  };
+
+  const syncWithActiveChip = () => {
+    const activeChip = document.querySelector<HTMLButtonElement>(".chip.active");
+    const candidate = activeChip?.dataset.mode;
+
+    if (isConcernMode(candidate)) {
+      applyMode(candidate);
+    }
+  };
+
+  const resizeCanvas = () => {
+    const bounds = stage.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.75);
+
+    width = Math.max(1, bounds.width);
+    height = Math.max(1, bounds.height);
+    canvas.width = Math.max(1, Math.floor(width * dpr));
+    canvas.height = Math.max(1, Math.floor(height * dpr));
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    context.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+
+  const onPointerMove = (event: PointerEvent) => {
+    const bounds = stage.getBoundingClientRect();
+    pointer.x = (event.clientX - bounds.left) / bounds.width;
+    pointer.y = (event.clientY - bounds.top) / bounds.height;
+    pointer.active = true;
+  };
+
+  const onPointerLeave = () => {
+    pointer.active = false;
+  };
+
+  stage.addEventListener("pointermove", onPointerMove);
+  stage.addEventListener("pointerleave", onPointerLeave);
+
+  const chipListeners = Array.from(document.querySelectorAll<HTMLButtonElement>(".chip")).map((chip) => {
+    const handler = () => {
+      const candidate = chip.dataset.mode;
+
+      if (isConcernMode(candidate)) {
+        applyMode(candidate);
+      }
+    };
+
+    chip.addEventListener("click", handler);
+    return { chip, handler };
+  });
+
+  const resizeObserver = new ResizeObserver(() => resizeCanvas());
+  resizeObserver.observe(stage);
+  window.addEventListener("resize", resizeCanvas);
+
+  const render = (time: number) => {
+    if (destroyed || !points.length) {
+      return;
+    }
+
+    const meta = concernMeta[mode];
+    const sway = Math.sin(time * 0.00055) * (Math.PI / 2);
+    const yaw = Math.max(
+      -Math.PI / 2,
+      Math.min(Math.PI / 2, sway + (pointer.active ? (pointer.x - 0.5) * 0.12 : 0)),
+    );
+    // Move the straightening correction to the upward tilt axis instead of spinning in screen space.
+    const visualStraighten = 0;
+    const straightenPivotX = width * 0.3976;
+    const straightenPivotY = height * 0.4723;
+    const basePitch = -1.64;
+    const pitch = meta.pitch + (pointer.active ? (pointer.y - 0.5) * 0.08 : 0);
+    const cosBasePitch = Math.cos(basePitch);
+    const sinBasePitch = Math.sin(basePitch);
+    const cosYaw = Math.cos(yaw);
+    const sinYaw = Math.sin(yaw);
+    const cosPitch = Math.cos(pitch);
+    const sinPitch = Math.sin(pitch);
+    const cosStraighten = Math.cos(visualStraighten);
+    const sinStraighten = Math.sin(visualStraighten);
+
+    context.clearRect(0, 0, width, height);
+
+    const background = context.createRadialGradient(
+      width * 0.5,
+      height * 0.44,
+      12,
+      width * 0.5,
+      height * 0.48,
+      height * 0.72,
+    );
+    background.addColorStop(0, "rgba(255,255,255,0.04)");
+    background.addColorStop(0.45, "rgba(9,11,14,0.09)");
+    background.addColorStop(1, "rgba(4,5,6,0)");
+    context.fillStyle = background;
+    context.fillRect(0, 0, width, height);
+
+    const projectedPoints: Array<{
+      screenX: number;
+      screenY: number;
+      focus: number;
+      depthAlpha: number;
+      glowAlpha: number;
+      radius: number;
+      depth: number;
+    }> = [];
+
+    for (const point of points) {
+      const [x, y, z] = point;
+      const yBase = y * cosBasePitch - z * sinBasePitch;
+      const zBase = z * cosBasePitch + y * sinBasePitch;
+      const xYaw = x * cosYaw + zBase * sinYaw;
+      const zYaw = zBase * cosYaw - x * sinYaw;
+      const yPitch = yBase * cosPitch - zYaw * sinPitch;
+      const zPitch = zYaw * cosPitch + yBase * sinPitch;
+
+      const perspective = 1 / (1.8 - zPitch * 0.65);
+      const rawScreenX = width * 0.5 + xYaw * width * 0.82 * perspective;
+      const rawScreenY = height * 0.58 - yPitch * height * 0.98 * perspective;
+      const dx = rawScreenX - straightenPivotX;
+      const dy = rawScreenY - straightenPivotY;
+      const screenX = straightenPivotX + dx * cosStraighten - dy * sinStraighten;
+      const screenY = straightenPivotY + dx * sinStraighten + dy * cosStraighten;
+
+      if (screenX < -24 || screenX > width + 24 || screenY < -24 || screenY > height + 24) {
+        continue;
+      }
+
+      const focus = meta.hotspot(x, y, z);
+      const depthAlpha = Math.min(0.72, 0.16 + perspective * 0.33);
+      const glowAlpha = Math.min(0.92, focus * 0.48 + perspective * 0.2);
+      const radius = 0.45 + perspective * 1.28;
+
+      projectedPoints.push({
+        screenX,
+        screenY,
+        focus,
+        depthAlpha,
+        glowAlpha,
+        radius,
+        depth: zPitch,
+      });
+    }
+
+    projectedPoints.sort((left, right) => left.depth - right.depth);
+
+    for (const point of projectedPoints) {
+      if (point.focus > 0.28) {
+        context.fillStyle = `rgba(${meta.glowColor},${point.glowAlpha * 0.22})`;
+        context.beginPath();
+        context.arc(point.screenX, point.screenY, point.radius * (2.2 + point.focus), 0, Math.PI * 2);
+        context.fill();
+      }
+
+      context.fillStyle =
+        point.focus > 0.34
+          ? `rgba(${meta.primaryColor},${Math.max(point.depthAlpha, point.glowAlpha)})`
+          : `rgba(243,245,247,${point.depthAlpha})`;
+      context.beginPath();
+      context.arc(point.screenX, point.screenY, point.radius + point.focus * 1.08, 0, Math.PI * 2);
+      context.fill();
+    }
+
+    frameId = window.requestAnimationFrame(render);
+  };
+
+  applyMode(mode);
+  resizeCanvas();
+  syncWithActiveChip();
+
+  loadFaceMesh()
+    .then((asset) => {
+      if (destroyed) {
+        return;
+      }
+
+      points = asset.points;
+      emptyState.hidden = true;
+      frameId = window.requestAnimationFrame(render);
+    })
+    .catch(() => {
+      emptyState.textContent = "Face mesh unavailable";
+    });
+
+  return () => {
+    destroyed = true;
+    window.cancelAnimationFrame(frameId);
+    resizeObserver.disconnect();
+    window.removeEventListener("resize", resizeCanvas);
+    stage.removeEventListener("pointermove", onPointerMove);
+    stage.removeEventListener("pointerleave", onPointerLeave);
+    chipListeners.forEach(({ chip, handler }) => chip.removeEventListener("click", handler));
+  };
+}
+
 const landingHtml = `<div class="loader"><div class="loader-brand">NABI</div><div class="loader-slit"></div><div class="loader-sub">private skin intelligence system</div></div>
   <div class="cursor" id="cursor"></div><div class="glow" id="glow"></div><div class="noise"></div>
 
@@ -59,7 +427,7 @@ const landingHtml = `<div class="loader"><div class="loader-brand">NABI</div><di
     <div class="sim-box">
       <div class="sim-header"><div class="eyebrow"><span class="dot"></span>Interactive concept</div><h2>Make the visitor create the <span class="highlight-word highlight-blue">argument.</span></h2><p class="lead">This is not the real demo. It is a controlled interaction that makes the <span class="highlight-word highlight-gold">value obvious</span> without exposing the product.</p></div>
       <div class="sim-grid">
-        <div class="choice-panel"><div class="choice-label">Choose visitor concern</div><div class="chips" id="chips"><button class="chip active" data-mode="hydration">Dryness</button><button class="chip" data-mode="sensitivity">Sensitivity</button><button class="chip" data-mode="acne">Breakouts</button><button class="chip" data-mode="aging">Fine lines</button></div><div class="skin-face"><div class="scan-dots"><span></span><span></span><span></span><span></span></div></div></div>
+        <div class="choice-panel" data-concern="hydration"><div class="choice-top"><div><div class="choice-label">Choose visitor concern</div><h3 class="choice-heading">Select the concern. Let the interface isolate the signal before the recommendation appears.</h3></div><div class="mesh-badge"><span class="dot"></span>3D face topology</div></div><div class="chips" id="chips"><button class="chip active" data-mode="hydration">Dryness</button><button class="chip" data-mode="sensitivity">Sensitivity</button><button class="chip" data-mode="acne">Breakouts</button><button class="chip" data-mode="aging">Fine lines</button></div><div class="skin-face mesh-stage"><canvas id="faceMeshCanvas" aria-label="3D face mesh preview"></canvas><div class="mesh-empty" id="meshEmpty">Loading face topology...</div><div class="mesh-grid"></div><div class="mesh-scanline"></div><div class="mesh-hud mesh-hud-a"><span class="hud-label">Concern</span><strong id="meshConcern">Hydration depletion</strong></div><div class="mesh-hud mesh-hud-b"><span class="hud-label">Focus zone</span><strong id="meshFocus">Barrier + cheeks</strong></div><div class="mesh-hud mesh-hud-c"><span class="hud-label">Reading</span><strong id="meshReading">The routine starts by restoring comfort before actives.</strong></div></div><div class="choice-summary"><p id="meshSummary">The 3D face gives a concrete visual anchor, so the diagnosis feels guided rather than guessed.</p><div class="choice-stats"><div class="choice-stat"><span class="stat-label">Depth</span><strong id="meshDepth">Barrier-first scan</strong></div><div class="choice-stat"><span class="stat-label">Lens</span><strong id="meshLens">Hydration mapping</strong></div></div></div></div>
         <div class="result-panel"><div class="result-top"><div><div class="choice-label">Skin ID output</div><h3 id="resultTitle" style="font-size:34px;letter-spacing:-.06em;margin:0;">Hydration-first routine</h3></div><div class="score" id="score">91</div></div><div class="result-list"><div class="result-item"><span>Main decision</span><span id="decision">Repair barrier first</span></div><div class="result-item"><span>Routine direction</span><span id="routine">Cleanser + serum + cream</span></div><div class="result-item"><span>Cart logic</span><span id="cart">Bundle recommended</span></div><div class="result-item"><span>Customer feeling</span><span id="feeling">Clear next step</span></div></div></div>
       </div>
     </div>
@@ -90,11 +458,18 @@ const landingScript = "document.querySelectorAll(\".problem-card,.depth-card\").
 
 export default function App() {
   useEffect(() => {
-    if ((window as any).__nabiLandingInitialized) return;
-    (window as any).__nabiLandingInitialized = true;
+    if (!(window as any).__nabiLandingInitialized) {
+      (window as any).__nabiLandingInitialized = true;
 
-    const runLandingScript = new Function(landingScript);
-    runLandingScript();
+      const runLandingScript = new Function(landingScript);
+      runLandingScript();
+    }
+
+    const cleanupFaceSection = setupVisitorFaceSection();
+
+    return () => {
+      cleanupFaceSection();
+    };
   }, []);
 
   return <div dangerouslySetInnerHTML={{ __html: landingHtml }} />;
