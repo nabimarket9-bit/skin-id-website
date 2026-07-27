@@ -140,6 +140,7 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
   const environmentTarget = pmremGenerator.fromScene(roomEnvironment, 0.05);
   roomEnvironment.dispose();
   const loader = new GLTFLoader();
+  const loadController = new AbortController();
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const shouldAnimate = !prefersReducedMotion;
 
@@ -254,9 +255,26 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
   resizeObserver.observe(viewport);
   visibilityObserver.observe(viewport);
 
-  void loader
-    .loadAsync(config.modelUrl)
+  void fetch(config.modelUrl, { signal: loadController.signal })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`Unable to load routine product model (${response.status})`);
+      }
+
+      return response.arrayBuffer();
+    })
+    .then((buffer) => {
+      if (destroyed) {
+        return null;
+      }
+
+      return loader.parseAsync(buffer, import.meta.env.BASE_URL);
+    })
     .then((gltf) => {
+      if (!gltf) {
+        return;
+      }
+
       if (destroyed) {
         gltf.scene.traverse((child) => {
           if (child instanceof Mesh) {
@@ -300,6 +318,10 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
       }
     })
     .catch((error) => {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+
       console.error("Unable to load routine product model", error);
     });
 
@@ -308,17 +330,27 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
 
   return () => {
     destroyed = true;
+    loadController.abort();
     stopAnimation();
     resizeObserver.disconnect();
     visibilityObserver.disconnect();
     window.removeEventListener("resize", resize);
-    renderer.dispose();
-    renderer.forceContextLoss();
+    viewport.style.removeProperty("--routine-product-ready");
+    if (model) {
+      scene.remove(model);
+      model = null;
+    }
     scene.environment = null;
-    environmentTarget.dispose();
-    pmremGenerator.dispose();
     resources.geometries.forEach((geometry) => geometry.dispose());
     resources.materials.forEach((material) => material.dispose());
+    environmentTarget.dispose();
+    pmremGenerator.dispose();
+    renderer.renderLists.dispose();
+    renderer.dispose();
+    renderer.forceContextLoss();
+    canvas.width = 1;
+    canvas.height = 1;
+    canvas.replaceWith(canvas.cloneNode(false));
   };
 }
 

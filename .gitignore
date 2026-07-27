@@ -15,6 +15,7 @@ dist-ssr
 .chrome-*/
 .edge-cdp/
 .codex-*-stress/
+.codex-mobile-stress*/
 
 # Editor directories and files
 .vscode/*

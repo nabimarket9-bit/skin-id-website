@@ -1,6 +1,11 @@
 import { useEffect } from "react";
 
 const calendlyUrl = "https://calendly.com/nabi_";
+const heroModelSceneEvent = "nabi:hero-model-scene";
+
+type HeroModelSceneDetail = {
+  sceneIndex: number | null;
+};
 
 type StoryMetricCounter = {
   node: HTMLElement;
@@ -467,6 +472,7 @@ function setupBrandStoryCarousel() {
 
       slide.dataset.state = state;
       slide.classList.toggle("is-active", isActive);
+      slide.classList.toggle("is-near-active", Math.abs(slideIndex - index) <= 1);
       slide.setAttribute("aria-current", isActive ? "true" : "false");
     });
 
@@ -1418,6 +1424,7 @@ function setupHeroSceneTransitions() {
   let activeScanPhase = -1;
   let activeProfilePhase = -1;
   let isVisible = true;
+  let publishedModelScene: number | null | undefined;
   const sceneAnimationStates = new WeakMap<HTMLElement, boolean>();
 
   heroCinema.style.setProperty("--hero-loop", `${loopMs / 1000}s`);
@@ -2260,6 +2267,26 @@ function setupHeroSceneTransitions() {
     syncSceneAnimations(node, isVisible && opacity > 0.02);
   }
 
+  function publishModelScene(sceneIndex: number | null) {
+    if (publishedModelScene === sceneIndex) {
+      return;
+    }
+
+    publishedModelScene = sceneIndex;
+
+    if (sceneIndex === null) {
+      delete heroCinema.dataset.modelScene;
+    } else {
+      heroCinema.dataset.modelScene = String(sceneIndex);
+    }
+
+    heroCinema.dispatchEvent(
+      new CustomEvent<HeroModelSceneDetail>(heroModelSceneEvent, {
+        detail: { sceneIndex },
+      }),
+    );
+  }
+
   function applySceneStates(now: number) {
     let elapsed = 0;
     let segmentIndex = 0;
@@ -2280,6 +2307,15 @@ function setupHeroSceneTransitions() {
     const next = (segmentIndex + 1) % scenes.length;
     const currentHoldMs = sceneHoldDurations[current] ?? holdMs;
     const transition = segmentProgress > currentHoldMs;
+    const modelScene = transition
+      ? next === 0 || next === routineSceneIndex
+        ? next
+        : null
+      : current === 0 || current === routineSceneIndex
+        ? current
+        : null;
+
+    publishModelScene(modelScene);
 
     scenes.forEach((scene, index) => {
       if (index !== current && index !== next) {
@@ -2411,6 +2447,7 @@ function setupHeroSceneTransitions() {
 
   function showFirstSceneImmediately() {
     scenes.forEach((scene, index) => setSceneStyle(scene, index === 0 ? 1 : 0, 0, 1, 0));
+    publishModelScene(0);
     resetScanSceneState();
     resetProfileSceneState();
     resetMatchSceneState();
@@ -3620,7 +3657,7 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
                     <div class="story-guided-card">
                       <span class="story-guided-card-label">Skin Profile</span>
                       <span class="story-guided-card-icon" aria-hidden="true">
-                        <img src="/skin_profile_exact.png" alt="" />
+                        <img src="/skin_profile_exact.png" srcset="/skin_profile_exact-mobile.png 384w, /skin_profile_exact.png 1254w" sizes="(max-width: 768px) 82px, 104px" width="1254" height="1254" loading="lazy" decoding="async" alt="" />
                       </span>
                     </div>
                     </div>
@@ -3629,7 +3666,7 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
                       <div class="story-guided-card">
                         <span class="story-guided-card-label">Personalized Routine</span>
                         <span class="story-guided-card-icon" aria-hidden="true">
-                          <img src="/personalized_routine_icon.png" alt="" />
+                          <img src="/personalized_routine_icon.png" srcset="/personalized_routine_icon-mobile.png 384w, /personalized_routine_icon.png 1254w" sizes="(max-width: 768px) 82px, 104px" width="1254" height="1254" loading="lazy" decoding="async" alt="" />
                         </span>
                       </div>
                     </div>
@@ -3638,7 +3675,7 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
                       <div class="story-guided-card">
                         <span class="story-guided-card-label">Checkout</span>
                         <span class="story-guided-card-icon" aria-hidden="true">
-                          <img src="/checkout_icon.png" alt="" />
+                          <img src="/checkout_icon.png" srcset="/checkout_icon-mobile.png 384w, /checkout_icon.png 1254w" sizes="(max-width: 768px) 82px, 104px" width="1254" height="1254" loading="lazy" decoding="async" alt="" />
                         </span>
                       </div>
                     </div>
@@ -4356,54 +4393,142 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
 
 export default function App() {
   useEffect(() => {
+    type RequestedHeroModel = "face" | "routine" | "both" | null;
+
     let introDisposed = false;
     let cleanupLogoIntro: () => void = () => undefined;
     let cleanupFaceScanModel: () => void = () => undefined;
     let cleanupRoutineProductModel: () => void = () => undefined;
     let setupFaceScanModel: (() => () => void) | null = null;
     let setupRoutineProductModel: (() => () => void) | null = null;
+    let faceModuleImportStarted = false;
+    let routineModuleImportStarted = false;
     let faceScanModelActive = false;
     let routineProductModelActive = false;
     let heroModelsVisible = false;
+    let introFinished = document.body.classList.contains("intro-complete");
 
     const heroCinema = document.getElementById("cinema");
+    const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+    let requestedHeroModel: RequestedHeroModel = touchDevice ? "face" : "both";
 
-    const startHeroModels = () => {
-      if (introDisposed || !heroModelsVisible) {
+    const stopFaceModel = () => {
+      if (!faceScanModelActive) {
         return;
       }
 
-      if (setupFaceScanModel && !faceScanModelActive) {
-        cleanupFaceScanModel = setupFaceScanModel();
-        faceScanModelActive = true;
+      cleanupFaceScanModel();
+      cleanupFaceScanModel = () => undefined;
+      faceScanModelActive = false;
+    };
+
+    const stopRoutineModel = () => {
+      if (!routineProductModelActive) {
+        return;
       }
 
-      if (setupRoutineProductModel && !routineProductModelActive) {
-        cleanupRoutineProductModel = setupRoutineProductModel();
-        routineProductModelActive = true;
+      cleanupRoutineProductModel();
+      cleanupRoutineProductModel = () => undefined;
+      routineProductModelActive = false;
+    };
+
+    const syncHeroModels = () => {
+      if (introDisposed || !introFinished || !heroModelsVisible) {
+        stopFaceModel();
+        stopRoutineModel();
+        return;
+      }
+
+      const needsFace = requestedHeroModel === "face" || requestedHeroModel === "both";
+      const needsRoutine = requestedHeroModel === "routine" || requestedHeroModel === "both";
+
+      if (!needsFace) {
+        stopFaceModel();
+      }
+
+      if (!needsRoutine) {
+        stopRoutineModel();
+      }
+
+      if (needsFace) {
+        if (setupFaceScanModel && !faceScanModelActive) {
+          cleanupFaceScanModel = setupFaceScanModel();
+          faceScanModelActive = true;
+        } else if (!setupFaceScanModel && !faceModuleImportStarted) {
+          faceModuleImportStarted = true;
+          void import("./lib/setupFaceScanModel")
+            .then((module) => {
+              if (introDisposed) {
+                return;
+              }
+
+              setupFaceScanModel = module.setupFaceScanModel;
+              syncHeroModels();
+            })
+            .catch(() => undefined);
+        }
+      }
+
+      if (needsRoutine) {
+        if (setupRoutineProductModel && !routineProductModelActive) {
+          cleanupRoutineProductModel = setupRoutineProductModel();
+          routineProductModelActive = true;
+        } else if (!setupRoutineProductModel && !routineModuleImportStarted) {
+          routineModuleImportStarted = true;
+          void import("./lib/setupRoutineProductModel")
+            .then((module) => {
+              if (introDisposed) {
+                return;
+              }
+
+              setupRoutineProductModel = module.setupRoutineProductModel;
+              syncHeroModels();
+            })
+            .catch(() => undefined);
+        }
       }
     };
 
     const stopHeroModels = () => {
-      if (faceScanModelActive) {
-        cleanupFaceScanModel();
-        cleanupFaceScanModel = () => undefined;
-        faceScanModelActive = false;
+      stopFaceModel();
+      stopRoutineModel();
+    };
+
+    const onHeroModelScene = (event: Event) => {
+      if (!touchDevice) {
+        return;
       }
 
-      if (routineProductModelActive) {
-        cleanupRoutineProductModel();
-        cleanupRoutineProductModel = () => undefined;
-        routineProductModelActive = false;
-      }
+      const { sceneIndex } = (event as CustomEvent<HeroModelSceneDetail>).detail;
+      requestedHeroModel = sceneIndex === 0 ? "face" : sceneIndex === 3 ? "routine" : null;
+      syncHeroModels();
     };
+
+    heroCinema?.addEventListener(heroModelSceneEvent, onHeroModelScene);
+    const cleanupHeroSceneTransitions = setupHeroSceneTransitions();
+    const introStateObserver = new MutationObserver(() => {
+      if (!document.body.classList.contains("intro-complete")) {
+        return;
+      }
+
+      introFinished = true;
+      introStateObserver.disconnect();
+      syncHeroModels();
+    });
+
+    if (!introFinished) {
+      introStateObserver.observe(document.body, {
+        attributes: true,
+        attributeFilter: ["class"],
+      });
+    }
 
     const heroModelObserver = new IntersectionObserver(
       ([entry]) => {
         heroModelsVisible = entry?.isIntersecting ?? false;
 
         if (heroModelsVisible) {
-          startHeroModels();
+          syncHeroModels();
         } else {
           stopHeroModels();
         }
@@ -4425,39 +4550,22 @@ export default function App() {
 
         cleanupLogoIntro = setupLogoIntro();
       })
-      .catch(() => undefined);
-
-    void import("./lib/setupFaceScanModel")
-      .then((module) => {
-        if (introDisposed) {
-          return;
-        }
-
-        setupFaceScanModel = module.setupFaceScanModel;
-        startHeroModels();
-      })
-      .catch(() => undefined);
-
-    void import("./lib/setupRoutineProductModel")
-      .then((module) => {
-        if (introDisposed) {
-          return;
-        }
-
-        setupRoutineProductModel = module.setupRoutineProductModel;
-        startHeroModels();
-      })
-      .catch(() => undefined);
+      .catch(() => {
+        introFinished = true;
+        introStateObserver.disconnect();
+        syncHeroModels();
+      });
 
     const cleanupBrandStoryCarousel = setupBrandStoryCarousel();
     const cleanupHeroPlatformToggle = setupHeroPlatformToggle();
     const cleanupHeroValueEngine = setupHeroValueEngine();
-    const cleanupHeroSceneTransitions = setupHeroSceneTransitions();
     const cleanupDecisionSummaryBoard = setupDecisionSummaryBoard();
     const cleanupLandingInteractions = setupLandingInteractions();
 
     return () => {
       introDisposed = true;
+      heroCinema?.removeEventListener(heroModelSceneEvent, onHeroModelScene);
+      introStateObserver.disconnect();
       heroModelObserver.disconnect();
       cleanupLogoIntro();
       stopHeroModels();

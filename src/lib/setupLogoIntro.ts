@@ -139,8 +139,12 @@ export function setupLogoIntro() {
     resources.materials.forEach((material) => material.dispose());
     environmentTarget.dispose();
     pmremGenerator.dispose();
+    renderer.renderLists.dispose();
     renderer.dispose();
     renderer.forceContextLoss();
+    canvas.width = 1;
+    canvas.height = 1;
+    canvas.replaceWith(canvas.cloneNode(false));
   };
 
   document.body.classList.add("intro-lock");

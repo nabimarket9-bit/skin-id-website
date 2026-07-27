@@ -3613,6 +3613,10 @@
         transition: border-color .45s ease, box-shadow .45s ease;
       }
 
+      .story-slide:not(.is-near-active) {
+        visibility: hidden;
+      }
+
       .problem-card:hover,
       .depth-card:hover {
         transform: none;
