@@ -89,6 +89,8 @@ export function setupLogoIntro() {
     materials: new Set(),
   };
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+  const maxPixelRatio = touchDevice ? 1 : 1.5;
   const introDuration = reducedMotion ? REDUCED_MOTION_DURATION_MS : INTRO_DURATION_MS;
   const renderer = new WebGLRenderer({
     canvas,
@@ -118,7 +120,7 @@ export function setupLogoIntro() {
 
   document.body.classList.add("intro-lock");
 
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxPixelRatio));
   renderer.setClearColor(0x000000, 0);
   scene.environment = environmentTarget.texture;
 
