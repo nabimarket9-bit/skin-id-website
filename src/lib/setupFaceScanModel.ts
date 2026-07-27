@@ -72,11 +72,13 @@ export function setupFaceScanModel() {
     antialias: true,
     powerPreference: "high-performance",
   });
+  const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+  const maxPixelRatio = touchDevice ? 1 : 1.5;
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1;
   renderer.setClearColor(0x000000, 0);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxPixelRatio));
 
   const scene = new Scene();
   const camera = new PerspectiveCamera(22, 1, 0.01, 1000);
@@ -88,6 +90,7 @@ export function setupFaceScanModel() {
   const environmentTarget = pmremGenerator.fromScene(new RoomEnvironment(), 0.05);
   const loader = new GLTFLoader();
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const shouldAnimate = !prefersReducedMotion && !touchDevice;
 
   let model: Object3D | null = null;
   let destroyed = false;
@@ -95,6 +98,7 @@ export function setupFaceScanModel() {
   let baseY = 0;
   let baseRotationX = 0;
   let baseRotationY = 0;
+  let isVisible = true;
 
   scene.environment = environmentTarget.texture;
   keyLight.position.set(1.8, 1.3, 3.4);
@@ -110,12 +114,31 @@ export function setupFaceScanModel() {
     renderer.render(scene, camera);
   };
 
+  const stopAnimation = () => {
+    if (!frameId) {
+      return;
+    }
+
+    window.cancelAnimationFrame(frameId);
+    frameId = 0;
+  };
+
+  const startAnimation = () => {
+    if (!shouldAnimate || !model || frameId || !isVisible) {
+      return;
+    }
+
+    frameId = window.requestAnimationFrame(animate);
+  };
+
   const animate = (time: number) => {
+    frameId = 0;
+
     if (destroyed) {
       return;
     }
 
-    if (model && !prefersReducedMotion) {
+    if (model && shouldAnimate && isVisible) {
       const drift = time * 0.001;
       model.position.y = baseY + Math.sin(drift * 1.15) * 0.028;
       model.rotation.x = baseRotationX + Math.sin(drift * 0.7) * 0.018;
@@ -123,7 +146,10 @@ export function setupFaceScanModel() {
     }
 
     renderFrame();
-    frameId = window.requestAnimationFrame(animate);
+
+    if (shouldAnimate && isVisible) {
+      startAnimation();
+    }
   };
 
   const resize = () => {
@@ -135,7 +161,7 @@ export function setupFaceScanModel() {
 
     camera.aspect = clientWidth / clientHeight;
     camera.updateProjectionMatrix();
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxPixelRatio));
     renderer.setSize(clientWidth, clientHeight, false);
 
     if (model) {
@@ -143,6 +169,24 @@ export function setupFaceScanModel() {
       renderFrame();
     }
   };
+
+  const visibilityObserver = new IntersectionObserver(
+    ([entry]) => {
+      isVisible = entry?.isIntersecting ?? false;
+
+      if (isVisible) {
+        if (shouldAnimate) {
+          startAnimation();
+        } else if (model) {
+          renderFrame();
+        }
+      } else {
+        stopAnimation();
+      }
+    },
+    { threshold: 0.15 },
+  );
+  visibilityObserver.observe(viewport);
 
   void loader
     .loadAsync("/face.glb")
@@ -163,7 +207,12 @@ export function setupFaceScanModel() {
       baseRotationX = model.rotation.x;
       baseRotationY = model.rotation.y;
       resize();
-      frameId = window.requestAnimationFrame(animate);
+
+      if (shouldAnimate) {
+        startAnimation();
+      } else {
+        renderFrame();
+      }
     })
     .catch(() => undefined);
 
@@ -172,7 +221,8 @@ export function setupFaceScanModel() {
 
   return () => {
     destroyed = true;
-    window.cancelAnimationFrame(frameId);
+    stopAnimation();
+    visibilityObserver.disconnect();
     window.removeEventListener("resize", resize);
     renderer.dispose();
     renderer.forceContextLoss();

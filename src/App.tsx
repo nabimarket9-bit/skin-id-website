@@ -21,6 +21,281 @@ type FlowSlideController = {
   destroy: () => void;
 };
 
+type ChoiceMode = "hydration" | "sensitivity" | "acne" | "aging";
+
+type ChoiceContent = {
+  title: string;
+  score: string;
+  decision: string;
+  routine: string;
+  cart: string;
+  feeling: string;
+};
+
+const controlStageCopy = [
+  [
+    "Before Skin ID",
+    'More <span class="highlight-word highlight-gold">products.</span> Less <span class="highlight-word highlight-cyan">confidence.</span>',
+  ],
+  [
+    "The leak",
+    'Too many <span class="highlight-word highlight-gold">options.</span> No <span class="highlight-word highlight-blue">personal</span> answer. No reason to buy the <span class="highlight-word highlight-cyan">routine.</span>',
+  ],
+  [
+    "Skin ID activated",
+    '<span class="highlight-word highlight-gold">Confusion</span> becomes <span class="highlight-word highlight-cyan">clarity.</span> <span class="highlight-word highlight-gold">⭐⭐⭐⭐⭐</span>',
+  ],
+  [
+    "Decision engine",
+    'Every <span class="highlight-word highlight-blue">recommendation</span> has a <span class="highlight-word highlight-gold">reason.</span>',
+  ],
+  [
+    "After Skin ID",
+    'The customer leaves with a complete <span class="highlight-word highlight-cyan">routine</span>, not <span class="highlight-word highlight-gold">confusion.</span>',
+  ],
+] as const;
+
+const productCloudPositions = [
+  [74, 420, -19],
+  [240, 255, 15],
+  [450, 435, 28],
+  [690, 210, -25],
+  [875, 395, 19],
+  [145, 570, 22],
+  [555, 260, -8],
+  [930, 120, 8],
+  [360, 92, -16],
+  [760, 565, -10],
+  [1010, 520, 14],
+  [70, 165, 24],
+  [515, 585, -22],
+  [640, 90, 11],
+  [995, 255, -17],
+  [315, 590, 18],
+] as const;
+
+const simulatorChoiceContent: Record<ChoiceMode, ChoiceContent> = {
+  hydration: {
+    title: "Hydration-first routine",
+    score: "91",
+    decision: "Repair barrier first",
+    routine: "Cleanser + serum + cream",
+    cart: "Bundle recommended",
+    feeling: "Clear next step",
+  },
+  sensitivity: {
+    title: "Sensitivity-safe routine",
+    score: "88",
+    decision: "Reduce irritation risk",
+    routine: "Gentle cleanse + barrier cream",
+    cart: "Low-friction bundle",
+    feeling: "Feels understood",
+  },
+  acne: {
+    title: "Breakout-control routine",
+    score: "86",
+    decision: "Clarify without stripping",
+    routine: "Cleanser + treatment + SPF",
+    cart: "Problem-solution bundle",
+    feeling: "Confident choice",
+  },
+  aging: {
+    title: "Texture-support routine",
+    score: "90",
+    decision: "Support renewal gradually",
+    routine: "Serum + cream + SPF",
+    cart: "Premium routine path",
+    feeling: "Higher trust",
+  },
+};
+
+function isMobileLiteExperience() {
+  const navigatorWithDeviceMemory = navigator as Navigator & { deviceMemory?: number };
+  const coarsePointer = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+  const narrowViewport = window.matchMedia("(max-width: 768px)").matches;
+  const touchViewport = navigator.maxTouchPoints > 0 && window.innerWidth <= 1024;
+  const lowMemoryDevice =
+    typeof navigatorWithDeviceMemory.deviceMemory === "number" &&
+    navigatorWithDeviceMemory.deviceMemory <= 4;
+
+  return coarsePointer || narrowViewport || touchViewport || lowMemoryDevice;
+}
+
+function syncMobileLiteState(isLite: boolean) {
+  document.documentElement.dataset.mobileLite = isLite ? "true" : "false";
+  document.body.classList.toggle("mobile-lite", isLite);
+}
+
+function dismissIntroLoader() {
+  const loader = document.getElementById("loader");
+
+  if (!loader) {
+    document.body.classList.remove("intro-lock");
+    document.body.classList.add("intro-complete");
+    return;
+  }
+
+  loader.classList.add("is-hidden");
+  loader.classList.remove("is-exiting");
+  document.body.classList.remove("intro-lock");
+  document.body.classList.add("intro-complete");
+}
+
+function ensureProductCloud(animate: boolean) {
+  const cloud = document.getElementById("productCloud");
+
+  if (!cloud || cloud.children.length > 0) {
+    return;
+  }
+
+  productCloudPositions.forEach(([left, top, rotation], index) => {
+    const product = document.createElement("div");
+    product.className = "product";
+    product.style.left = `${left}px`;
+    product.style.top = `${top}px`;
+    product.style.setProperty("--r", `${rotation}deg`);
+
+    if (animate) {
+      product.style.animation = `float${index % 4} ${5 + (index % 5)}s ease-in-out infinite alternate`;
+    } else {
+      product.style.animation = "none";
+    }
+
+    cloud.appendChild(product);
+  });
+
+  if (animate && !document.getElementById("productCloudMotionStyles")) {
+    const style = document.createElement("style");
+    style.id = "productCloudMotionStyles";
+    style.textContent =
+      "@keyframes float0{to{transform:translateY(-24px) rotate(8deg)}}@keyframes float1{to{transform:translate(14px,18px) rotate(-12deg)}}@keyframes float2{to{transform:translate(18px,-12px) rotate(18deg)}}@keyframes float3{to{transform:translate(-14px,16px) rotate(-8deg)}}";
+    document.head.appendChild(style);
+  }
+}
+
+function setupChoiceSimulator() {
+  const chips = Array.from(document.querySelectorAll<HTMLElement>(".chip[data-mode]"));
+  const title = document.getElementById("resultTitle");
+  const score = document.getElementById("score");
+  const decision = document.getElementById("decision");
+  const routine = document.getElementById("routine");
+  const cart = document.getElementById("cart");
+  const feeling = document.getElementById("feeling");
+
+  if (!chips.length || !title || !score || !decision || !routine || !cart || !feeling) {
+    return () => undefined;
+  }
+
+  const renderChoice = (mode: ChoiceMode) => {
+    const content = simulatorChoiceContent[mode];
+
+    title.textContent = content.title;
+    score.textContent = content.score;
+    decision.textContent = content.decision;
+    routine.textContent = content.routine;
+    cart.textContent = content.cart;
+    feeling.textContent = content.feeling;
+  };
+
+  const listeners = chips.map((chip) => {
+    const onClick = () => {
+      const mode = chip.dataset.mode as ChoiceMode | undefined;
+
+      if (!mode || !(mode in simulatorChoiceContent)) {
+        return;
+      }
+
+      chips.forEach((item) => item.classList.toggle("active", item === chip));
+      renderChoice(mode);
+    };
+
+    chip.addEventListener("click", onClick);
+    return { chip, onClick };
+  });
+
+  const activeChip =
+    chips.find((chip) => chip.classList.contains("active")) ?? chips.find((chip) => chip.dataset.mode);
+  const initialMode = activeChip?.dataset.mode as ChoiceMode | undefined;
+
+  if (initialMode && initialMode in simulatorChoiceContent) {
+    renderChoice(initialMode);
+  }
+
+  return () => {
+    listeners.forEach(({ chip, onClick }) => chip.removeEventListener("click", onClick));
+  };
+}
+
+function setupBeliefRange() {
+  const range = document.getElementById("beliefRange") as HTMLInputElement | null;
+  const fill = document.getElementById("rangeFill");
+  const belief = document.getElementById("beliefText");
+
+  if (!range || !fill || !belief) {
+    return () => undefined;
+  }
+
+  const syncRange = () => {
+    const value = Number(range.value);
+    fill.style.width = `calc(${value}% - 24px)`;
+    belief.innerHTML =
+      value < 35
+        ? 'Most skincare stores sell <span class="change word-products">products.</span>'
+        : value < 70
+          ? 'Better skincare stores sell <span class="change word-routines">routines.</span>'
+          : 'Top skincare brands sell <span class="change word-decisions">decisions.</span>';
+  };
+
+  range.addEventListener("input", syncRange);
+  syncRange();
+
+  return () => {
+    range.removeEventListener("input", syncRange);
+  };
+}
+
+function setupLiteLandingExperience() {
+  document.querySelectorAll<HTMLElement>(".problem-card").forEach((card) => {
+    card.classList.add("reveal");
+  });
+
+  ensureProductCloud(false);
+
+  const stage = document.getElementById("controlStage");
+  const kicker = document.getElementById("stageKicker");
+  const title = document.getElementById("stageTitle");
+
+  if (stage) {
+    stage.className = "control-stage s5";
+  }
+
+  if (kicker) {
+    kicker.textContent = controlStageCopy[4][0];
+  }
+
+  if (title) {
+    title.innerHTML = controlStageCopy[4][1];
+  }
+
+  const blackoutBg = document.getElementById("blackoutBg");
+
+  if (blackoutBg) {
+    blackoutBg.style.opacity = "0.7";
+  }
+
+  ["f1", "f2", "f3", "f4"].forEach((id) => {
+    document.getElementById(id)?.classList.add("show");
+  });
+
+  const cleanupChoiceSimulator = setupChoiceSimulator();
+  const cleanupBeliefRange = setupBeliefRange();
+
+  return () => {
+    cleanupChoiceSimulator();
+    cleanupBeliefRange();
+  };
+}
+
 function setupContrastSlides(root: HTMLElement): ContrastSlideController[] {
   const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -2260,9 +2535,9 @@ function setupHeroSceneTransitions() {
       };
       const orbit = orbitPoint(particle, time, center);
 
-      let x = source.x;
-      let y = source.y;
-      let alpha = particle.alpha * 0.7;
+      let x: number;
+      let y: number;
+      let alpha: number;
 
       if (transitionProgress < 0.38) {
         const progress = easeInOut(transitionProgress / 0.38);
@@ -3758,48 +4033,59 @@ export default function App() {
     let cleanupRoutineProductModel: () => void = () => undefined;
 
     const landingWindow = window as LandingWindow;
+    const mobileLite = isMobileLiteExperience();
+
+    syncMobileLiteState(mobileLite);
 
     if (!landingWindow.__nabiLandingInitialized) {
       landingWindow.__nabiLandingInitialized = true;
 
-      const runLandingScript = new Function(landingScript);
-      runLandingScript();
+      if (mobileLite) {
+        setupLiteLandingExperience();
+      } else {
+        const runLandingScript = new Function(landingScript);
+        runLandingScript();
+      }
     }
 
-    void import("./lib/setupLogoIntro")
-      .then(({ setupLogoIntro }) => {
-        if (introDisposed) {
-          return;
-        }
+    if (mobileLite) {
+      dismissIntroLoader();
+    } else {
+      void import("./lib/setupLogoIntro")
+        .then(({ setupLogoIntro }) => {
+          if (introDisposed) {
+            return;
+          }
 
-        cleanupLogoIntro = setupLogoIntro();
-      })
-      .catch(() => undefined);
+          cleanupLogoIntro = setupLogoIntro();
+        })
+        .catch(() => undefined);
 
-    void import("./lib/setupFaceScanModel")
-      .then(({ setupFaceScanModel }) => {
-        if (introDisposed) {
-          return;
-        }
+      void import("./lib/setupFaceScanModel")
+        .then(({ setupFaceScanModel }) => {
+          if (introDisposed) {
+            return;
+          }
 
-        cleanupFaceScanModel = setupFaceScanModel();
-      })
-      .catch(() => undefined);
+          cleanupFaceScanModel = setupFaceScanModel();
+        })
+        .catch(() => undefined);
 
-    void import("./lib/setupRoutineProductModel")
-      .then(({ setupRoutineProductModel }) => {
-        if (introDisposed) {
-          return;
-        }
+      void import("./lib/setupRoutineProductModel")
+        .then(({ setupRoutineProductModel }) => {
+          if (introDisposed) {
+            return;
+          }
 
-        cleanupRoutineProductModel = setupRoutineProductModel();
-      })
-      .catch(() => undefined);
+          cleanupRoutineProductModel = setupRoutineProductModel();
+        })
+        .catch(() => undefined);
+    }
 
     const cleanupBrandStoryCarousel = setupBrandStoryCarousel();
     const cleanupHeroPlatformToggle = setupHeroPlatformToggle();
     const cleanupHeroValueEngine = setupHeroValueEngine();
-    const cleanupHeroSceneTransitions = setupHeroSceneTransitions();
+    const cleanupHeroSceneTransitions = mobileLite ? () => undefined : setupHeroSceneTransitions();
     const cleanupDecisionSummaryBoard = setupDecisionSummaryBoard();
 
     return () => {
