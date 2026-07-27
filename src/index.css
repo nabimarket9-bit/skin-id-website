@@ -3601,6 +3601,18 @@
         display: none;
       }
 
+      .brand-story-track {
+        contain: paint style;
+      }
+
+      .story-slide {
+        contain: paint style;
+        filter: none;
+        opacity: 1;
+        transform: none;
+        transition: border-color .45s ease, box-shadow .45s ease;
+      }
+
       .problem-card:hover,
       .depth-card:hover {
         transform: none;

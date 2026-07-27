@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 
 const calendlyUrl = "https://calendly.com/nabi_";
-type LandingWindow = Window & { __nabiLandingInitialized?: boolean };
 
 type StoryMetricCounter = {
   node: HTMLElement;
@@ -333,12 +332,57 @@ function setupBrandStoryCarousel() {
   let activePointerId: number | null = null;
   let dragStartX = 0;
   let dragStartScrollLeft = 0;
+  let hasInitialized = false;
+  let storyVisible = false;
+  let storyAnimationFrame = 0;
 
   const resizeObserver = new ResizeObserver(() => {
-    updateActiveSlide(getNearestIndex(), false);
+    const nearestIndex = getNearestIndex();
+
+    if (nearestIndex !== activeIndex) {
+      updateActiveSlide(nearestIndex, false);
+      return;
+    }
+
+    flowSlideControllers.forEach((controller) => {
+      controller.setActive(controller.slide.classList.contains("is-active"));
+    });
   });
 
   const formatMetric = (value: number, suffix: string) => `${Math.round(value)}${suffix}`;
+
+  const syncStoryAnimations = () => {
+    storyAnimationFrame = 0;
+
+    root.getAnimations({ subtree: true }).forEach((animation) => {
+      const target = (animation.effect as KeyframeEffect | null)?.target;
+      const slide = target instanceof Element ? target.closest(".story-slide") : null;
+      const shouldPlay =
+        storyVisible && (!slide || slide.classList.contains("is-active"));
+
+      if (shouldPlay && animation.playState === "paused") {
+        animation.play();
+      } else if (!shouldPlay && animation.playState === "running") {
+        animation.pause();
+      }
+    });
+  };
+
+  const scheduleStoryAnimationSync = () => {
+    window.cancelAnimationFrame(storyAnimationFrame);
+    storyAnimationFrame = window.requestAnimationFrame(syncStoryAnimations);
+  };
+
+  const storyVisibilityObserver = new IntersectionObserver(
+    ([entry]) => {
+      storyVisible = entry?.isIntersecting ?? false;
+      scheduleStoryAnimationSync();
+    },
+    { threshold: 0.01 },
+  );
+  const storyRect = root.getBoundingClientRect();
+  storyVisible = storyRect.bottom > 0 && storyRect.top < window.innerHeight;
+  storyVisibilityObserver.observe(root);
 
   const cancelMetricAnimation = () => {
     window.cancelAnimationFrame(metricFrame);
@@ -444,16 +488,25 @@ function setupBrandStoryCarousel() {
 
     prevButton.disabled = index === 0;
     nextButton.disabled = index === slides.length - 1;
+    scheduleStoryAnimationSync();
   };
 
   const updateActiveSlide = (index: number, animateScaleMetrics = false) => {
     const nextIndex = clampIndex(index);
-    const didChange = nextIndex !== activeIndex;
+    const didChange = !hasInitialized || nextIndex !== activeIndex;
+
+    if (!didChange) {
+      if (nextIndex === 0 && animateScaleMetrics) {
+        animateMetrics();
+      }
+      return;
+    }
 
     activeIndex = nextIndex;
+    hasInitialized = true;
     updateProgress(nextIndex);
 
-    if (nextIndex === 0 && (animateScaleMetrics || didChange)) {
+    if (nextIndex === 0) {
       animateMetrics();
     }
   };
@@ -537,6 +590,10 @@ function setupBrandStoryCarousel() {
 
   const onPointerUp = (event: PointerEvent) => {
     releasePointer(event.pointerId);
+  };
+
+  const onLostPointerCapture = () => {
+    releasePointer();
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -623,7 +680,7 @@ function setupBrandStoryCarousel() {
   track.addEventListener("pointermove", onPointerMove);
   track.addEventListener("pointerup", onPointerUp);
   track.addEventListener("pointercancel", onPointerUp);
-  track.addEventListener("lostpointercapture", () => releasePointer());
+  track.addEventListener("lostpointercapture", onLostPointerCapture);
   root.addEventListener("keydown", onKeyDown);
   resizeObserver.observe(track);
 
@@ -632,9 +689,11 @@ function setupBrandStoryCarousel() {
   return () => {
     cancelMetricAnimation();
     window.cancelAnimationFrame(scrollFrame);
+    window.cancelAnimationFrame(storyAnimationFrame);
     window.clearTimeout(settleTimeout);
     releasePointer();
     resizeObserver.disconnect();
+    storyVisibilityObserver.disconnect();
     prevButton.removeEventListener("click", onPrevClick);
     nextButton.removeEventListener("click", onNextClick);
     track.removeEventListener("scroll", onTrackScroll);
@@ -642,6 +701,7 @@ function setupBrandStoryCarousel() {
     track.removeEventListener("pointermove", onPointerMove);
     track.removeEventListener("pointerup", onPointerUp);
     track.removeEventListener("pointercancel", onPointerUp);
+    track.removeEventListener("lostpointercapture", onLostPointerCapture);
     root.removeEventListener("keydown", onKeyDown);
     dotListeners.forEach(({ button, handler }) => button.removeEventListener("click", handler));
     mobileCompareToggleCleanups.forEach((cleanup) => cleanup());
@@ -1240,6 +1300,7 @@ function setupHeroSceneTransitions() {
   }
 
   const heroCinema = cinema;
+  const heroSection = heroCinema.closest<HTMLElement>(".hero");
   const heroCanvas = canvas;
   const heroContext = context;
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1357,6 +1418,7 @@ function setupHeroSceneTransitions() {
   let activeScanPhase = -1;
   let activeProfilePhase = -1;
   let isVisible = true;
+  const sceneAnimationStates = new WeakMap<HTMLElement, boolean>();
 
   heroCinema.style.setProperty("--hero-loop", `${loopMs / 1000}s`);
 
@@ -2156,10 +2218,46 @@ function setupHeroSceneTransitions() {
     ];
   }
 
+  function syncSceneAnimations(node: HTMLElement, shouldPlay: boolean) {
+    if (sceneAnimationStates.get(node) === shouldPlay) {
+      return;
+    }
+
+    sceneAnimationStates.set(node, shouldPlay);
+    node.getAnimations({ subtree: true }).forEach((animation) => {
+      if (shouldPlay && animation.playState === "paused") {
+        animation.play();
+      } else if (!shouldPlay && animation.playState === "running") {
+        animation.pause();
+      }
+    });
+  }
+
+  function syncHeroSectionAnimations(shouldPlay: boolean) {
+    heroSection?.getAnimations({ subtree: true }).forEach((animation) => {
+      const target = (animation.effect as KeyframeEffect | null)?.target;
+      const containingScene =
+        target instanceof Element ? target.closest<HTMLElement>(".hero-scene") : null;
+      const sceneOpacity = containingScene
+        ? Number.parseFloat(containingScene.style.opacity)
+        : 1;
+      const targetShouldPlay =
+        shouldPlay &&
+        (!containingScene || Number.isNaN(sceneOpacity) || sceneOpacity > 0.02);
+
+      if (targetShouldPlay && animation.playState === "paused") {
+        animation.play();
+      } else if (!targetShouldPlay && animation.playState === "running") {
+        animation.pause();
+      }
+    });
+  }
+
   function setSceneStyle(node: HTMLElement, opacity: number, translateY: number, scale: number, blur: number) {
     node.style.opacity = opacity.toFixed(4);
     node.style.transform = `translate3d(0,${translateY}px,0) scale(${scale})`;
     node.style.filter = `blur(${blur}px)`;
+    syncSceneAnimations(node, isVisible && opacity > 0.02);
   }
 
   function applySceneStates(now: number) {
@@ -2444,11 +2542,18 @@ function setupHeroSceneTransitions() {
   const visibilityObserver = new IntersectionObserver(
     ([entry]) => {
       isVisible = entry?.isIntersecting ?? false;
+      syncHeroSectionAnimations(isVisible);
 
       if (isVisible) {
+        scenes.forEach((scene) => {
+          sceneAnimationStates.delete(scene);
+          const opacity = Number.parseFloat(scene.style.opacity);
+          syncSceneAnimations(scene, Number.isNaN(opacity) || opacity > 0.02);
+        });
         startAnimation();
       } else {
         stopAnimation();
+        scenes.forEach((scene) => syncSceneAnimations(scene, false));
       }
     },
     { threshold: 0.1 },
@@ -2475,6 +2580,460 @@ function setupHeroSceneTransitions() {
     resetRoutineSceneState();
     resetResultSceneState();
     heroContext.clearRect(0, 0, width, height);
+  };
+}
+
+function setupLandingInteractions() {
+  const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+  const cleanupHandlers: Array<() => void> = [];
+
+  if (!touchDevice) {
+    document.querySelectorAll<HTMLElement>(".problem-card,.depth-card").forEach((card) => {
+      const onMouseMove = (event: MouseEvent) => {
+        const rect = card.getBoundingClientRect();
+        card.style.setProperty("--mx", `${((event.clientX - rect.left) / rect.width) * 100}%`);
+        card.style.setProperty("--my", `${((event.clientY - rect.top) / rect.height) * 100}%`);
+      };
+
+      card.addEventListener("mousemove", onMouseMove);
+      cleanupHandlers.push(() => card.removeEventListener("mousemove", onMouseMove));
+    });
+
+    const cursor = document.getElementById("cursor");
+    const glow = document.getElementById("glow");
+    const magnets = Array.from(document.querySelectorAll<HTMLElement>(".magnetic"));
+
+    if (cursor && glow) {
+      const onMouseMove = (event: MouseEvent) => {
+        cursor.style.left = `${event.clientX}px`;
+        cursor.style.top = `${event.clientY}px`;
+        glow.style.left = `${event.clientX}px`;
+        glow.style.top = `${event.clientY}px`;
+        let active = false;
+
+        magnets.forEach((element) => {
+          const rect = element.getBoundingClientRect();
+          const x = event.clientX - (rect.left + rect.width / 2);
+          const y = event.clientY - (rect.top + rect.height / 2);
+          const distance = Math.hypot(x, y);
+
+          if (distance < 140) {
+            element.style.transform = `translate(${x * 0.14}px,${y * 0.2}px)`;
+            active = true;
+          } else {
+            element.style.transform = "translate(0,0)";
+          }
+        });
+
+        cursor.style.width = active ? "48px" : "18px";
+        cursor.style.height = active ? "48px" : "18px";
+        cursor.style.background = active ? "rgba(255,231,163,.14)" : "transparent";
+      };
+
+      window.addEventListener("mousemove", onMouseMove);
+      cleanupHandlers.push(() => window.removeEventListener("mousemove", onMouseMove));
+    }
+  }
+
+  const problemCards = Array.from(document.querySelectorAll<HTMLElement>(".problem-card"));
+  const revealObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("reveal");
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.22 },
+  );
+  problemCards.forEach((card) => revealObserver.observe(card));
+  cleanupHandlers.push(() => revealObserver.disconnect());
+
+  const cinema = document.getElementById("cinema");
+  if (cinema && !touchDevice) {
+    const onMouseLeave = () => {
+      cinema.style.transform = "perspective(1000px) rotateY(0deg) rotateX(0deg)";
+    };
+    cinema.addEventListener("mouseleave", onMouseLeave);
+    cleanupHandlers.push(() => cinema.removeEventListener("mouseleave", onMouseLeave));
+  }
+
+  const cloud = document.getElementById("productCloud");
+  if (cloud) {
+    const productPositions = [
+      [74, 420, -19],
+      [240, 255, 15],
+      [450, 435, 28],
+      [690, 210, -25],
+      [875, 395, 19],
+      [145, 570, 22],
+      [555, 260, -8],
+      [930, 120, 8],
+      [360, 92, -16],
+      [760, 565, -10],
+      [1010, 520, 14],
+      [70, 165, 24],
+      [515, 585, -22],
+      [640, 90, 11],
+      [995, 255, -17],
+      [315, 590, 18],
+    ];
+    const products = productPositions.map(([left, top, rotation], index) => {
+      const product = document.createElement("div");
+      product.className = "product";
+      product.style.left = `${left}px`;
+      product.style.top = `${top}px`;
+      product.style.setProperty("--r", `${rotation}deg`);
+      product.style.animation = `float${index % 4} ${5 + (index % 5)}s ease-in-out infinite alternate`;
+      cloud.appendChild(product);
+      return product;
+    });
+    const animationStyle = document.createElement("style");
+    animationStyle.textContent =
+      "@keyframes float0{to{transform:translateY(-24px) rotate(8deg)}}" +
+      "@keyframes float1{to{transform:translate(14px,18px) rotate(-12deg)}}" +
+      "@keyframes float2{to{transform:translate(18px,-12px) rotate(18deg)}}" +
+      "@keyframes float3{to{transform:translate(-14px,16px) rotate(-8deg)}}";
+    document.head.appendChild(animationStyle);
+
+    const cloudObserver = new IntersectionObserver(
+      ([entry]) => {
+        const playState = entry?.isIntersecting ? "running" : "paused";
+        products.forEach((product) => {
+          product.style.animationPlayState = playState;
+        });
+      },
+      { rootMargin: "120px 0px" },
+    );
+    cloudObserver.observe(cloud);
+
+    cleanupHandlers.push(() => {
+      cloudObserver.disconnect();
+      products.forEach((product) => product.remove());
+      animationStyle.remove();
+    });
+  }
+
+  const control = document.querySelector<HTMLElement>(".control-room");
+  const stage = document.getElementById("controlStage");
+  const kicker = document.getElementById("stageKicker");
+  const title = document.getElementById("stageTitle");
+  const blackout = document.querySelector<HTMLElement>(".blackout");
+  const blackoutBackground = document.getElementById("blackoutBg");
+  const finalLines = ["f1", "f2", "f3", "f4"].map((id) => document.getElementById(id));
+  const stageCopy = [
+    [
+      "Before Skin ID",
+      'More <span class="highlight-word highlight-gold">products.</span> Less <span class="highlight-word highlight-cyan">confidence.</span>',
+    ],
+    [
+      "The leak",
+      'Too many <span class="highlight-word highlight-gold">options.</span> No <span class="highlight-word highlight-blue">personal</span> answer. No reason to buy the <span class="highlight-word highlight-cyan">routine.</span>',
+    ],
+    [
+      "Skin ID activated",
+      '<span class="highlight-word highlight-gold">Confusion</span> becomes <span class="highlight-word highlight-cyan">clarity.</span> <span class="highlight-word highlight-gold">⭐⭐⭐⭐⭐</span>',
+    ],
+    [
+      "Decision engine",
+      'Every <span class="highlight-word highlight-blue">recommendation</span> has a <span class="highlight-word highlight-gold">reason.</span>',
+    ],
+    [
+      "After Skin ID",
+      'The customer leaves with a complete <span class="highlight-word highlight-cyan">routine</span>, not <span class="highlight-word highlight-gold">confusion.</span>',
+    ],
+  ] as const;
+  let windowScrollFrame = 0;
+  let renderedStage = 0;
+
+  const renderWindowScroll = () => {
+    windowScrollFrame = 0;
+
+    if (control && stage && kicker && title) {
+      const rect = control.getBoundingClientRect();
+      const total = Math.max(1, control.offsetHeight - window.innerHeight);
+      const progress = Math.min(1, Math.max(0, -rect.top / total));
+      const stageNumber = progress < 0.13 ? 1 : progress < 0.3 ? 2 : progress < 0.5 ? 3 : progress < 0.68 ? 4 : 5;
+
+      if (stageNumber !== renderedStage) {
+        renderedStage = stageNumber;
+        stage.className = `control-stage s${stageNumber}`;
+        kicker.textContent = stageCopy[stageNumber - 1][0];
+        title.innerHTML = stageCopy[stageNumber - 1][1];
+      }
+    }
+
+    if (blackout && blackoutBackground) {
+      const rect = blackout.getBoundingClientRect();
+      const total = Math.max(1, blackout.offsetHeight - window.innerHeight);
+      const progress = Math.min(1, Math.max(0, -rect.top / total));
+      blackoutBackground.style.opacity = String(0.05 + progress * 0.78);
+      finalLines.forEach((line, index) => {
+        line?.classList.toggle("show", progress > 0.14 + index * 0.16);
+      });
+    }
+  };
+
+  const onWindowScroll = () => {
+    if (!windowScrollFrame) {
+      windowScrollFrame = window.requestAnimationFrame(renderWindowScroll);
+    }
+  };
+
+  window.addEventListener("scroll", onWindowScroll, { passive: true });
+  renderWindowScroll();
+  cleanupHandlers.push(() => {
+    window.cancelAnimationFrame(windowScrollFrame);
+    window.removeEventListener("scroll", onWindowScroll);
+  });
+
+  const resultData: Record<string, [string, string, string, string, string, string]> = {
+    hydration: [
+      "Hydration-first routine",
+      "91",
+      "Repair barrier first",
+      "Cleanser + serum + cream",
+      "Bundle recommended",
+      "Clear next step",
+    ],
+    sensitivity: [
+      "Sensitivity-safe routine",
+      "88",
+      "Reduce irritation risk",
+      "Gentle cleanse + barrier cream",
+      "Low-friction bundle",
+      "Feels understood",
+    ],
+    acne: [
+      "Breakout-control routine",
+      "86",
+      "Clarify without stripping",
+      "Cleanser + treatment + SPF",
+      "Problem-solution bundle",
+      "Confident choice",
+    ],
+    aging: [
+      "Texture-support routine",
+      "90",
+      "Support renewal gradually",
+      "Serum + cream + SPF",
+      "Premium routine path",
+      "Higher trust",
+    ],
+  };
+  const chips = Array.from(document.querySelectorAll<HTMLElement>(".chip"));
+  chips.forEach((chip) => {
+    const onClick = () => {
+      chips.forEach((item) => item.classList.remove("active"));
+      chip.classList.add("active");
+      const data = resultData[chip.dataset.mode ?? ""];
+
+      if (!data) {
+        return;
+      }
+
+      const ids = ["resultTitle", "score", "decision", "routine", "cart", "feeling"];
+      ids.forEach((id, index) => {
+        const node = document.getElementById(id);
+        if (node) {
+          node.textContent = data[index];
+        }
+      });
+    };
+
+    chip.addEventListener("click", onClick);
+    cleanupHandlers.push(() => chip.removeEventListener("click", onClick));
+  });
+
+  const range = document.getElementById("beliefRange") as HTMLInputElement | null;
+  const rangeFill = document.getElementById("rangeFill");
+  const belief = document.getElementById("beliefText");
+  if (range && rangeFill && belief) {
+    const onInput = () => {
+      const value = Number(range.value);
+      rangeFill.style.width = `calc(${value}% - 24px)`;
+      belief.innerHTML =
+        value < 35
+          ? 'Most skincare stores sell <span class="change word-products">products.</span>'
+          : value < 70
+            ? 'Better skincare stores sell <span class="change word-routines">routines.</span>'
+            : 'Top skincare brands sell <span class="change word-decisions">decisions.</span>';
+    };
+
+    range.addEventListener("input", onInput);
+    cleanupHandlers.push(() => range.removeEventListener("input", onInput));
+  }
+
+  const finalCanvas = document.getElementById("finalCanvas") as HTMLCanvasElement | null;
+  const finalContext = finalCanvas?.getContext("2d");
+  if (finalCanvas && finalContext) {
+    type FinalParticle = {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      size: number;
+    };
+
+    let particles: FinalParticle[] = [];
+    let finalFrame = 0;
+    let resizeFrame = 0;
+    let canvasVisible = false;
+    let canvasWidth = 0;
+    let canvasHeight = 0;
+
+    const resizeFinalCanvas = () => {
+      resizeFrame = 0;
+      const width = Math.max(1, Math.round(finalCanvas.clientWidth || window.innerWidth));
+      const height = Math.max(1, Math.round(finalCanvas.clientHeight || window.innerHeight));
+
+      if (width === canvasWidth && height === canvasHeight) {
+        return;
+      }
+
+      canvasWidth = width;
+      canvasHeight = height;
+      finalCanvas.width = width;
+      finalCanvas.height = height;
+      particles = Array.from({ length: 120 }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.6,
+        vy: (Math.random() - 0.5) * 0.6,
+        size: Math.random() * 2 + 1,
+      }));
+    };
+
+    const stopFinalCanvas = () => {
+      window.cancelAnimationFrame(finalFrame);
+      finalFrame = 0;
+    };
+
+    const drawFinalCanvas = () => {
+      finalFrame = 0;
+
+      if (!canvasVisible || document.hidden) {
+        return;
+      }
+
+      finalContext.clearRect(0, 0, canvasWidth, canvasHeight);
+
+      particles.forEach((particle, index) => {
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+
+        if (particle.x < 0 || particle.x > canvasWidth) {
+          particle.vx *= -1;
+        }
+        if (particle.y < 0 || particle.y > canvasHeight) {
+          particle.vy *= -1;
+        }
+
+        finalContext.beginPath();
+        finalContext.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        finalContext.fillStyle =
+          index % 2 ? "rgba(255,231,163,.35)" : "rgba(115,169,255,.32)";
+        finalContext.fill();
+
+        for (let otherIndex = index + 1; otherIndex < particles.length; otherIndex += 1) {
+          const other = particles[otherIndex];
+          const deltaX = particle.x - other.x;
+          const deltaY = particle.y - other.y;
+          const distanceSquared = deltaX * deltaX + deltaY * deltaY;
+
+          if (distanceSquared < 12100) {
+            const distance = Math.sqrt(distanceSquared);
+            finalContext.beginPath();
+            finalContext.moveTo(particle.x, particle.y);
+            finalContext.lineTo(other.x, other.y);
+            finalContext.strokeStyle = `rgba(255,231,163,${(1 - distance / 110) * 0.12})`;
+            finalContext.stroke();
+          }
+        }
+      });
+
+      finalFrame = window.requestAnimationFrame(drawFinalCanvas);
+    };
+
+    const startFinalCanvas = () => {
+      if (!finalFrame && canvasVisible && !document.hidden) {
+        finalFrame = window.requestAnimationFrame(drawFinalCanvas);
+      }
+    };
+
+    const finalCanvasObserver = new IntersectionObserver(
+      ([entry]) => {
+        canvasVisible = entry?.isIntersecting ?? false;
+        if (canvasVisible) {
+          startFinalCanvas();
+        } else {
+          stopFinalCanvas();
+        }
+      },
+      { rootMargin: "100px 0px" },
+    );
+    const onResize = () => {
+      if (!resizeFrame) {
+        resizeFrame = window.requestAnimationFrame(resizeFinalCanvas);
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        stopFinalCanvas();
+      } else {
+        startFinalCanvas();
+      }
+    };
+
+    resizeFinalCanvas();
+    finalCanvasObserver.observe(finalCanvas);
+    window.addEventListener("resize", onResize);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    cleanupHandlers.push(() => {
+      stopFinalCanvas();
+      window.cancelAnimationFrame(resizeFrame);
+      finalCanvasObserver.disconnect();
+      window.removeEventListener("resize", onResize);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      finalContext.clearRect(0, 0, canvasWidth, canvasHeight);
+    });
+  }
+
+  const visibilityBoundRoots = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      ".section,.control-room,.deep-system,.belief-section,.blackout",
+    ),
+  );
+  const syncRootAnimations = (root: HTMLElement, shouldPlay: boolean) => {
+    root.getAnimations({ subtree: true }).forEach((animation) => {
+      if (shouldPlay && animation.playState === "paused") {
+        animation.play();
+      } else if (!shouldPlay && animation.playState === "running") {
+        animation.pause();
+      }
+    });
+  };
+  const sectionAnimationObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        syncRootAnimations(entry.target as HTMLElement, entry.isIntersecting);
+      });
+    },
+    { rootMargin: "0px" },
+  );
+
+  visibilityBoundRoots.forEach((root) => {
+    const rect = root.getBoundingClientRect();
+    const isNearViewport = rect.bottom >= 0 && rect.top <= window.innerHeight;
+    syncRootAnimations(root, isNearViewport);
+    sectionAnimationObserver.observe(root);
+  });
+  cleanupHandlers.push(() => sectionAnimationObserver.disconnect());
+
+  return () => {
+    cleanupHandlers.forEach((cleanup) => cleanup());
   };
 }
 
@@ -3794,7 +4353,6 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
     <div class="blackout-pin"><canvas class="final-canvas" id="finalCanvas"></canvas><div class="blackout-bg" id="blackoutBg"></div><div class="final-word"><h2><span class="final-line" id="f1">Your <span class="highlight-word highlight-gold">visitors</span> already have questions.</span><span class="final-line" id="f2">Your store needs to <span class="highlight-word highlight-blue">answer</span> them.</span></h2><p class="final-line" id="f3">Skin ID turns <span class="highlight-word highlight-gold">product confusion</span> into a <span class="highlight-word highlight-cyan">personalized buying path</span> configured around your catalog, UX and growth goals.</p><a class="cta magnetic final-line" id="f4" href="${calendlyUrl}" target="_blank" rel="noreferrer"><span class="btn-text">Discover Skin ID</span></a></div></div>
   </section>`;
 
-const landingScript = "document.querySelectorAll(\".problem-card,.depth-card\").forEach(card=>{\n  card.addEventListener(\"mousemove\",e=>{\n    const r=card.getBoundingClientRect();\n    card.style.setProperty(\"--mx\", ((e.clientX-r.left)/r.width*100)+\"%\");\n    card.style.setProperty(\"--my\", ((e.clientY-r.top)/r.height*100)+\"%\");\n  });\n});\n\nconst cursor=document.getElementById(\"cursor\"),glow=document.getElementById(\"glow\"),magnets=document.querySelectorAll(\".magnetic\");\nwindow.addEventListener(\"mousemove\",e=>{cursor.style.left=e.clientX+\"px\";cursor.style.top=e.clientY+\"px\";glow.style.left=e.clientX+\"px\";glow.style.top=e.clientY+\"px\";let active=false;magnets.forEach(el=>{const r=el.getBoundingClientRect(),x=e.clientX-(r.left+r.width/2),y=e.clientY-(r.top+r.height/2),d=Math.sqrt(x*x+y*y);if(d<140){el.style.transform=`translate(${x*.14}px,${y*.2}px)`;active=true}else el.style.transform=\"translate(0,0)\"});cursor.style.width=active?\"48px\":\"18px\";cursor.style.height=active?\"48px\":\"18px\";cursor.style.background=active?\"rgba(255,231,163,.14)\":\"transparent\"});\ndocument.querySelectorAll(\".problem-card\").forEach(c=>new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add(\"reveal\")}),{threshold:.22}).observe(c));\n\nconst cinema=document.getElementById(\"cinema\");if(cinema){cinema.addEventListener(\"mouseleave\",()=>{cinema.style.transform=\"perspective(1000px) rotateY(0deg) rotateX(0deg)\"})}\n\nconst cloud=document.getElementById(\"productCloud\");[[74,420,-19],[240,255,15],[450,435,28],[690,210,-25],[875,395,19],[145,570,22],[555,260,-8],[930,120,8],[360,92,-16],[760,565,-10],[1010,520,14],[70,165,24],[515,585,-22],[640,90,11],[995,255,-17],[315,590,18]].forEach((p,i)=>{const el=document.createElement(\"div\");el.className=\"product\";el.style.left=p[0]+\"px\";el.style.top=p[1]+\"px\";el.style.setProperty(\"--r\",p[2]+\"deg\");el.style.animation=`float${i%4} ${5+i%5}s ease-in-out infinite alternate`;cloud.appendChild(el)});\nconst st=document.createElement(\"style\");st.textContent=`@keyframes float0{to{transform:translateY(-24px) rotate(8deg)}}@keyframes float1{to{transform:translate(14px,18px) rotate(-12deg)}}@keyframes float2{to{transform:translate(18px,-12px) rotate(18deg)}}@keyframes float3{to{transform:translate(-14px,16px) rotate(-8deg)}}`;document.head.appendChild(st);\n\nconst control=document.querySelector(\".control-room\"),stage=document.getElementById(\"controlStage\"),kicker=document.getElementById(\"stageKicker\"),title=document.getElementById(\"stageTitle\");\nconst copy=[[\"Before Skin ID\",\"More <span class=\\\"highlight-word highlight-gold\\\">products.</span> Less <span class=\\\"highlight-word highlight-cyan\\\">confidence.</span>\"],[\"The leak\",\"Too many <span class=\\\"highlight-word highlight-gold\\\">options.</span> No <span class=\\\"highlight-word highlight-blue\\\">personal</span> answer. No reason to buy the <span class=\\\"highlight-word highlight-cyan\\\">routine.</span>\"],[\"Skin ID activated\",\"<span class=\\\"highlight-word highlight-gold\\\">Confusion</span> becomes <span class=\\\"highlight-word highlight-cyan\\\">clarity.</span> <span class=\\\"highlight-word highlight-gold\\\">⭐⭐⭐⭐⭐</span>\"],[\"Decision engine\",\"Every <span class=\\\"highlight-word highlight-blue\\\">recommendation</span> has a <span class=\\\"highlight-word highlight-gold\\\">reason.</span>\"],[\"After Skin ID\",\"The customer leaves with a complete <span class=\\\"highlight-word highlight-cyan\\\">routine</span>, not <span class=\\\"highlight-word highlight-gold\\\">confusion.</span>\"]];\naddEventListener(\"scroll\",()=>{const r=control.getBoundingClientRect(),total=control.offsetHeight-innerHeight,p=Math.min(1,Math.max(0,-r.top/total));let s=p<.13?1:p<.30?2:p<.50?3:p<.68?4:5;stage.className=\"control-stage s\"+s;kicker.textContent=copy[s-1][0];title.innerHTML=copy[s-1][1];const black=document.querySelector(\".blackout\"),br=black.getBoundingClientRect(),bt=black.offsetHeight-innerHeight,bp=Math.min(1,Math.max(0,-br.top/bt));document.getElementById(\"blackoutBg\").style.opacity=.05+bp*.78;[\"f1\",\"f2\",\"f3\",\"f4\"].forEach((id,i)=>document.getElementById(id).classList.toggle(\"show\",bp>0.14+i*.16))});\n\nconst data={hydration:[\"Hydration-first routine\",\"91\",\"Repair barrier first\",\"Cleanser + serum + cream\",\"Bundle recommended\",\"Clear next step\"],sensitivity:[\"Sensitivity-safe routine\",\"88\",\"Reduce irritation risk\",\"Gentle cleanse + barrier cream\",\"Low-friction bundle\",\"Feels understood\"],acne:[\"Breakout-control routine\",\"86\",\"Clarify without stripping\",\"Cleanser + treatment + SPF\",\"Problem-solution bundle\",\"Confident choice\"],aging:[\"Texture-support routine\",\"90\",\"Support renewal gradually\",\"Serum + cream + SPF\",\"Premium routine path\",\"Higher trust\"]};\ndocument.querySelectorAll(\".chip\").forEach(chip=>chip.addEventListener(\"click\",()=>{document.querySelectorAll(\".chip\").forEach(c=>c.classList.remove(\"active\"));chip.classList.add(\"active\");const d=data[chip.dataset.mode];document.getElementById(\"resultTitle\").textContent=d[0];document.getElementById(\"score\").textContent=d[1];document.getElementById(\"decision\").textContent=d[2];document.getElementById(\"routine\").textContent=d[3];document.getElementById(\"cart\").textContent=d[4];document.getElementById(\"feeling\").textContent=d[5]}));\nconst range=document.getElementById(\"beliefRange\"),fill=document.getElementById(\"rangeFill\"),belief=document.getElementById(\"beliefText\");range.addEventListener(\"input\",()=>{const v=+range.value;fill.style.width=`calc(${v}% - 24px)`;belief.innerHTML=v<35?`Most skincare stores sell <span class=\"change word-products\">products.</span>`:v<70?`Better skincare stores sell <span class=\"change word-routines\">routines.</span>`:`Top skincare brands sell <span class=\"change word-decisions\">decisions.</span>`});\n\nconst fc=document.getElementById(\"finalCanvas\"),fctx=fc.getContext(\"2d\");let fps=[];\nfunction fsize(){fc.width=innerWidth;fc.height=innerHeight;fps=Array.from({length:120},()=>({x:Math.random()*fc.width,y:Math.random()*fc.height,vx:(Math.random()-.5)*.6,vy:(Math.random()-.5)*.6,s:Math.random()*2+1}))}\nfunction fdraw(){fctx.clearRect(0,0,fc.width,fc.height);for(let i=0;i<fps.length;i++){let p=fps[i];p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>fc.width)p.vx*=-1;if(p.y<0||p.y>fc.height)p.vy*=-1;fctx.beginPath();fctx.arc(p.x,p.y,p.s,0,Math.PI*2);fctx.fillStyle=i%2?\"rgba(255,231,163,.35)\":\"rgba(115,169,255,.32)\";fctx.fill();for(let j=i+1;j<fps.length;j++){let q=fps[j],dx=p.x-q.x,dy=p.y-q.y,d=Math.sqrt(dx*dx+dy*dy);if(d<110){fctx.beginPath();fctx.moveTo(p.x,p.y);fctx.lineTo(q.x,q.y);fctx.strokeStyle=`rgba(255,231,163,${(1-d/110)*.12})`;fctx.stroke()}}}requestAnimationFrame(fdraw)}\naddEventListener(\"resize\",fsize);fsize();fdraw();";
 
 export default function App() {
   useEffect(() => {
@@ -3808,7 +4366,6 @@ export default function App() {
     let routineProductModelActive = false;
     let heroModelsVisible = false;
 
-    const landingWindow = window as LandingWindow;
     const heroCinema = document.getElementById("cinema");
 
     const startHeroModels = () => {
@@ -3860,13 +4417,6 @@ export default function App() {
       heroModelObserver.observe(heroCinema);
     }
 
-    if (!landingWindow.__nabiLandingInitialized) {
-      landingWindow.__nabiLandingInitialized = true;
-
-      const runLandingScript = new Function(landingScript);
-      runLandingScript();
-    }
-
     void import("./lib/setupLogoIntro")
       .then(({ setupLogoIntro }) => {
         if (introDisposed) {
@@ -3904,6 +4454,7 @@ export default function App() {
     const cleanupHeroValueEngine = setupHeroValueEngine();
     const cleanupHeroSceneTransitions = setupHeroSceneTransitions();
     const cleanupDecisionSummaryBoard = setupDecisionSummaryBoard();
+    const cleanupLandingInteractions = setupLandingInteractions();
 
     return () => {
       introDisposed = true;
@@ -3915,6 +4466,7 @@ export default function App() {
       cleanupHeroValueEngine();
       cleanupHeroSceneTransitions();
       cleanupDecisionSummaryBoard();
+      cleanupLandingInteractions();
     };
   }, []);
 
