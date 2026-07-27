@@ -313,7 +313,6 @@ function setupBrandStoryCarousel() {
   }
 
   const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const staticMobileStory = window.matchMedia("(max-width: 768px), (hover: none) and (pointer: coarse)").matches;
   const metricCounters: StoryMetricCounter[] = Array.from(
     root.querySelectorAll<HTMLElement>(".story-slide-scale .story-metric-value[data-target]"),
   )
@@ -578,10 +577,9 @@ function setupBrandStoryCarousel() {
     button.addEventListener("click", handler);
     return { button, handler };
   });
-  const setupCompareToggleListeners = () => {
-    const compareSlides = Array.from(root.querySelectorAll<HTMLElement>(".story-slide-scale"));
+  const compareSlides = Array.from(root.querySelectorAll<HTMLElement>(".story-slide-scale"));
 
-    compareSlides.forEach((slide) => {
+  compareSlides.forEach((slide) => {
     const compare = slide.querySelector<HTMLElement>(".story-commerce-compare[data-mobile-view]");
     const toggle = slide.querySelector<HTMLElement>(".story-commerce-toggle");
 
@@ -613,56 +611,7 @@ function setupBrandStoryCarousel() {
     });
 
     setMobileView(compare.dataset.mobileView ?? buttons[0]?.dataset.mobileViewOption ?? "guided");
-    });
-  };
-
-  setupCompareToggleListeners();
-
-  if (staticMobileStory) {
-    const flowSlides = Array.from(root.querySelectorAll<HTMLElement>(".story-slide-flow"));
-    const contrastSlides = Array.from(root.querySelectorAll<HTMLElement>(".story-slide-contrast"));
-
-    root.classList.add("is-mobile-static");
-    currentNode.textContent = "01";
-    totalNode.textContent = String(slides.length).padStart(2, "0");
-    progressFill.style.transform = "scaleX(1)";
-    track.scrollLeft = 0;
-    setMetricsToTarget();
-
-    slides.forEach((slide, index) => {
-      slide.dataset.state = "active";
-      slide.classList.toggle("is-active", index === 0);
-      slide.setAttribute("aria-current", index === 0 ? "true" : "false");
-    });
-
-    contrastSlides.forEach((slide) => {
-      slide.classList.add("is-settled");
-    });
-
-    flowSlides.forEach((slide) => {
-      slide.classList.add("is-settled");
-      slide.style.setProperty("--story-flow-progress", "100%");
-      slide.querySelectorAll<HTMLElement>(".story-flow-step").forEach((step) => {
-        step.classList.add("is-complete");
-      });
-    });
-
-    return () => {
-      root.classList.remove("is-mobile-static");
-      dotListeners.forEach(({ button, handler }) => button.removeEventListener("click", handler));
-      mobileCompareToggleCleanups.forEach((cleanup) => cleanup());
-      contrastSlides.forEach((slide) => {
-        slide.classList.remove("is-settled");
-      });
-      flowSlides.forEach((slide) => {
-        slide.classList.remove("is-settled");
-        slide.style.removeProperty("--story-flow-progress");
-        slide.querySelectorAll<HTMLElement>(".story-flow-step").forEach((step) => {
-          step.classList.remove("is-complete");
-        });
-      });
-    };
-  }
+  });
 
   contrastSlideControllers.push(...setupContrastSlides(root));
   flowSlideControllers.push(...setupFlowSlides(root));
