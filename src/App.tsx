@@ -1,151 +1,1235 @@
 import { useEffect } from "react";
 
 const calendlyUrl = "https://calendly.com/nabi_";
+type LandingWindow = Window & { __nabiLandingInitialized?: boolean };
 
-type ConcernMode = "hydration" | "sensitivity" | "acne" | "aging";
-type FacePoint = [number, number, number, number, number, number];
-type FaceMeshAsset = { count: number; scale: number; points: FacePoint[] };
-
-type ConcernMeta = {
-  concern: string;
-  focus: string;
-  reading: string;
-  summary: string;
-  depth: string;
-  lens: string;
-  primaryColor: string;
-  glowColor: string;
-  pitch: number;
-  hotspot: (x: number, y: number, z: number) => number;
+type StoryMetricCounter = {
+  node: HTMLElement;
+  suffix: string;
+  target: number;
 };
 
-const regionFalloff = (
-  x: number,
-  y: number,
-  centerX: number,
-  centerY: number,
-  radius: number,
-) => Math.max(0, 1 - Math.hypot(x - centerX, y - centerY) / radius);
-
-const concernMeta: Record<ConcernMode, ConcernMeta> = {
-  hydration: {
-    concern: "Hydration depletion",
-    focus: "Barrier + cheeks",
-    reading: "The routine starts by restoring comfort before actives.",
-    summary:
-      "The 3D face gives a concrete visual anchor, so the diagnosis feels guided rather than guessed.",
-    depth: "Barrier-first scan",
-    lens: "Hydration mapping",
-    primaryColor: "115,169,255",
-    glowColor: "244,221,176",
-    pitch: 0.03,
-    hotspot: (x, y) =>
-      Math.max(
-        regionFalloff(x, y, -0.1, 0.02, 0.12),
-        regionFalloff(x, y, 0.1, 0.02, 0.12),
-        regionFalloff(x, y, 0, -0.05, 0.1) * 0.72,
-      ),
-  },
-  sensitivity: {
-    concern: "Reactivity pattern",
-    focus: "Cheeks + nose bridge",
-    reading: "The visual scan frames irritation as a pattern, not a generic skin type.",
-    summary:
-      "Instead of forcing the visitor into a quiz answer, the interface isolates where reactivity is likely to appear.",
-    depth: "Comfort-led analysis",
-    lens: "Sensitivity zoning",
-    primaryColor: "184,242,255",
-    glowColor: "244,221,176",
-    pitch: 0.02,
-    hotspot: (x, y) =>
-      Math.max(
-        regionFalloff(x, y, -0.12, 0.03, 0.11),
-        regionFalloff(x, y, 0.12, 0.03, 0.11),
-        regionFalloff(x, y, 0, 0.02, 0.08) * 0.88,
-      ),
-  },
-  acne: {
-    concern: "Breakout pressure",
-    focus: "T-zone + lower face",
-    reading: "The system can show imbalance without defaulting to harsh treatment logic.",
-    summary:
-      "The face model makes the concern feel located and specific, which creates confidence in the routine direction.",
-    depth: "Congestion sweep",
-    lens: "Sebum + inflammation",
-    primaryColor: "255,115,132",
-    glowColor: "244,221,176",
-    pitch: 0.05,
-    hotspot: (x, y) =>
-      Math.max(
-        regionFalloff(x, y, 0, 0.08, 0.09),
-        regionFalloff(x, y, 0, -0.02, 0.1),
-        regionFalloff(x, y, -0.08, -0.1, 0.1) * 0.84,
-        regionFalloff(x, y, 0.08, -0.1, 0.1) * 0.84,
-      ),
-  },
-  aging: {
-    concern: "Texture + fine-line focus",
-    focus: "Forehead + eye contour",
-    reading: "The model turns fine lines into a premium care pathway instead of a vague anti-age claim.",
-    summary:
-      "This keeps the story aspirational while still feeling diagnostic, which fits a higher-value skincare positioning.",
-    depth: "Texture contouring",
-    lens: "Renewal support",
-    primaryColor: "244,221,176",
-    glowColor: "184,242,255",
-    pitch: 0.01,
-    hotspot: (x, y) =>
-      Math.max(
-        regionFalloff(x, y, 0, 0.18, 0.12),
-        regionFalloff(x, y, -0.08, 0.08, 0.08),
-        regionFalloff(x, y, 0.08, 0.08, 0.08),
-      ),
-  },
+type ContrastSlideController = {
+  slide: HTMLElement;
+  setActive: (isActive: boolean) => void;
+  destroy: () => void;
 };
 
-let faceMeshPromise: Promise<FaceMeshAsset> | null = null;
+type FlowSlideController = {
+  slide: HTMLElement;
+  setActive: (isActive: boolean) => void;
+  destroy: () => void;
+};
 
-function isConcernMode(value: string | undefined): value is ConcernMode {
-  return value === "hydration" || value === "sensitivity" || value === "acne" || value === "aging";
+function setupContrastSlides(root: HTMLElement): ContrastSlideController[] {
+  const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  return Array.from(root.querySelectorAll<HTMLElement>(".story-slide-contrast")).map((slide) => {
+    const grid = slide.querySelector<HTMLElement>(".story-contrast-grid");
+    const bridge = slide.querySelector<HTMLElement>(".story-contrast-bridge");
+    const rows = Array.from(slide.querySelectorAll<HTMLElement>(".story-contrast-row"));
+
+    let settleTimeout = 0;
+
+    const clearActivePair = () => {
+      delete slide.dataset.activePair;
+      rows.forEach((row) => {
+        row.classList.remove("is-linked", "is-dimmed");
+      });
+      bridge?.classList.remove("is-active");
+    };
+
+    const positionBridge = (pairId: string) => {
+      if (!grid || !bridge) {
+        return;
+      }
+
+      const leftRow = slide.querySelector<HTMLElement>(
+        `.story-contrast-row[data-pair="${pairId}"][data-side="left"]`,
+      );
+      const rightRow = slide.querySelector<HTMLElement>(
+        `.story-contrast-row[data-pair="${pairId}"][data-side="right"]`,
+      );
+
+      if (!leftRow || !rightRow) {
+        bridge.classList.remove("is-active");
+        return;
+      }
+
+      const gridRect = grid.getBoundingClientRect();
+      const leftRect = leftRow.getBoundingClientRect();
+      const rightRect = rightRow.getBoundingClientRect();
+      const startX = leftRect.right - gridRect.left - 16;
+      const endX = rightRect.left - gridRect.left + 16;
+      const startY = leftRect.top - gridRect.top + leftRect.height / 2;
+      const endY = rightRect.top - gridRect.top + rightRect.height / 2;
+      const dx = endX - startX;
+      const dy = endY - startY;
+      const distance = Math.max(0, Math.hypot(dx, dy));
+      const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+      bridge.style.setProperty("--story-contrast-line-left", `${startX}px`);
+      bridge.style.setProperty("--story-contrast-line-top", `${startY}px`);
+      bridge.style.setProperty("--story-contrast-line-width", `${distance}px`);
+      bridge.style.setProperty("--story-contrast-line-angle", `${angle}deg`);
+      bridge.classList.remove("is-active");
+      void bridge.offsetWidth;
+      bridge.classList.add("is-active");
+    };
+
+    const activatePair = (pairId?: string) => {
+      if (!pairId || !slide.classList.contains("is-active")) {
+        return;
+      }
+
+      slide.dataset.activePair = pairId;
+      rows.forEach((row) => {
+        const isLinked = row.dataset.pair === pairId;
+        row.classList.toggle("is-linked", isLinked);
+        row.classList.toggle("is-dimmed", !isLinked);
+      });
+      positionBridge(pairId);
+    };
+
+    const rowListeners = rows.map((row) => {
+      const onPointerEnter = () => activatePair(row.dataset.pair);
+      row.addEventListener("pointerenter", onPointerEnter);
+      return { row, onPointerEnter };
+    });
+
+    const onGridPointerLeave = () => clearActivePair();
+    grid?.addEventListener("pointerleave", onGridPointerLeave);
+
+    const setActive = (isActive: boolean) => {
+      window.clearTimeout(settleTimeout);
+      slide.classList.remove("is-settled");
+
+      if (!isActive) {
+        clearActivePair();
+        return;
+      }
+
+      if (reduceMotionQuery.matches) {
+        slide.classList.add("is-settled");
+        return;
+      }
+
+      settleTimeout = window.setTimeout(() => {
+        slide.classList.add("is-settled");
+      }, 1800);
+    };
+
+    return {
+      slide,
+      setActive,
+      destroy: () => {
+        window.clearTimeout(settleTimeout);
+        clearActivePair();
+        grid?.removeEventListener("pointerleave", onGridPointerLeave);
+        rowListeners.forEach(({ row, onPointerEnter }) => {
+          row.removeEventListener("pointerenter", onPointerEnter);
+        });
+      },
+    };
+  });
 }
 
-function loadFaceMesh() {
-  if (!faceMeshPromise) {
-    faceMeshPromise = fetch("/visitor-face-points.json").then((response) => {
-      if (!response.ok) {
-        throw new Error("Unable to load face mesh");
+function setupFlowSlides(root: HTMLElement): FlowSlideController[] {
+  const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  return Array.from(root.querySelectorAll<HTMLElement>(".story-slide-flow")).map((slide) => {
+    const line = slide.querySelector<HTMLElement>(".story-flow-line");
+    const steps = Array.from(slide.querySelectorAll<HTMLElement>(".story-flow-step"));
+    const totalSteps = steps.length;
+    const sequenceTimeouts: number[] = [];
+    const replayTimeouts = new Map<HTMLElement, number>();
+    let isActiveState = false;
+    let currentStep = 0;
+
+    const clearSequence = () => {
+      sequenceTimeouts.forEach((timeout) => window.clearTimeout(timeout));
+      sequenceTimeouts.length = 0;
+      slide.classList.remove("is-settled");
+      slide.style.setProperty("--story-flow-progress", "0%");
+      currentStep = 0;
+
+      steps.forEach((step) => {
+        step.classList.remove("is-current", "is-complete", "is-replaying");
+        step.dataset.state = "upcoming";
+        step.setAttribute("aria-current", "false");
+      });
+    };
+
+    const getStepProgress = (stepNumber: number) => {
+      if (stepNumber >= totalSteps) {
+        return "100%";
       }
-      return response.json() as Promise<FaceMeshAsset>;
+
+      if (!line) {
+        return totalSteps > 1 ? `${((stepNumber - 1) / (totalSteps - 1)) * 100}%` : "100%";
+      }
+
+      const step = steps[stepNumber - 1];
+      const node = step?.querySelector<HTMLElement>(".story-flow-node");
+
+      if (!step || !node) {
+        return totalSteps > 1 ? `${((stepNumber - 1) / (totalSteps - 1)) * 100}%` : "100%";
+      }
+
+      const lineRect = line.getBoundingClientRect();
+      const nodeRect = node.getBoundingClientRect();
+      const isVertical = lineRect.height > lineRect.width;
+
+      if (isVertical) {
+        const target = nodeRect.top + nodeRect.height * 0.5 - lineRect.top;
+        const progress = lineRect.height > 0 ? target / lineRect.height : 0;
+        return `${Math.max(0, Math.min(1, progress)) * 100}%`;
+      }
+
+      const target = nodeRect.left + nodeRect.width * 0.5 - lineRect.left;
+      const progress = lineRect.width > 0 ? target / lineRect.width : 0;
+      return `${Math.max(0, Math.min(1, progress)) * 100}%`;
+    };
+
+    const setStepState = (stepNumber: number) => {
+      currentStep = stepNumber;
+      slide.classList.toggle("is-settled", stepNumber === totalSteps);
+
+      steps.forEach((step, index) => {
+        const nextIndex = index + 1;
+        const isCurrent = nextIndex === stepNumber;
+        const isComplete = nextIndex < stepNumber;
+        const state = isCurrent ? "current" : isComplete ? "complete" : "upcoming";
+
+        step.classList.toggle("is-current", isCurrent);
+        step.classList.toggle("is-complete", isComplete);
+        step.dataset.state = state;
+        step.setAttribute("aria-current", String(isCurrent));
+      });
+
+      slide.style.setProperty("--story-flow-progress", getStepProgress(stepNumber));
+    };
+
+    const replayStep = (step: HTMLElement) => {
+      if (!slide.classList.contains("is-active") || !step.classList.contains("is-complete")) {
+        return;
+      }
+
+      window.clearTimeout(replayTimeouts.get(step));
+      step.classList.remove("is-replaying");
+      void step.offsetWidth;
+      step.classList.add("is-replaying");
+
+      const timeout = window.setTimeout(() => {
+        step.classList.remove("is-replaying");
+        replayTimeouts.delete(step);
+      }, 900);
+
+      replayTimeouts.set(step, timeout);
+    };
+
+    const hoverListeners = steps.map((step) => {
+      const onPointerEnter = () => replayStep(step);
+      step.addEventListener("pointerenter", onPointerEnter);
+      return { step, onPointerEnter };
+    });
+
+    const setActive = (isActive: boolean) => {
+      if (isActive === isActiveState) {
+        if (isActive && currentStep > 0) {
+          slide.style.setProperty("--story-flow-progress", getStepProgress(currentStep));
+        }
+
+        return;
+      }
+
+      isActiveState = isActive;
+      clearSequence();
+
+      replayTimeouts.forEach((timeout) => window.clearTimeout(timeout));
+      replayTimeouts.clear();
+
+      if (!isActive) {
+        return;
+      }
+
+      if (reduceMotionQuery.matches) {
+        setStepState(totalSteps);
+        return;
+      }
+
+      steps.forEach((_, index) => {
+        const timeout = window.setTimeout(() => {
+          if (!slide.classList.contains("is-active")) {
+            return;
+          }
+
+          setStepState(index + 1);
+        }, 260 + index * 1100);
+
+        sequenceTimeouts.push(timeout);
+      });
+    };
+
+    return {
+      slide,
+      setActive,
+      destroy: () => {
+        clearSequence();
+        replayTimeouts.forEach((timeout) => window.clearTimeout(timeout));
+        replayTimeouts.clear();
+        hoverListeners.forEach(({ step, onPointerEnter }) => {
+          step.removeEventListener("pointerenter", onPointerEnter);
+        });
+      },
+    };
+  });
+}
+
+function setupBrandStoryCarousel() {
+  const root = document.querySelector<HTMLElement>(".brand-story");
+  const track = root?.querySelector<HTMLElement>(".brand-story-track");
+  const prevButton = root?.querySelector<HTMLButtonElement>('[data-story-nav="prev"]');
+  const nextButton = root?.querySelector<HTMLButtonElement>('[data-story-nav="next"]');
+  const currentNode = document.getElementById("brandStoryCurrent");
+  const totalNode = document.getElementById("brandStoryTotal");
+  const progressFill = document.getElementById("brandStoryProgressFill");
+  const slides = track ? Array.from(track.querySelectorAll<HTMLElement>(".story-slide")) : [];
+  const dotButtons = root
+    ? Array.from(root.querySelectorAll<HTMLButtonElement>(".story-dot"))
+    : [];
+
+  if (
+    !root ||
+    !track ||
+    !prevButton ||
+    !nextButton ||
+    !currentNode ||
+    !totalNode ||
+    !progressFill ||
+    slides.length === 0
+  ) {
+    return () => undefined;
+  }
+
+  const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const metricCounters: StoryMetricCounter[] = Array.from(
+    root.querySelectorAll<HTMLElement>(".story-slide-scale .story-metric-value[data-target]"),
+  )
+    .map((node) => ({
+      node,
+      suffix: node.dataset.suffix ?? "",
+      target: Number(node.dataset.target ?? "0"),
+    }))
+    .filter((counter) => Number.isFinite(counter.target));
+  const mobileCompareToggleCleanups: Array<() => void> = [];
+  const contrastSlideControllers: ContrastSlideController[] = [];
+  const flowSlideControllers: FlowSlideController[] = [];
+
+  let activeIndex = 0;
+  let metricFrame = 0;
+  let scrollFrame = 0;
+  let settleTimeout = 0;
+  let activePointerId: number | null = null;
+  let dragStartX = 0;
+  let dragStartScrollLeft = 0;
+
+  const resizeObserver = new ResizeObserver(() => {
+    updateActiveSlide(getNearestIndex(), false);
+  });
+
+  const formatMetric = (value: number, suffix: string) => `${Math.round(value)}${suffix}`;
+
+  const cancelMetricAnimation = () => {
+    window.cancelAnimationFrame(metricFrame);
+    metricFrame = 0;
+  };
+
+  const setMetricsToTarget = () => {
+    metricCounters.forEach((counter) => {
+      counter.node.textContent = formatMetric(counter.target, counter.suffix);
+    });
+  };
+
+  const animateMetrics = () => {
+    cancelMetricAnimation();
+
+    if (!metricCounters.length) {
+      return;
+    }
+
+    if (reduceMotionQuery.matches) {
+      setMetricsToTarget();
+      return;
+    }
+
+    const durationMs = 880;
+    const staggerMs = 85;
+    const startedAt = performance.now();
+
+    metricCounters.forEach((counter) => {
+      counter.node.textContent = formatMetric(0, counter.suffix);
+    });
+
+    const render = (now: number) => {
+      let hasPendingAnimation = false;
+
+      metricCounters.forEach((counter, index) => {
+        const localElapsed = now - startedAt - index * staggerMs;
+        const localProgress = Math.min(1, Math.max(0, localElapsed / durationMs));
+        const easedProgress = 1 - Math.pow(1 - localProgress, 3);
+
+        counter.node.textContent = formatMetric(counter.target * easedProgress, counter.suffix);
+
+        if (localProgress < 1) {
+          hasPendingAnimation = true;
+        }
+      });
+
+      if (hasPendingAnimation) {
+        metricFrame = window.requestAnimationFrame(render);
+      } else {
+        setMetricsToTarget();
+        metricFrame = 0;
+      }
+    };
+
+    metricFrame = window.requestAnimationFrame(render);
+  };
+
+  const clampIndex = (value: number) => Math.max(0, Math.min(slides.length - 1, value));
+
+  const getScrollTarget = (index: number) => {
+    const style = window.getComputedStyle(track);
+    const startPadding = Number.parseFloat(style.paddingLeft) || 0;
+    return Math.max(0, slides[index].offsetLeft - startPadding);
+  };
+
+  const updateProgress = (index: number) => {
+    currentNode.textContent = String(index + 1).padStart(2, "0");
+    totalNode.textContent = String(slides.length).padStart(2, "0");
+    progressFill.style.transform = `scaleX(${(index + 1) / slides.length})`;
+
+    slides.forEach((slide, slideIndex) => {
+      const state =
+        slideIndex === index
+          ? "active"
+          : slideIndex === index + 1
+            ? "peek"
+            : slideIndex < index
+              ? "past"
+              : "upcoming";
+      const isActive = slideIndex === index;
+
+      slide.dataset.state = state;
+      slide.classList.toggle("is-active", isActive);
+      slide.setAttribute("aria-current", isActive ? "true" : "false");
+    });
+
+    contrastSlideControllers.forEach((controller) => {
+      controller.setActive(controller.slide.classList.contains("is-active"));
+    });
+
+    flowSlideControllers.forEach((controller) => {
+      controller.setActive(controller.slide.classList.contains("is-active"));
+    });
+
+    dotButtons.forEach((button, buttonIndex) => {
+      const isActive = buttonIndex === index;
+
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-selected", String(isActive));
+      button.tabIndex = isActive ? 0 : -1;
+    });
+
+    prevButton.disabled = index === 0;
+    nextButton.disabled = index === slides.length - 1;
+  };
+
+  const updateActiveSlide = (index: number, animateScaleMetrics = false) => {
+    const nextIndex = clampIndex(index);
+    const didChange = nextIndex !== activeIndex;
+
+    activeIndex = nextIndex;
+    updateProgress(nextIndex);
+
+    if (nextIndex === 0 && (animateScaleMetrics || didChange)) {
+      animateMetrics();
+    }
+  };
+
+  const getNearestIndex = () => {
+    const center = track.scrollLeft + track.clientWidth * 0.5;
+    let nearestIndex = 0;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+
+    slides.forEach((slide, index) => {
+      const slideCenter = slide.offsetLeft + slide.offsetWidth * 0.5;
+      const distance = Math.abs(slideCenter - center);
+
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = index;
+      }
+    });
+
+    return nearestIndex;
+  };
+
+  const scrollToIndex = (index: number) => {
+    const nextIndex = clampIndex(index);
+    track.scrollTo({
+      behavior: reduceMotionQuery.matches ? "auto" : "smooth",
+      left: getScrollTarget(nextIndex),
+    });
+    updateActiveSlide(nextIndex, nextIndex === 0);
+  };
+
+  const onTrackScroll = () => {
+    window.cancelAnimationFrame(scrollFrame);
+    window.clearTimeout(settleTimeout);
+
+    scrollFrame = window.requestAnimationFrame(() => {
+      updateActiveSlide(getNearestIndex(), false);
+    });
+
+    settleTimeout = window.setTimeout(() => {
+      updateActiveSlide(getNearestIndex(), true);
+    }, 120);
+  };
+
+  const releasePointer = (pointerId?: number) => {
+    if (activePointerId === null) {
+      return;
+    }
+
+    const releasedPointerId = pointerId ?? activePointerId;
+
+    if (track.hasPointerCapture(releasedPointerId)) {
+      track.releasePointerCapture(releasedPointerId);
+    }
+
+    activePointerId = null;
+    track.classList.remove("is-dragging");
+    updateActiveSlide(getNearestIndex(), false);
+  };
+
+  const onPointerDown = (event: PointerEvent) => {
+    if (event.button !== 0 || (event.pointerType !== "mouse" && event.pointerType !== "pen")) {
+      return;
+    }
+
+    activePointerId = event.pointerId;
+    dragStartX = event.clientX;
+    dragStartScrollLeft = track.scrollLeft;
+    track.classList.add("is-dragging");
+    track.setPointerCapture(event.pointerId);
+  };
+
+  const onPointerMove = (event: PointerEvent) => {
+    if (activePointerId !== event.pointerId) {
+      return;
+    }
+
+    const deltaX = event.clientX - dragStartX;
+    track.scrollLeft = dragStartScrollLeft - deltaX;
+  };
+
+  const onPointerUp = (event: PointerEvent) => {
+    releasePointer(event.pointerId);
+  };
+
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      scrollToIndex(activeIndex + 1);
+      return;
+    }
+
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      scrollToIndex(activeIndex - 1);
+      return;
+    }
+
+    if (event.key === "Home") {
+      event.preventDefault();
+      scrollToIndex(0);
+      return;
+    }
+
+    if (event.key === "End") {
+      event.preventDefault();
+      scrollToIndex(slides.length - 1);
+    }
+  };
+
+  const onPrevClick = () => {
+    scrollToIndex(activeIndex - 1);
+  };
+
+  const onNextClick = () => {
+    scrollToIndex(activeIndex + 1);
+  };
+
+  const dotListeners = dotButtons.map((button, index) => {
+    const handler = () => scrollToIndex(index);
+    button.addEventListener("click", handler);
+    return { button, handler };
+  });
+  const compareSlides = Array.from(root.querySelectorAll<HTMLElement>(".story-slide-scale"));
+
+  compareSlides.forEach((slide) => {
+    const compare = slide.querySelector<HTMLElement>(".story-commerce-compare[data-mobile-view]");
+    const toggle = slide.querySelector<HTMLElement>(".story-commerce-toggle");
+
+    if (!compare || !toggle) {
+      return;
+    }
+
+    const buttons = Array.from(toggle.querySelectorAll<HTMLButtonElement>("[data-mobile-view-option]"));
+
+    if (!buttons.length) {
+      return;
+    }
+
+    const setMobileView = (nextView: string) => {
+      const view = nextView === "chaos" ? "chaos" : "guided";
+      compare.dataset.mobileView = view;
+
+      buttons.forEach((button) => {
+        const isActive = button.dataset.mobileViewOption === view;
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-pressed", String(isActive));
+      });
+    };
+
+    buttons.forEach((button) => {
+      const handler = () => setMobileView(button.dataset.mobileViewOption ?? "guided");
+      button.addEventListener("click", handler);
+      mobileCompareToggleCleanups.push(() => button.removeEventListener("click", handler));
+    });
+
+    setMobileView(compare.dataset.mobileView ?? buttons[0]?.dataset.mobileViewOption ?? "guided");
+  });
+
+  contrastSlideControllers.push(...setupContrastSlides(root));
+  flowSlideControllers.push(...setupFlowSlides(root));
+
+  prevButton.addEventListener("click", onPrevClick);
+  nextButton.addEventListener("click", onNextClick);
+  track.addEventListener("scroll", onTrackScroll, { passive: true });
+  track.addEventListener("pointerdown", onPointerDown);
+  track.addEventListener("pointermove", onPointerMove);
+  track.addEventListener("pointerup", onPointerUp);
+  track.addEventListener("pointercancel", onPointerUp);
+  track.addEventListener("lostpointercapture", () => releasePointer());
+  root.addEventListener("keydown", onKeyDown);
+  resizeObserver.observe(track);
+
+  updateActiveSlide(0, true);
+
+  return () => {
+    cancelMetricAnimation();
+    window.cancelAnimationFrame(scrollFrame);
+    window.clearTimeout(settleTimeout);
+    releasePointer();
+    resizeObserver.disconnect();
+    prevButton.removeEventListener("click", onPrevClick);
+    nextButton.removeEventListener("click", onNextClick);
+    track.removeEventListener("scroll", onTrackScroll);
+    track.removeEventListener("pointerdown", onPointerDown);
+    track.removeEventListener("pointermove", onPointerMove);
+    track.removeEventListener("pointerup", onPointerUp);
+    track.removeEventListener("pointercancel", onPointerUp);
+    root.removeEventListener("keydown", onKeyDown);
+    dotListeners.forEach(({ button, handler }) => button.removeEventListener("click", handler));
+    mobileCompareToggleCleanups.forEach((cleanup) => cleanup());
+    contrastSlideControllers.forEach((controller) => controller.destroy());
+    flowSlideControllers.forEach((controller) => controller.destroy());
+  };
+}
+
+function setupHeroPlatformToggle() {
+  const root = document.querySelector<HTMLElement>(".hero-platforms");
+  const button = root?.querySelector<HTMLButtonElement>(".hero-platform-toggle");
+  const panel = root?.querySelector<HTMLElement>(".hero-platform-panel");
+
+  if (!root || !button || !panel) {
+    return () => undefined;
+  }
+
+  let isOpen = false;
+
+  const syncOpenState = (nextOpen: boolean) => {
+    isOpen = nextOpen;
+    root.dataset.open = nextOpen ? "true" : "false";
+    button.setAttribute("aria-expanded", String(nextOpen));
+    panel.setAttribute("aria-hidden", String(!nextOpen));
+  };
+
+  const onToggle = () => {
+    syncOpenState(!isOpen);
+  };
+
+  const onPointerDown = (event: PointerEvent) => {
+    if (!isOpen) {
+      return;
+    }
+
+    const target = event.target;
+
+    if (target instanceof Node && !root.contains(target)) {
+      syncOpenState(false);
+    }
+  };
+
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Escape" && isOpen) {
+      syncOpenState(false);
+      button.blur();
+    }
+  };
+
+  syncOpenState(false);
+  button.addEventListener("click", onToggle);
+  document.addEventListener("pointerdown", onPointerDown);
+  document.addEventListener("keydown", onKeyDown);
+
+  return () => {
+    button.removeEventListener("click", onToggle);
+    document.removeEventListener("pointerdown", onPointerDown);
+    document.removeEventListener("keydown", onKeyDown);
+  };
+}
+
+type HeroPoint = { x: number; y: number };
+type HeroRect = { left: number; top: number; width: number; height: number };
+type HeroParticle = {
+  angle: number;
+  alpha: number;
+  color: string;
+  depth: number;
+  orbit: number;
+  size: number;
+  speed: number;
+};
+
+function setupHeroValueEngine() {
+  const statement = document.querySelector<HTMLElement>(".hero-statement");
+  const reel = statement?.querySelector<HTMLElement>(".hero-slot-reel");
+
+  if (!statement || !reel) {
+    return () => undefined;
+  }
+
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    return () => undefined;
+  }
+
+  statement.classList.add("is-enhanced");
+
+  return () => {
+    statement.classList.remove("is-enhanced");
+  };
+}
+
+function setupDecisionSummaryBoard() {
+  const stage = document.getElementById("controlStage");
+  const board = document.getElementById("decisionSummaryBoard");
+  const action = document.getElementById("decisionSummaryAction") as HTMLButtonElement | null;
+  const actionLabel = action?.querySelector<HTMLElement>(".decision-summary-action-label");
+  const badge = document.getElementById("decisionSummaryBadge");
+  const status = document.getElementById("decisionSummaryStatus");
+  const confidenceFill = document.getElementById("decisionSummaryConfidenceFill");
+  const confidenceValue = document.getElementById("decisionSummaryConfidenceValue");
+  const completionGlow = document.getElementById("decisionSummaryCompletionGlow");
+  const successWave = document.getElementById("decisionSummarySuccessWave");
+  const checkIcon = document.getElementById("decisionSummaryCheckIcon");
+  const scannedValue = document.getElementById("decisionSummaryScanned");
+  const compatibleValue = document.getElementById("decisionSummaryCompatible");
+  const candidatesValue = document.getElementById("decisionSummaryCandidates");
+  const selectedValue = document.getElementById("decisionSummarySelected");
+  const timelineSteps = Array.from(
+    document.querySelectorAll<HTMLElement>(".decision-summary-timeline-step"),
+  );
+  const rows = {
+    scanned: document.querySelector<HTMLElement>('.decision-summary-row[data-key="scanned"]'),
+    compatible: document.querySelector<HTMLElement>('.decision-summary-row[data-key="compatible"]'),
+    candidates: document.querySelector<HTMLElement>('.decision-summary-row[data-key="candidates"]'),
+    selected: document.querySelector<HTMLElement>('.decision-summary-row[data-key="selected"]'),
+    confidence: document.querySelector<HTMLElement>('.decision-summary-row[data-key="confidence"]'),
+    status: document.querySelector<HTMLElement>('.decision-summary-row[data-key="status"]'),
+  };
+
+  if (
+    !stage ||
+    !board ||
+    !action ||
+    !actionLabel ||
+    !badge ||
+    !status ||
+    !confidenceFill ||
+    !confidenceValue ||
+    !completionGlow ||
+    !successWave ||
+    !checkIcon ||
+    !scannedValue ||
+    !compatibleValue ||
+    !candidatesValue ||
+    !selectedValue ||
+    timelineSteps.length !== 4 ||
+    !rows.scanned ||
+    !rows.compatible ||
+    !rows.candidates ||
+    !rows.selected ||
+    !rows.confidence ||
+    !rows.status
+  ) {
+    return () => undefined;
+  }
+
+  const stageNode = stage;
+  const boardNode = board;
+  const actionNode = action;
+  const actionLabelNode = actionLabel;
+  const badgeNode = badge;
+  const statusNode = status;
+  const confidenceValueNode = confidenceValue;
+  const completionGlowNode = completionGlow;
+  const successWaveNode = successWave;
+  const checkIconNode = checkIcon;
+  const scannedValueNode = scannedValue;
+  const compatibleValueNode = compatibleValue;
+  const candidatesValueNode = candidatesValue;
+  const selectedValueNode = selectedValue;
+  const timelineOrder = ["scan", "profile", "matching", "routine"] as const;
+  type TimelineKey = (typeof timelineOrder)[number];
+  const timelineNodes = timelineSteps.reduce<Record<TimelineKey, HTMLElement>>(
+    (accumulator, step) => {
+      const key = step.dataset.stage as TimelineKey | undefined;
+
+      if (key && timelineOrder.includes(key)) {
+        accumulator[key] = step;
+      }
+
+      return accumulator;
+    },
+    {} as Record<TimelineKey, HTMLElement>,
+  );
+
+  const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const steps = [
+    {
+      key: "scanned" as const,
+      startMs: 180,
+      durationMs: 580,
+      target: 247,
+      label: "Scanning products",
+      render: (value: number) => {
+        scannedValueNode.textContent = `${Math.round(value)}`;
+      },
+      complete: () => {
+        scannedValueNode.textContent = "247";
+      },
+    },
+    {
+      key: "compatible" as const,
+      startMs: 860,
+      durationMs: 560,
+      target: 81,
+      label: "Filtering compatibility",
+      render: (value: number, progress: number) => {
+        compatibleValueNode.textContent = `${Math.round(value)}`;
+        boardNode.style.setProperty("--decision-prune", (1 - progress * 0.64).toFixed(4));
+      },
+      complete: () => {
+        compatibleValueNode.textContent = "81";
+        boardNode.style.setProperty("--decision-prune", "0.36");
+      },
+    },
+    {
+      key: "candidates" as const,
+      startMs: 1580,
+      durationMs: 500,
+      target: 19,
+      label: "Ranking final candidates",
+      render: (value: number) => {
+        candidatesValueNode.textContent = `${Math.round(value)}`;
+      },
+      complete: () => {
+        candidatesValueNode.textContent = "19";
+      },
+    },
+    {
+      key: "selected" as const,
+      startMs: 2260,
+      durationMs: 460,
+      target: 4,
+      label: "Selecting the routine",
+      render: (value: number) => {
+        selectedValueNode.textContent = `${Math.round(value)}`;
+      },
+      complete: () => {
+        selectedValueNode.textContent = "4";
+      },
+    },
+    {
+      key: "confidence" as const,
+      startMs: 2940,
+      durationMs: 760,
+      target: 96,
+      label: "Calibrating confidence",
+      render: (value: number, progress: number) => {
+        const rounded = Math.round(value);
+        confidenceValueNode.textContent = `${rounded}%`;
+        boardNode.style.setProperty("--decision-confidence", `${rounded / 100}`);
+        boardNode.style.setProperty("--decision-confidence-ring", progress.toFixed(4));
+      },
+      complete: () => {
+        confidenceValueNode.textContent = "96%";
+        boardNode.style.setProperty("--decision-confidence", "0.96");
+        boardNode.style.setProperty("--decision-confidence-ring", "1");
+      },
+    },
+    {
+      key: "status" as const,
+      startMs: 3880,
+      durationMs: 360,
+      target: 1,
+      label: "Finalizing summary",
+      render: (_value: number, progress: number) => {
+        if (progress > 0.16) {
+          statusNode.textContent = "Routine ready";
+        }
+
+        if (progress > 0.22) {
+          checkIconNode.classList.add("is-done");
+        }
+
+        boardNode.style.setProperty("--decision-success", progress.toFixed(4));
+        boardNode.style.setProperty("--decision-status-reveal", progress.toFixed(4));
+      },
+      complete: () => {
+        boardNode.style.setProperty("--decision-success", "1");
+        boardNode.style.setProperty("--decision-status-reveal", "1");
+      },
+    },
+  ];
+  const totalDurationMs = 4420;
+  const placeholder = "\u2014";
+  const completedKeys = new Set<string>();
+  const rowPulseTimeouts = new Map<HTMLElement, number>();
+  let animationFrame = 0;
+  let runStartedAt = 0;
+  let hasTriggered = false;
+  let isRunning = false;
+  let isComplete = false;
+  let replayRevealTimeout = 0;
+  let stageLinkTimeout = 0;
+  let activeRowKey: keyof typeof rows | null = null;
+
+  function setActionMode(mode: "run" | "running" | "replay") {
+    actionNode.dataset.mode = mode;
+    actionNode.disabled = mode === "running";
+    actionLabelNode.textContent =
+      mode === "replay"
+        ? "Replay Analysis"
+        : mode === "running"
+          ? "Running analysis"
+          : "Run the decision engine";
+  }
+
+  function clearReplayRevealTimeout() {
+    window.clearTimeout(replayRevealTimeout);
+    replayRevealTimeout = 0;
+  }
+
+  function clearStageLinkTimeout() {
+    window.clearTimeout(stageLinkTimeout);
+    stageLinkTimeout = 0;
+  }
+
+  function clearRowPulseTimeouts() {
+    rowPulseTimeouts.forEach((timeout) => window.clearTimeout(timeout));
+    rowPulseTimeouts.clear();
+  }
+
+  function getTimelineKeyForRow(key: keyof typeof rows): TimelineKey {
+    if (key === "scanned") {
+      return "scan";
+    }
+
+    if (key === "compatible") {
+      return "profile";
+    }
+
+    if (key === "candidates" || key === "selected") {
+      return "matching";
+    }
+
+    return "routine";
+  }
+
+  function setActiveTimeline(key: TimelineKey | null) {
+    const activeIndex = key ? timelineOrder.indexOf(key) : -1;
+
+    timelineOrder.forEach((timelineKey, index) => {
+      const node = timelineNodes[timelineKey];
+
+      node.classList.toggle("is-active", timelineKey === key);
+      node.classList.toggle("is-complete", activeIndex > index);
     });
   }
 
-  return faceMeshPromise;
+  function completeTimeline() {
+    timelineOrder.forEach((timelineKey) => {
+      const node = timelineNodes[timelineKey];
+
+      node.classList.remove("is-active");
+      node.classList.add("is-complete");
+    });
+  }
+
+  function resetTimeline() {
+    timelineOrder.forEach((timelineKey) => {
+      const node = timelineNodes[timelineKey];
+
+      node.classList.remove("is-active", "is-complete");
+    });
+  }
+
+  function triggerStageLinkPulse() {
+    stageNode.classList.remove("is-decision-linked");
+    clearStageLinkTimeout();
+    void stageNode.offsetWidth;
+    stageNode.classList.add("is-decision-linked");
+    stageLinkTimeout = window.setTimeout(() => {
+      stageNode.classList.remove("is-decision-linked");
+      stageLinkTimeout = 0;
+    }, 1500);
+  }
+
+  function setActiveRow(key: keyof typeof rows | null) {
+    if (activeRowKey === key) {
+      return;
+    }
+
+    if (activeRowKey) {
+      rows[activeRowKey]?.classList.remove("is-active");
+    }
+
+    activeRowKey = key;
+
+    if (key) {
+      rows[key]?.classList.add("is-active");
+      setActiveTimeline(getTimelineKeyForRow(key));
+    } else {
+      setActiveTimeline(null);
+    }
+  }
+
+  function markRowComplete(key: keyof typeof rows) {
+    const row = rows[key];
+
+    row?.classList.add("is-complete", "is-settling");
+    row?.classList.remove("is-active");
+
+    if (!row) {
+      return;
+    }
+
+    const existing = rowPulseTimeouts.get(row);
+
+    if (existing) {
+      window.clearTimeout(existing);
+    }
+
+    const timeout = window.setTimeout(() => {
+      row.classList.remove("is-settling");
+      rowPulseTimeouts.delete(row);
+    }, 560);
+
+    rowPulseTimeouts.set(row, timeout);
+  }
+
+  function resetBoard() {
+    completedKeys.clear();
+    clearReplayRevealTimeout();
+    clearStageLinkTimeout();
+    clearRowPulseTimeouts();
+    setActiveRow(null);
+    resetTimeline();
+    boardNode.dataset.state = "idle";
+    boardNode.style.setProperty("--decision-confidence", "0");
+    boardNode.style.setProperty("--decision-confidence-ring", "0");
+    boardNode.style.setProperty("--decision-prune", "1");
+    boardNode.style.setProperty("--decision-success", "0");
+    boardNode.style.setProperty("--decision-status-reveal", "0");
+    badgeNode.textContent = "\u2713 Analysis Complete";
+    statusNode.textContent = "Waiting for analysis";
+    scannedValueNode.textContent = placeholder;
+    compatibleValueNode.textContent = placeholder;
+    candidatesValueNode.textContent = placeholder;
+    selectedValueNode.textContent = placeholder;
+    confidenceValueNode.textContent = placeholder;
+    [rows.scanned, rows.compatible, rows.candidates, rows.selected, rows.confidence, rows.status].forEach((row) => {
+      row?.classList.remove("is-complete", "is-active", "is-settling");
+    });
+    completionGlowNode.classList.remove("is-visible");
+    successWaveNode.classList.remove("is-visible");
+    checkIconNode.classList.remove("is-done");
+    actionNode.classList.remove("is-replay-visible");
+    stageNode.classList.remove("is-decision-linked");
+    setActionMode("run");
+    isRunning = false;
+    isComplete = false;
+  }
+
+  function finishBoard(showReplayImmediately = false) {
+    isRunning = false;
+    isComplete = true;
+    setActiveRow(null);
+    boardNode.dataset.state = "complete";
+    badgeNode.textContent = "\u2713 Analysis Complete";
+    statusNode.textContent = "Routine ready";
+    boardNode.style.setProperty("--decision-confidence", "0.96");
+    boardNode.style.setProperty("--decision-confidence-ring", "1");
+    boardNode.style.setProperty("--decision-prune", "0.36");
+    boardNode.style.setProperty("--decision-success", "1");
+    boardNode.style.setProperty("--decision-status-reveal", "1");
+    completionGlowNode.classList.add("is-visible");
+    checkIconNode.classList.add("is-done");
+    completeTimeline();
+    [rows.scanned, rows.compatible, rows.candidates, rows.selected, rows.confidence, rows.status].forEach((row) => {
+      row?.classList.add("is-complete");
+      row?.classList.remove("is-active");
+    });
+    successWaveNode.classList.remove("is-visible");
+    void successWaveNode.offsetWidth;
+    successWaveNode.classList.add("is-visible");
+    triggerStageLinkPulse();
+    setActionMode("replay");
+    actionNode.classList.remove("is-replay-visible");
+
+    if (showReplayImmediately) {
+      actionNode.classList.add("is-replay-visible");
+    } else {
+      replayRevealTimeout = window.setTimeout(() => {
+        actionNode.classList.add("is-replay-visible");
+      }, 2000);
+    }
+  }
+
+  function setReducedMotionComplete() {
+    resetBoard();
+    scannedValueNode.textContent = "247";
+    compatibleValueNode.textContent = "81";
+    candidatesValueNode.textContent = "19";
+    selectedValueNode.textContent = "4";
+    confidenceValueNode.textContent = "96%";
+    finishBoard(true);
+  }
+
+  function animateFrame(now: number) {
+    const elapsed = now - runStartedAt;
+    const overallProgress = Math.min(1, elapsed / totalDurationMs);
+
+    boardNode.style.setProperty("--decision-overall", overallProgress.toFixed(4));
+
+    for (const step of steps) {
+      const localProgress = Math.min(1, Math.max(0, (elapsed - step.startMs) / step.durationMs));
+
+      if (localProgress > 0 && localProgress < 1) {
+        boardNode.dataset.state = "running";
+        setActiveRow(step.key);
+      }
+
+      if (localProgress > 0) {
+        if (step.key !== "status") {
+          const currentValue = step.target * localProgress;
+          step.render(currentValue, localProgress);
+        } else {
+          step.render(localProgress, localProgress);
+        }
+      }
+
+      if (localProgress >= 1 && !completedKeys.has(step.key)) {
+        completedKeys.add(step.key);
+        step.complete();
+        markRowComplete(step.key);
+      }
+    }
+
+    if (elapsed >= totalDurationMs) {
+      finishBoard();
+      return;
+    }
+
+    animationFrame = window.requestAnimationFrame(animateFrame);
+  }
+
+  function runBoard() {
+    window.cancelAnimationFrame(animationFrame);
+    hasTriggered = true;
+
+    if (reduceMotionQuery.matches) {
+      setReducedMotionComplete();
+      return;
+    }
+
+    resetBoard();
+    isRunning = true;
+    boardNode.dataset.state = "running";
+    setActionMode("running");
+    runStartedAt = performance.now();
+    animationFrame = window.requestAnimationFrame(animateFrame);
+  }
+
+  function maybeAutoRun() {
+    if (hasTriggered || !stageNode.classList.contains("s5")) {
+      return;
+    }
+
+    runBoard();
+  }
+
+  const onActionClick = () => {
+    if (isRunning) {
+      return;
+    }
+
+    if (isComplete) {
+      runBoard();
+      return;
+    }
+
+    runBoard();
+  };
+
+  const stageObserver = new MutationObserver(maybeAutoRun);
+  stageObserver.observe(stageNode, { attributes: true, attributeFilter: ["class"] });
+  actionNode.addEventListener("click", onActionClick);
+  resetBoard();
+  maybeAutoRun();
+
+  return () => {
+    window.cancelAnimationFrame(animationFrame);
+    clearReplayRevealTimeout();
+    clearStageLinkTimeout();
+    clearRowPulseTimeouts();
+    actionNode.removeEventListener("click", onActionClick);
+    stageObserver.disconnect();
+  };
 }
 
-function setupVisitorFaceSection() {
-  const choicePanel = document.querySelector<HTMLElement>(".choice-panel");
-  const stage = document.querySelector<HTMLElement>(".mesh-stage");
-  const canvas = document.getElementById("faceMeshCanvas") as HTMLCanvasElement | null;
-  const emptyState = document.getElementById("meshEmpty");
-  const concernNode = document.getElementById("meshConcern");
-  const focusNode = document.getElementById("meshFocus");
-  const readingNode = document.getElementById("meshReading");
-  const summaryNode = document.getElementById("meshSummary");
-  const depthNode = document.getElementById("meshDepth");
-  const lensNode = document.getElementById("meshLens");
+function setupHeroSceneTransitions() {
+  const cinema = document.getElementById("cinema");
+  const canvas = document.getElementById("heroCanvas") as HTMLCanvasElement | null;
+  const heroSim = cinema?.querySelector<HTMLElement>(".hero-sim");
+  const scenes = heroSim ? Array.from(heroSim.querySelectorAll<HTMLElement>(".hero-scene")) : [];
 
-  if (
-    !choicePanel ||
-    !stage ||
-    !canvas ||
-    !emptyState ||
-    !concernNode ||
-    !focusNode ||
-    !readingNode ||
-    !summaryNode ||
-    !depthNode ||
-    !lensNode
-  ) {
+  if (!cinema || !canvas || !heroSim || scenes.length !== 5) {
     return () => undefined;
   }
 
@@ -155,244 +1239,1556 @@ function setupVisitorFaceSection() {
     return () => undefined;
   }
 
-  let mode: ConcernMode = "hydration";
-  let frameId = 0;
+  const heroCinema = cinema;
+  const heroCanvas = canvas;
+  const heroContext = context;
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const palette = ["115,169,255", "244,221,176", "247,241,232"];
+  const holdMs = 5000;
+  const profilePulseDurationMs = 2500;
+  const profileSceneHoldMs = profilePulseDurationMs * 4;
+  const matchSceneHoldMs = holdMs + 1500;
+  const routineSceneHoldMs = holdMs + 4000;
+  const resultSceneHoldMs = routineSceneHoldMs + 2000;
+  const transitionMs = 1200;
+  const sceneHoldDurations = [
+    holdMs,
+    profileSceneHoldMs,
+    matchSceneHoldMs,
+    routineSceneHoldMs,
+    resultSceneHoldMs,
+  ];
+  const sceneSegmentDurations = sceneHoldDurations.map((sceneHold) => sceneHold + transitionMs);
+  const loopMs = sceneSegmentDurations.reduce((total, duration) => total + duration, 0);
+  const particleCount = 320;
+  const mouse = { x: 0.5, y: 0.5 };
+  const scanConfirmationMs = 420;
+  const scanAnalysisMs = Math.max(holdMs - scanConfirmationMs, 1);
+  const scanPhaseLabels = ["Initializing", "Surface read", "Profile mapping", "Finalizing"];
+  const scanScene = heroCinema.querySelector<HTMLElement>(".scene-scan");
+  const scanFrame = heroCinema.querySelector<HTMLElement>(".scene-scan .face-shell");
+  const scanPhaseValue = heroCinema.querySelector<HTMLElement>(".scene-scan .scan-phase-value");
+  const scanPhaseMarkers = Array.from(
+    heroCinema.querySelectorAll<HTMLElement>(".scene-scan .scan-phase-marker"),
+  );
+  const profilePhaseLabels = [
+    "Resolving skin type",
+    "Mapping sensitivity",
+    "Linking exposure profile",
+    "Inferring primary goal",
+    "Profile assembled",
+  ];
+  const profileScene = heroCinema.querySelector<HTMLElement>(".scene-profile");
+  const profilePhaseValue = heroCinema.querySelector<HTMLElement>(".scene-profile .profile-phase-value");
+  const matchSceneIndex = 2;
+  const matchScene = heroCinema.querySelector<HTMLElement>(".scene-match");
+  const matchPhaseValue = heroCinema.querySelector<HTMLElement>(".scene-match .match-phase-value");
+  const matchCoreLabel = heroCinema.querySelector<HTMLElement>(".scene-match .engine-core-label");
+  const matchCounterLabel = heroCinema.querySelector<HTMLElement>(".scene-match .match-counter-label");
+  const matchCounterValue = heroCinema.querySelector<HTMLElement>(".scene-match .match-counter-value");
+  const matchCatalogChips = Array.from(heroCinema.querySelectorAll<HTMLElement>(".scene-match .catalog-chip"));
+  const matchTargetChips = Array.from(
+    heroCinema.querySelectorAll<HTMLElement>(".scene-match .catalog-chip.is-target"),
+  );
+  const matchSelectionDurationMs = 860;
+  const matchSelectionStartMs = 2350;
+  const matchSelectionStaggerMs = 850;
+  const matchNonTargetFadeMs = 2600;
+  const matchPhaseLabels = [
+    "Catalog search live",
+    "Compatibility matching",
+    "Decision ranking",
+    "Selection locking",
+    "Routine ready",
+  ];
+  const matchEngineLabels = ["Searching...", "Matching...", "Ranking...", "Selecting..."];
+  const matchSelectionLabels = ["Cleanser", "Serum", "Moisturizer", "SPF"];
+  const matchCounterStates = [
+    { label: "Catalog", value: "247 products" },
+    { label: "Compatible", value: "81 products" },
+    { label: "Candidates", value: "19 products" },
+    { label: "Selected", value: "4 products" },
+  ];
+  const matchTargetFamilies = ["cleanser", "serum", "moisturizer", "spf"];
+  const routineSceneIndex = 3;
+  const routineMeterFill = heroCinema.querySelector<HTMLElement>(".scene-routine .sheet-meter span");
+  const routineSceneRows = Array.from(heroCinema.querySelectorAll<HTMLElement>(".scene-routine .sheet-row"));
+  const routineRevealStarts = [450, 700, 950, 1200];
+  const routineRevealDurationMs = 360;
+  const routineMeterDurationMs = 1100;
+  const resultSceneIndex = 4;
+  const resultScene = heroCinema.querySelector<HTMLElement>(".scene-result");
+  const resultTitle = heroCinema.querySelector<HTMLElement>(".scene-result .result-title");
+  const resultLead = heroCinema.querySelector<HTMLElement>(".scene-result .result-lead");
+  const resultStatus = heroCinema.querySelector<HTMLElement>(".scene-result .result-status-value");
+  const resultChecklist = Array.from(
+    heroCinema.querySelectorAll<HTMLElement>(".scene-result .result-check-item"),
+  );
+  const resultRoutineChips = Array.from(
+    heroCinema.querySelectorAll<HTMLElement>(".scene-result .result-routine-chip"),
+  );
+  const resultChecklistStarts = [650, 1100, 1550, 2000];
+  const resultChecklistDurationMs = 420;
+  const resultRoutineStartMs = 2550;
+  const resultRoutineStaggerMs = 150;
+  const resultRoutineDurationMs = 320;
+  const particles: HeroParticle[] = Array.from({ length: particleCount }, (_, index) => {
+    const seed = index + 1;
+
+    return {
+      angle: ((seed * 29) % 360) * (Math.PI / 180),
+      alpha: 0.52 + seededNoise(seed * 11) * 0.34,
+      color: palette[index % palette.length],
+      depth: 0.8 + seededNoise(seed * 17) * 0.8,
+      orbit: 28 + seededNoise(seed * 7) * 62,
+      size: 0.9 + seededNoise(seed * 5) * 2.9,
+      speed: 0.85 + seededNoise(seed * 19) * 1.55,
+    };
+  });
+
+  let animationFrame = 0;
   let destroyed = false;
   let width = 0;
   let height = 0;
-  let points: FacePoint[] = [];
+  let sceneTargets: HeroPoint[][] = [];
+  let loopStartTime: number | null = null;
+  let activeScanPhase = -1;
+  let activeProfilePhase = -1;
 
-  const pointer = { x: 0.5, y: 0.5, active: false };
+  heroCinema.style.setProperty("--hero-loop", `${loopMs / 1000}s`);
 
-  const applyMode = (nextMode: ConcernMode) => {
-    mode = nextMode;
-    choicePanel.dataset.concern = nextMode;
+  function seededNoise(seed: number) {
+    const value = Math.sin(seed * 12.9898 + 78.233) * 43758.5453123;
+    return value - Math.floor(value);
+  }
 
-    const meta = concernMeta[nextMode];
-    concernNode.textContent = meta.concern;
-    focusNode.textContent = meta.focus;
-    readingNode.textContent = meta.reading;
-    summaryNode.textContent = meta.summary;
-    depthNode.textContent = meta.depth;
-    lensNode.textContent = meta.lens;
-  };
+  function lerp(start: number, end: number, progress: number) {
+    return start + (end - start) * progress;
+  }
 
-  const syncWithActiveChip = () => {
-    const activeChip = document.querySelector<HTMLButtonElement>(".chip.active");
-    const candidate = activeChip?.dataset.mode;
+  function clamp(value: number, min = 0, max = 1) {
+    return Math.min(max, Math.max(min, value));
+  }
 
-    if (isConcernMode(candidate)) {
-      applyMode(candidate);
+  function easeInOut(progress: number) {
+    if (progress <= 0) {
+      return 0;
     }
-  };
 
-  const resizeCanvas = () => {
-    const bounds = stage.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.75);
+    if (progress >= 1) {
+      return 1;
+    }
 
-    width = Math.max(1, bounds.width);
-    height = Math.max(1, bounds.height);
-    canvas.width = Math.max(1, Math.floor(width * dpr));
-    canvas.height = Math.max(1, Math.floor(height * dpr));
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-    context.setTransform(dpr, 0, 0, dpr, 0, 0);
-  };
+    return progress < 0.5
+      ? 4 * progress * progress * progress
+      : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+  }
 
-  const onPointerMove = (event: PointerEvent) => {
-    const bounds = stage.getBoundingClientRect();
-    pointer.x = (event.clientX - bounds.left) / bounds.width;
-    pointer.y = (event.clientY - bounds.top) / bounds.height;
-    pointer.active = true;
-  };
+  function relativeRect(element: Element): HeroRect {
+    const cinemaRect = heroCinema.getBoundingClientRect();
+    const rect = element.getBoundingClientRect();
 
-  const onPointerLeave = () => {
-    pointer.active = false;
-  };
-
-  stage.addEventListener("pointermove", onPointerMove);
-  stage.addEventListener("pointerleave", onPointerLeave);
-
-  const chipListeners = Array.from(document.querySelectorAll<HTMLButtonElement>(".chip")).map((chip) => {
-    const handler = () => {
-      const candidate = chip.dataset.mode;
-
-      if (isConcernMode(candidate)) {
-        applyMode(candidate);
-      }
+    return {
+      left: rect.left - cinemaRect.left,
+      top: rect.top - cinemaRect.top,
+      width: rect.width,
+      height: rect.height,
     };
+  }
 
-    chip.addEventListener("click", handler);
-    return { chip, handler };
-  });
+  function centerPoint(rect: HeroRect): HeroPoint {
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  }
 
-  const resizeObserver = new ResizeObserver(() => resizeCanvas());
-  resizeObserver.observe(stage);
-  window.addEventListener("resize", resizeCanvas);
+  function normalizePoints(points: HeroPoint[], count: number): HeroPoint[] {
+    if (!points.length) {
+      return Array.from({ length: count }, () => ({ x: width / 2, y: height / 2 }));
+    }
 
-  const render = (time: number) => {
-    if (destroyed || !points.length) {
+    return Array.from({ length: count }, (_, index) => {
+      const mappedIndex = Math.floor((index / count) * points.length);
+      return points[mappedIndex] ?? points[points.length - 1];
+    });
+  }
+
+  function sampleRectFill(rect: HeroRect, count: number, seedOffset: number) {
+    return Array.from({ length: count }, (_, index) => {
+      const px = seededNoise(seedOffset + index * 2 + 1);
+      const py = seededNoise(seedOffset + index * 2 + 2);
+      return {
+        x: rect.left + rect.width * (0.12 + px * 0.76),
+        y: rect.top + rect.height * (0.16 + py * 0.68),
+      };
+    });
+  }
+
+  function sampleRectOutline(rect: HeroRect, count: number) {
+    return Array.from({ length: count }, (_, index) => {
+      const progress = index / Math.max(1, count - 1);
+      const perimeter = 2 * (rect.width + rect.height);
+      const distance = progress * perimeter;
+
+      if (distance <= rect.width) {
+        return { x: rect.left + distance, y: rect.top };
+      }
+
+      if (distance <= rect.width + rect.height) {
+        return { x: rect.left + rect.width, y: rect.top + (distance - rect.width) };
+      }
+
+      if (distance <= rect.width * 2 + rect.height) {
+        return {
+          x: rect.left + rect.width - (distance - rect.width - rect.height),
+          y: rect.top + rect.height,
+        };
+      }
+
+      return {
+        x: rect.left,
+        y: rect.top + rect.height - (distance - rect.width * 2 - rect.height),
+      };
+    });
+  }
+
+  function sampleLine(start: HeroPoint, end: HeroPoint, count: number) {
+    return Array.from({ length: count }, (_, index) => {
+      const progress = index / Math.max(1, count - 1);
+      return {
+        x: lerp(start.x, end.x, progress),
+        y: lerp(start.y, end.y, progress),
+      };
+    });
+  }
+
+  function sampleEllipse(rect: HeroRect, count: number, insetX = 0.18, insetY = 0.12) {
+    const center = centerPoint(rect);
+    const radiusX = rect.width * (0.5 - insetX);
+    const radiusY = rect.height * (0.5 - insetY);
+
+    return Array.from({ length: count }, (_, index) => {
+      const angle = (index / count) * Math.PI * 2;
+      return {
+        x: center.x + Math.cos(angle) * radiusX,
+        y: center.y + Math.sin(angle) * radiusY,
+      };
+    });
+  }
+
+  function sampleCluster(rect: HeroRect, count: number, seedOffset: number) {
+    const center = centerPoint(rect);
+    const radiusX = rect.width * 0.9;
+    const radiusY = rect.height * 0.9;
+
+    return Array.from({ length: count }, (_, index) => {
+      const angle = seededNoise(seedOffset + index * 3 + 1) * Math.PI * 2;
+      const spread = Math.sqrt(seededNoise(seedOffset + index * 3 + 2));
+      return {
+        x: center.x + Math.cos(angle) * radiusX * spread,
+        y: center.y + Math.sin(angle) * radiusY * spread,
+      };
+    });
+  }
+
+  function beamGlow(progress: number, center: number, widthValue: number) {
+    return Math.pow(clamp(1 - Math.abs(progress - center) / widthValue), 1.8);
+  }
+
+  function pulseWindowMs(progressMs: number, startMs: number, durationMs: number) {
+    const local = clamp((progressMs - startMs) / Math.max(durationMs, 1));
+
+    if (local <= 0 || local >= 1) {
+      return 0;
+    }
+
+    return Math.sin(local * Math.PI);
+  }
+
+  function setScanSceneVar(name: string, value: number | string) {
+    scanScene?.style.setProperty(name, typeof value === "number" ? value.toFixed(4) : value);
+  }
+
+  function setProfileSceneVar(name: string, value: number | string) {
+    profileScene?.style.setProperty(name, typeof value === "number" ? value.toFixed(4) : value);
+  }
+
+  function setMatchSceneVar(name: string, value: number | string) {
+    matchScene?.style.setProperty(name, typeof value === "number" ? value.toFixed(4) : value);
+  }
+
+  function updateScanPhaseMarkers(activeIndex: number, completedCount: number) {
+    scanPhaseMarkers.forEach((marker, index) => {
+      marker.classList.toggle("is-active", index === activeIndex);
+      marker.classList.toggle("is-complete", index < completedCount);
+    });
+  }
+
+  function resetScanSceneState() {
+    if (scanPhaseValue) {
+      scanPhaseValue.textContent = scanPhaseLabels[0];
+    }
+
+    activeScanPhase = 0;
+    scanScene?.classList.remove("is-confirming", "is-transitioning");
+    setScanSceneVar("--scan-progress", 0);
+    setScanSceneVar("--scan-readout", 1);
+    setScanSceneVar("--scan-confirmation", 0);
+    setScanSceneVar("--scan-beam-y", "22%");
+    setScanSceneVar("--scan-beam-opacity", 0.28);
+    setScanSceneVar("--scan-ambient", 0.48);
+    setScanSceneVar("--wire-major", 0.1);
+    setScanSceneVar("--wire-secondary", 0);
+    setScanSceneVar("--wire-tertiary", 0);
+    setScanSceneVar("--orbit-opacity", 0.22);
+    setScanSceneVar("--scan-transition", 0);
+    setScanSceneVar("--zone-hydration-a", 0);
+    setScanSceneVar("--zone-hydration-b", 0);
+    setScanSceneVar("--zone-barrier", 0);
+    setScanSceneVar("--zone-sensitivity", 0);
+    updateScanPhaseMarkers(0, 0);
+  }
+
+  function resetProfileSceneState() {
+    if (profilePhaseValue) {
+      profilePhaseValue.textContent = "Analyzing profile";
+    }
+
+    activeProfilePhase = 0;
+    profileScene?.classList.remove("is-holding", "is-transitioning");
+    setProfileSceneVar("--profile-reveal-a", 0);
+    setProfileSceneVar("--profile-reveal-b", 0);
+    setProfileSceneVar("--profile-reveal-c", 0);
+    setProfileSceneVar("--profile-reveal-d", 0);
+    setProfileSceneVar("--profile-pulse-a", 0);
+    setProfileSceneVar("--profile-pulse-b", 0);
+    setProfileSceneVar("--profile-pulse-c", 0);
+    setProfileSceneVar("--profile-pulse-d", 0);
+    setProfileSceneVar("--profile-ambient", 0.18);
+    setProfileSceneVar("--profile-line", 0.08);
+    setProfileSceneVar("--profile-status", 0.42);
+  }
+
+  function resetRoutineSceneState() {
+    if (routineMeterFill) {
+      routineMeterFill.style.transform = "scaleX(0)";
+    }
+
+    routineSceneRows.forEach((row) => {
+      row.style.opacity = "0";
+      row.style.transform = "translate3d(0,12px,0)";
+    });
+  }
+
+  function resetResultSceneState() {
+    if (resultTitle) {
+      resultTitle.textContent = "Personalization complete";
+    }
+
+    if (resultLead) {
+      resultLead.textContent =
+        "Skin ID finished the routine with a profile match, a curated selection, and a cart-ready bundle.";
+    }
+
+    if (resultStatus) {
+      resultStatus.textContent = "Routine successfully generated";
+    }
+
+    resultScene?.classList.remove("is-transitioning", "is-settled");
+    resultScene?.style.setProperty("--result-arrival", "0");
+    resultScene?.style.setProperty("--result-glow", "0");
+    resultScene?.style.setProperty("--result-bloom", "0");
+    resultScene?.style.setProperty("--result-idle", "0");
+    resultScene?.style.setProperty("--result-transition", "0");
+
+    resultChecklist.forEach((item) => {
+      item.style.opacity = "0";
+      item.style.transform = "translate3d(0,14px,0) scale(.97)";
+    });
+
+    resultRoutineChips.forEach((chip) => {
+      chip.style.opacity = "0";
+      chip.style.transform = "translate3d(0,12px,0) scale(.96)";
+    });
+  }
+
+  function resetMatchSceneState() {
+    if (matchPhaseValue) {
+      matchPhaseValue.textContent = matchPhaseLabels[0];
+    }
+
+    if (matchCoreLabel) {
+      matchCoreLabel.textContent = matchEngineLabels[0];
+    }
+
+    if (matchCounterLabel) {
+      matchCounterLabel.textContent = matchCounterStates[0].label;
+    }
+
+    if (matchCounterValue) {
+      matchCounterValue.textContent = matchCounterStates[0].value;
+    }
+
+    matchScene?.classList.remove("is-evaluating", "has-selection", "is-transitioning");
+    setMatchSceneVar("--match-ambient", 0.18);
+    setMatchSceneVar("--match-core-pulse", 0.18);
+    setMatchSceneVar("--match-dim", 0);
+    setMatchSceneVar("--match-wave", 0);
+    setMatchSceneVar("--match-flash", 0);
+    setMatchSceneVar("--match-transition", 0);
+
+    matchCatalogChips.forEach((chip) => {
+      chip.classList.remove("is-dimmed", "is-receding", "is-selected", "is-active");
+      chip.style.removeProperty("--match-selected-x");
+      chip.style.removeProperty("--match-selected-y");
+      chip.style.removeProperty("--match-selected-rotate");
+      chip.style.removeProperty("--match-selected-opacity");
+      chip.style.removeProperty("--match-reject-x");
+      chip.style.removeProperty("--match-reject-y");
+      chip.style.removeProperty("--match-reject-rotate");
+    });
+  }
+
+  function updateScanSceneState(
+    current: number,
+    next: number,
+    segmentProgress: number,
+    transition: boolean,
+    transitionProgress: number,
+  ) {
+    if (!scanScene || !scanFrame) {
       return;
     }
 
-    const meta = concernMeta[mode];
-    const sway = Math.sin(time * 0.00055) * (Math.PI / 2);
-    const yaw = Math.max(
-      -Math.PI / 2,
-      Math.min(Math.PI / 2, sway + (pointer.active ? (pointer.x - 0.5) * 0.12 : 0)),
-    );
-    // Move the straightening correction to the upward tilt axis instead of spinning in screen space.
-    const visualStraighten = 0;
-    const straightenPivotX = width * 0.3976;
-    const straightenPivotY = height * 0.4723;
-    const basePitch = -1.64;
-    const pitch = meta.pitch + (pointer.active ? (pointer.y - 0.5) * 0.08 : 0);
-    const cosBasePitch = Math.cos(basePitch);
-    const sinBasePitch = Math.sin(basePitch);
-    const cosYaw = Math.cos(yaw);
-    const sinYaw = Math.sin(yaw);
-    const cosPitch = Math.cos(pitch);
-    const sinPitch = Math.sin(pitch);
-    const cosStraighten = Math.cos(visualStraighten);
-    const sinStraighten = Math.sin(visualStraighten);
-
-    context.clearRect(0, 0, width, height);
-
-    const background = context.createRadialGradient(
-      width * 0.5,
-      height * 0.44,
-      12,
-      width * 0.5,
-      height * 0.48,
-      height * 0.72,
-    );
-    background.addColorStop(0, "rgba(255,255,255,0.04)");
-    background.addColorStop(0.45, "rgba(9,11,14,0.09)");
-    background.addColorStop(1, "rgba(4,5,6,0)");
-    context.fillStyle = background;
-    context.fillRect(0, 0, width, height);
-
-    const projectedPoints: Array<{
-      screenX: number;
-      screenY: number;
-      focus: number;
-      depthAlpha: number;
-      glowAlpha: number;
-      radius: number;
-      depth: number;
-    }> = [];
-
-    for (const point of points) {
-      const [x, y, z] = point;
-      const yBase = y * cosBasePitch - z * sinBasePitch;
-      const zBase = z * cosBasePitch + y * sinBasePitch;
-      const xYaw = x * cosYaw + zBase * sinYaw;
-      const zYaw = zBase * cosYaw - x * sinYaw;
-      const yPitch = yBase * cosPitch - zYaw * sinPitch;
-      const zPitch = zYaw * cosPitch + yBase * sinPitch;
-
-      const perspective = 1 / (1.8 - zPitch * 0.65);
-      const rawScreenX = width * 0.5 + xYaw * width * 0.82 * perspective;
-      const rawScreenY = height * 0.58 - yPitch * height * 0.98 * perspective;
-      const dx = rawScreenX - straightenPivotX;
-      const dy = rawScreenY - straightenPivotY;
-      const screenX = straightenPivotX + dx * cosStraighten - dy * sinStraighten;
-      const screenY = straightenPivotY + dx * sinStraighten + dy * cosStraighten;
-
-      if (screenX < -24 || screenX > width + 24 || screenY < -24 || screenY > height + 24) {
-        continue;
-      }
-
-      const focus = meta.hotspot(x, y, z);
-      const depthAlpha = Math.min(0.72, 0.16 + perspective * 0.33);
-      const glowAlpha = Math.min(0.92, focus * 0.48 + perspective * 0.2);
-      const radius = 0.45 + perspective * 1.28;
-
-      projectedPoints.push({
-        screenX,
-        screenY,
-        focus,
-        depthAlpha,
-        glowAlpha,
-        radius,
-        depth: zPitch,
-      });
+    if (current !== 0) {
+      resetScanSceneState();
+      return;
     }
 
-    projectedPoints.sort((left, right) => left.depth - right.depth);
+    const analysisProgress = clamp(segmentProgress / scanAnalysisMs);
+    const isConfirming = !transition && segmentProgress >= scanAnalysisMs;
+    const beamProgress = isConfirming
+      ? 1
+      : easeInOut(clamp((analysisProgress - 0.06) / 0.94));
+    const phaseIndex = isConfirming
+      ? scanPhaseLabels.length - 1
+      : analysisProgress < 0.18
+        ? 0
+        : analysisProgress < 0.46
+          ? 1
+          : analysisProgress < 0.78
+            ? 2
+            : 3;
+    const completedCount = isConfirming ? scanPhaseLabels.length : phaseIndex;
+    const majorReveal = clamp((analysisProgress - 0.06) / 0.24);
+    const secondaryReveal = clamp((analysisProgress - 0.24) / 0.24);
+    const tertiaryReveal = clamp((analysisProgress - 0.54) / 0.24);
+    const completionProgress = isConfirming
+      ? easeInOut(clamp((segmentProgress - scanAnalysisMs) / scanConfirmationMs))
+      : 0;
+    const transitionMix = transition ? transitionProgress : 0;
+    const readoutOpacity = isConfirming ? lerp(1, 0.38, completionProgress) : 1;
+    const beamOpacity = transition
+      ? lerp(0.8, 0.16, transitionProgress)
+      : isConfirming
+        ? lerp(0.9, 0.42, completionProgress)
+        : 0.82;
+    const zoneFade = 1 - transitionMix * 0.82;
+    const hydrationA =
+      beamGlow(beamProgress, 0.3, 0.21) * clamp((analysisProgress - 0.2) / 0.2) * zoneFade;
+    const barrier =
+      beamGlow(beamProgress, 0.48, 0.18) * clamp((analysisProgress - 0.42) / 0.18) * zoneFade;
+    const sensitivity =
+      beamGlow(beamProgress, 0.62, 0.18) * clamp((analysisProgress - 0.58) / 0.16) * zoneFade;
+    const hydrationB =
+      beamGlow(beamProgress, 0.78, 0.16) * clamp((analysisProgress - 0.72) / 0.14) * zoneFade;
 
-    for (const point of projectedPoints) {
-      if (point.focus > 0.28) {
-        context.fillStyle = `rgba(${meta.glowColor},${point.glowAlpha * 0.22})`;
-        context.beginPath();
-        context.arc(point.screenX, point.screenY, point.radius * (2.2 + point.focus), 0, Math.PI * 2);
-        context.fill();
-      }
-
-      context.fillStyle =
-        point.focus > 0.34
-          ? `rgba(${meta.primaryColor},${Math.max(point.depthAlpha, point.glowAlpha)})`
-          : `rgba(243,245,247,${point.depthAlpha})`;
-      context.beginPath();
-      context.arc(point.screenX, point.screenY, point.radius + point.focus * 1.08, 0, Math.PI * 2);
-      context.fill();
+    if (activeScanPhase !== phaseIndex && scanPhaseValue) {
+      scanPhaseValue.textContent = scanPhaseLabels[phaseIndex];
+      activeScanPhase = phaseIndex;
     }
 
-    frameId = window.requestAnimationFrame(render);
+    scanScene.classList.toggle("is-confirming", isConfirming || (transition && next === 1));
+    scanScene.classList.toggle("is-transitioning", transition);
+    setScanSceneVar("--scan-progress", isConfirming ? 1 : analysisProgress);
+    setScanSceneVar("--scan-readout", readoutOpacity);
+    setScanSceneVar(
+      "--scan-confirmation",
+      transition ? 1 - transitionProgress * 0.18 : completionProgress,
+    );
+    setScanSceneVar("--scan-beam-y", `${lerp(22, 74, beamProgress).toFixed(2)}%`);
+    setScanSceneVar("--scan-beam-opacity", beamOpacity);
+    setScanSceneVar("--scan-ambient", 0.5 + majorReveal * 0.18 + secondaryReveal * 0.12);
+    setScanSceneVar("--wire-major", majorReveal);
+    setScanSceneVar("--wire-secondary", secondaryReveal);
+    setScanSceneVar("--wire-tertiary", tertiaryReveal);
+    setScanSceneVar("--orbit-opacity", 0.28 + majorReveal * 0.22 + tertiaryReveal * 0.18);
+    setScanSceneVar("--scan-transition", transitionMix);
+    setScanSceneVar("--zone-hydration-a", hydrationA);
+    setScanSceneVar("--zone-hydration-b", hydrationB);
+    setScanSceneVar("--zone-barrier", barrier);
+    setScanSceneVar("--zone-sensitivity", sensitivity);
+    updateScanPhaseMarkers(isConfirming ? -1 : phaseIndex, completedCount);
+  }
+
+  function updateProfileSceneState(
+    current: number,
+    next: number,
+    segmentProgress: number,
+    transition: boolean,
+  ) {
+    if (!profileScene) {
+      return;
+    }
+
+    if (current !== 1) {
+      resetProfileSceneState();
+      return;
+    }
+
+    const phaseIndex = transition
+      ? profilePhaseLabels.length - 1
+      : Math.min(3, Math.floor(segmentProgress / profilePulseDurationMs));
+    const revealA = 1;
+    const revealB = 1;
+    const revealC = 1;
+    const revealD = 1;
+    const pulseA = pulseWindowMs(segmentProgress, 0, profilePulseDurationMs);
+    const pulseB = pulseWindowMs(segmentProgress, profilePulseDurationMs, profilePulseDurationMs);
+    const pulseC = pulseWindowMs(segmentProgress, profilePulseDurationMs * 2, profilePulseDurationMs);
+    const pulseD = pulseWindowMs(segmentProgress, profilePulseDurationMs * 3, profilePulseDurationMs);
+    const lineStrength =
+      0.12 + pulseA * 0.16 + pulseB * 0.14 + pulseC * 0.15 + pulseD * 0.16;
+    const ambient =
+      0.24 + pulseA * 0.18 + pulseB * 0.14 + pulseC * 0.16 + pulseD * 0.2;
+    const statusOpacity = transition ? 0.34 : 0.46 + Math.max(pulseA, pulseB, pulseC, pulseD) * 0.18;
+
+    if (activeProfilePhase !== phaseIndex && profilePhaseValue) {
+      profilePhaseValue.textContent = profilePhaseLabels[phaseIndex];
+      activeProfilePhase = phaseIndex;
+    }
+
+    profileScene.classList.toggle("is-holding", transition && next === 2);
+    profileScene.classList.toggle("is-transitioning", transition);
+    setProfileSceneVar("--profile-reveal-a", transition ? 1 : revealA);
+    setProfileSceneVar("--profile-reveal-b", transition ? 1 : revealB);
+    setProfileSceneVar("--profile-reveal-c", transition ? 1 : revealC);
+    setProfileSceneVar("--profile-reveal-d", transition ? 1 : revealD);
+    setProfileSceneVar("--profile-pulse-a", transition ? 0 : pulseA);
+    setProfileSceneVar("--profile-pulse-b", transition ? 0 : pulseB);
+    setProfileSceneVar("--profile-pulse-c", transition ? 0 : pulseC);
+    setProfileSceneVar("--profile-pulse-d", transition ? 0 : pulseD);
+    setProfileSceneVar("--profile-line", transition ? lineStrength * 0.84 : lineStrength);
+    setProfileSceneVar("--profile-ambient", transition ? ambient * 0.76 : ambient);
+    setProfileSceneVar("--profile-status", statusOpacity);
+  }
+
+  function updateMatchSceneState(
+    current: number,
+    segmentProgress: number,
+    transition: boolean,
+    transitionProgress: number,
+  ) {
+    if (
+      !matchScene ||
+      !matchPhaseValue ||
+      !matchCoreLabel ||
+      !matchCounterLabel ||
+      !matchCounterValue ||
+      matchTargetChips.length !== 4 ||
+      !matchCatalogChips.length
+    ) {
+      return;
+    }
+
+    if (current !== matchSceneIndex) {
+      resetMatchSceneState();
+      return;
+    }
+
+    const nonTargetChips = matchCatalogChips.filter((chip) => !chip.classList.contains("is-target"));
+    const dimProgress = clamp((segmentProgress - matchSelectionStartMs) / matchNonTargetFadeMs);
+    const selectionStarts = matchTargetChips.map(
+      (_, index) => matchSelectionStartMs + index * matchSelectionStaggerMs,
+    );
+    const selectionPulses = selectionStarts.map((start) =>
+      pulseWindowMs(segmentProgress, start, matchSelectionDurationMs),
+    );
+    const maxSelectionPulse = selectionPulses.reduce((max, pulse) => Math.max(max, pulse), 0);
+    const preSelectionPhaseIndex =
+      segmentProgress < 760 ? 0 : segmentProgress < 1580 ? 1 : segmentProgress < matchSelectionStartMs ? 2 : 3;
+    let activeIndex = -1;
+    let selectedCount = 0;
+
+    matchTargetChips.forEach((chip, index) => {
+      const start = selectionStarts[index];
+      const isSelected = transition || segmentProgress >= start;
+      const isActive =
+        !transition && segmentProgress >= start && segmentProgress < start + matchSelectionDurationMs;
+
+      chip.classList.toggle("is-selected", isSelected);
+      chip.classList.toggle("is-active", isActive);
+      chip.classList.remove("is-dimmed", "is-receding");
+
+      if (isSelected) {
+        selectedCount = index + 1;
+      }
+
+      if (isActive) {
+        activeIndex = index;
+      }
+
+      chip.style.setProperty(
+        "--match-selected-rotate",
+        `${((index % 2 === 0 ? -1 : 1) * selectionPulses[index] * 2.4).toFixed(2)}deg`,
+      );
+      chip.style.setProperty("--match-selected-opacity", transition ? `${1 - transitionProgress * 0.58}` : "1");
+
+      if (transition) {
+        const exitX = 84 + index * 3;
+        const exitY = -22 + index * 26;
+        chip.style.setProperty("--match-selected-x", `${lerp(0, exitX, transitionProgress).toFixed(2)}px`);
+        chip.style.setProperty("--match-selected-y", `${lerp(0, exitY, transitionProgress).toFixed(2)}px`);
+      } else {
+        chip.style.setProperty("--match-selected-x", "0px");
+        chip.style.setProperty("--match-selected-y", "0px");
+      }
+    });
+
+    nonTargetChips.forEach((chip, index) => {
+      const family = chip.dataset.family ?? "";
+      const familyIndex = matchTargetFamilies.indexOf(family);
+      const familyStart = familyIndex >= 0 ? selectionStarts[familyIndex] : matchSelectionStartMs;
+      const familyProgress = clamp((segmentProgress - familyStart) / 620);
+      const shouldDim = transition || segmentProgress >= familyStart + 40;
+      const shouldRecede = transition || segmentProgress >= familyStart + 180;
+      const driftDirection = index % 2 === 0 ? -1 : 1;
+
+      chip.classList.toggle("is-dimmed", shouldDim);
+      chip.classList.toggle("is-receding", shouldRecede);
+      chip.classList.remove("is-selected", "is-active");
+      chip.style.setProperty(
+        "--match-reject-x",
+        shouldRecede ? `${(driftDirection * (18 + familyProgress * 18)).toFixed(2)}px` : "0px",
+      );
+      chip.style.setProperty(
+        "--match-reject-y",
+        shouldRecede ? `${(12 + familyProgress * 12).toFixed(2)}px` : "0px",
+      );
+      chip.style.setProperty(
+        "--match-reject-rotate",
+        shouldRecede ? `${(driftDirection * (4 + familyProgress * 5)).toFixed(2)}deg` : "0deg",
+      );
+    });
+
+    const phaseText = transition
+      ? matchPhaseLabels[4]
+      : activeIndex >= 0
+        ? `${matchSelectionLabels[activeIndex]} locked`
+        : selectedCount >= matchTargetChips.length
+          ? matchPhaseLabels[4]
+          : matchPhaseLabels[Math.min(preSelectionPhaseIndex, 3)];
+    const engineText =
+      transition || segmentProgress >= matchSelectionStartMs
+        ? matchEngineLabels[3]
+        : matchEngineLabels[preSelectionPhaseIndex];
+    const counterState =
+      transition || selectedCount >= matchTargetChips.length
+        ? matchCounterStates[3]
+        : segmentProgress < 980
+          ? matchCounterStates[0]
+          : segmentProgress < 1780
+            ? matchCounterStates[1]
+            : segmentProgress < matchSelectionStartMs
+              ? matchCounterStates[2]
+              : {
+                  label: matchCounterStates[3].label,
+                  value: `${Math.max(1, selectedCount)} product${selectedCount === 1 ? "" : "s"}`,
+                };
+    const ambient =
+      0.22 +
+      dimProgress * 0.12 +
+      selectionPulses.reduce((sum, pulse) => sum + pulse * 0.12, 0);
+    const corePulse = transition
+      ? 0.42
+      : 0.28 + Math.sin(segmentProgress * 0.0042) * 0.1 + dimProgress * 0.1 + maxSelectionPulse * 0.14;
+    const decisionFlash = transition ? 0.2 : Math.pow(maxSelectionPulse, 1.4);
+    const decisionWave = transition ? 0.28 : maxSelectionPulse;
+
+    matchScene.classList.toggle("is-evaluating", segmentProgress >= matchSelectionStartMs || transition);
+    matchScene.classList.toggle("has-selection", selectedCount > 0 || transition);
+    matchScene.classList.toggle("is-transitioning", transition);
+    matchPhaseValue.textContent = phaseText;
+    matchCoreLabel.textContent = engineText;
+    matchCounterLabel.textContent = counterState.label;
+    matchCounterValue.textContent = counterState.value;
+    setMatchSceneVar("--match-ambient", transition ? ambient * 0.84 : ambient);
+    setMatchSceneVar("--match-core-pulse", transition ? corePulse * 0.84 : corePulse);
+    setMatchSceneVar("--match-dim", transition ? 1 : dimProgress);
+    setMatchSceneVar("--match-wave", decisionWave);
+    setMatchSceneVar("--match-flash", decisionFlash);
+    setMatchSceneVar("--match-transition", transition ? transitionProgress : 0);
+  }
+
+  function updateRoutineSceneState(
+    current: number,
+    next: number,
+    segmentProgress: number,
+    transition: boolean,
+  ) {
+    if (!routineMeterFill || routineSceneRows.length !== 4) {
+      return;
+    }
+
+    if (current !== routineSceneIndex) {
+      if (next !== routineSceneIndex) {
+        resetRoutineSceneState();
+      }
+      return;
+    }
+
+    const meterProgress = transition
+      ? 1
+      : easeInOut(clamp(segmentProgress / routineMeterDurationMs));
+    routineMeterFill.style.transform = `scaleX(${meterProgress.toFixed(4)})`;
+
+    routineSceneRows.forEach((row, index) => {
+      const revealProgress = transition
+        ? 1
+        : easeInOut(
+            clamp((segmentProgress - routineRevealStarts[index]) / routineRevealDurationMs),
+          );
+
+      row.style.opacity = revealProgress.toFixed(4);
+      row.style.transform = `translate3d(0,${((1 - revealProgress) * 12).toFixed(2)}px,0)`;
+    });
+  }
+
+  function updateResultSceneState(
+    current: number,
+    segmentProgress: number,
+    transition: boolean,
+    transitionProgress: number,
+  ) {
+    if (!resultScene || !resultTitle || !resultLead || !resultStatus) {
+      return;
+    }
+
+    if (current !== resultSceneIndex) {
+      resetResultSceneState();
+      return;
+    }
+
+    const arrivalProgress = easeInOut(clamp(segmentProgress / 900));
+    const checkProgress = easeInOut(clamp((segmentProgress - 220) / 760));
+    const summaryProgress = easeInOut(clamp((segmentProgress - resultRoutineStartMs) / 920));
+    const checklistPulse = resultChecklistStarts.reduce(
+      (sum, start) => sum + pulseWindowMs(segmentProgress, start, resultChecklistDurationMs) * 0.18,
+      0,
+    );
+    const routinePulse = resultRoutineChips.reduce(
+      (sum, _, index) =>
+        sum +
+        pulseWindowMs(
+          segmentProgress,
+          resultRoutineStartMs + index * resultRoutineStaggerMs,
+          resultRoutineDurationMs,
+        ) *
+          0.12,
+      0,
+    );
+    const glow = 0.28 + arrivalProgress * 0.28 + checklistPulse + routinePulse * 0.7;
+    const bloom = 0.18 + checkProgress * 0.24 + routinePulse;
+    const idle = 0.22 + Math.sin(segmentProgress * 0.0022) * 0.08 + summaryProgress * 0.08;
+
+    resultChecklist.forEach((item, index) => {
+      const reveal = transition
+        ? 1 - transitionProgress * 0.36
+        : easeInOut(
+            clamp((segmentProgress - resultChecklistStarts[index]) / resultChecklistDurationMs),
+          );
+
+      item.style.opacity = reveal.toFixed(4);
+      item.style.transform = `translate3d(0,${((1 - reveal) * 14).toFixed(2)}px,0) scale(${(
+        0.97 + reveal * 0.03
+      ).toFixed(4)})`;
+    });
+
+    resultRoutineChips.forEach((chip, index) => {
+      const reveal = transition
+        ? 1 - transitionProgress * 0.42
+        : easeInOut(
+            clamp(
+              (segmentProgress - (resultRoutineStartMs + index * resultRoutineStaggerMs)) /
+                resultRoutineDurationMs,
+            ),
+          );
+
+      chip.style.opacity = reveal.toFixed(4);
+      chip.style.transform = `translate3d(0,${((1 - reveal) * 12).toFixed(2)}px,0) scale(${(
+        0.96 + reveal * 0.04
+      ).toFixed(4)})`;
+    });
+
+    resultScene.classList.toggle("is-transitioning", transition);
+    resultScene.classList.toggle("is-settled", segmentProgress >= resultRoutineStartMs || transition);
+    resultStatus.textContent = transition ? "Reforming analysis field" : "Routine successfully generated";
+    resultScene.style.setProperty("--result-arrival", transition ? "1" : arrivalProgress.toFixed(4));
+    resultScene.style.setProperty("--result-glow", transition ? (glow * 0.86).toFixed(4) : glow.toFixed(4));
+    resultScene.style.setProperty("--result-bloom", transition ? (bloom * 0.92).toFixed(4) : bloom.toFixed(4));
+    resultScene.style.setProperty("--result-idle", idle.toFixed(4));
+    resultScene.style.setProperty("--result-transition", transition ? transitionProgress.toFixed(4) : "0");
+  }
+
+  function buildSceneTargets() {
+    const faceShell = heroCinema.querySelector(".scene-scan .face-shell");
+    const faceCore = heroCinema.querySelector(".scene-scan .face-core");
+    const faceVisual = heroCinema.querySelector(".scene-scan .face-visual");
+    const faceBeam = heroCinema.querySelector(".scene-scan .face-beam");
+    const faceRing = heroCinema.querySelector(".scene-scan .face-ring");
+    const analysisZones = Array.from(heroCinema.querySelectorAll(".scene-scan .analysis-zone"));
+    const scanTrack = heroCinema.querySelector(".scene-scan .scan-phase-track");
+    const scanMarkers = Array.from(heroCinema.querySelectorAll(".scene-scan .scan-phase-marker"));
+    const scanConfirmation = heroCinema.querySelector(".scene-scan .scan-confirmation");
+    const profilePills = Array.from(heroCinema.querySelectorAll(".scene-profile .profile-pill"));
+    const matchCore = heroCinema.querySelector(".scene-match .selection-engine-core");
+    const matchChips = Array.from(heroCinema.querySelectorAll(".scene-match .catalog-chip"));
+    const routineTitle = heroCinema.querySelector(".scene-routine .sheet-title");
+    const routineRows = Array.from(heroCinema.querySelectorAll(".scene-routine .sheet-row"));
+    const resultTitleNode = heroCinema.querySelector(".scene-result .result-title");
+    const resultLeadNode = heroCinema.querySelector(".scene-result .result-lead");
+    const resultStatusNode = heroCinema.querySelector(".scene-result .result-status");
+    const resultCheckNode = heroCinema.querySelector(".scene-result .result-checkmark");
+    const resultItems = Array.from(heroCinema.querySelectorAll(".scene-result .result-check-item"));
+    const resultSummary = Array.from(heroCinema.querySelectorAll(".scene-result .result-routine-chip"));
+
+    if (
+      !faceShell ||
+      !faceCore ||
+      !faceVisual ||
+      !faceBeam ||
+      !faceRing ||
+      !scanTrack ||
+      !scanConfirmation ||
+      profilePills.length !== 4 ||
+      !matchCore ||
+      matchChips.length < 8 ||
+      !routineTitle ||
+      routineRows.length !== 4 ||
+      !resultTitleNode ||
+      !resultLeadNode ||
+      !resultStatusNode ||
+      !resultCheckNode ||
+      resultItems.length !== 4 ||
+      resultSummary.length !== 4
+    ) {
+      sceneTargets = Array.from({ length: scenes.length }, () =>
+        normalizePoints([], particleCount),
+      );
+      return;
+    }
+
+    const faceRect = relativeRect(faceVisual);
+    const faceCoreRect = relativeRect(faceCore);
+    const beamRect = relativeRect(faceBeam);
+    const trackRect = relativeRect(scanTrack);
+    const scanPoints = [
+      ...sampleEllipse(faceRect, 112, 0.12, 0.08),
+      ...sampleEllipse(faceCoreRect, 42, 0.14, 0.06),
+      ...sampleLine(
+        { x: beamRect.left + 8, y: beamRect.top + beamRect.height / 2 },
+        {
+          x: beamRect.left + beamRect.width - 8,
+          y: beamRect.top + beamRect.height / 2,
+        },
+        72,
+      ),
+      ...analysisZones.flatMap((target, index) =>
+        sampleCluster(relativeRect(target), 22, 300 + index * 17),
+      ),
+      ...sampleRectFill(trackRect, 34, 420),
+      ...scanMarkers.flatMap((marker, index) =>
+        sampleCluster(relativeRect(marker), 10, 470 + index * 19),
+      ),
+      ...sampleRectFill(relativeRect(scanConfirmation), 28, 560),
+      ...sampleRectOutline(relativeRect(faceRing), 42),
+      ...sampleRectOutline(relativeRect(faceShell), 58),
+    ];
+
+    const profilePoints = profilePills.flatMap((pill, index) => [
+      ...sampleRectFill(relativeRect(pill), 52, 400 + index * 31),
+      ...sampleRectOutline(relativeRect(pill), 18),
+    ]);
+
+    const matchPoints = [
+      ...sampleEllipse(relativeRect(matchCore), 90, 0.1, 0.1),
+      ...matchChips.flatMap((chip, index) =>
+        sampleRectFill(relativeRect(chip), 40, 520 + index * 23),
+      ),
+    ];
+
+    const routinePoints = [
+      ...sampleRectFill(relativeRect(routineTitle), 74, 640),
+      ...routineRows.flatMap((row, index) => sampleRectFill(relativeRect(row), 52, 700 + index * 29)),
+    ];
+
+    const resultPoints = [
+      ...sampleRectFill(relativeRect(resultTitleNode), 84, 840),
+      ...sampleRectFill(relativeRect(resultLeadNode), 54, 890),
+      ...sampleCluster(relativeRect(resultCheckNode), 38, 930),
+      ...sampleRectFill(relativeRect(resultStatusNode), 40, 980),
+      ...resultItems.flatMap((item, index) => [
+        ...sampleRectFill(relativeRect(item), 32, 1040 + index * 29),
+        ...sampleRectOutline(relativeRect(item), 12),
+      ]),
+      ...resultSummary.flatMap((chip, index) =>
+        sampleRectFill(relativeRect(chip), 28, 1180 + index * 23),
+      ),
+    ];
+
+    sceneTargets = [
+      normalizePoints(scanPoints, particleCount),
+      normalizePoints(profilePoints, particleCount),
+      normalizePoints(matchPoints, particleCount),
+      normalizePoints(routinePoints, particleCount),
+      normalizePoints(resultPoints, particleCount),
+    ];
+  }
+
+  function setSceneStyle(node: HTMLElement, opacity: number, translateY: number, scale: number, blur: number) {
+    node.style.opacity = opacity.toFixed(4);
+    node.style.transform = `translate3d(0,${translateY}px,0) scale(${scale})`;
+    node.style.filter = `blur(${blur}px)`;
+  }
+
+  function applySceneStates(now: number) {
+    let elapsed = 0;
+    let segmentIndex = 0;
+
+    for (let index = 0; index < sceneSegmentDurations.length; index += 1) {
+      const segmentDuration = sceneSegmentDurations[index];
+
+      if (now < elapsed + segmentDuration) {
+        segmentIndex = index;
+        break;
+      }
+
+      elapsed += segmentDuration;
+    }
+
+    const segmentProgress = now - elapsed;
+    const current = segmentIndex;
+    const next = (segmentIndex + 1) % scenes.length;
+    const currentHoldMs = sceneHoldDurations[current] ?? holdMs;
+    const transition = segmentProgress > currentHoldMs;
+
+    scenes.forEach((scene, index) => {
+      if (index !== current && index !== next) {
+        setSceneStyle(scene, 0, 18, 0.96, 16);
+      }
+    });
+
+    if (!transition) {
+      setSceneStyle(scenes[current], 1, 0, 1, 0);
+      setSceneStyle(scenes[next], 0, 18, 0.96, 16);
+      return { current, next, transition: false, transitionProgress: 0, segmentProgress };
+    }
+
+    const transitionProgress = (segmentProgress - currentHoldMs) / transitionMs;
+    const sourceOpacity =
+      transitionProgress < 0.56 ? 1 - easeInOut(transitionProgress / 0.56) : 0;
+    const targetOpacity =
+      transitionProgress > 0.68 ? easeInOut((transitionProgress - 0.68) / 0.32) : 0;
+
+    setSceneStyle(
+      scenes[current],
+      sourceOpacity,
+      lerp(0, -14, transitionProgress),
+      lerp(1, 1.02, transitionProgress),
+      lerp(0, 14, transitionProgress),
+    );
+    setSceneStyle(
+      scenes[next],
+      targetOpacity,
+      lerp(18, 0, targetOpacity),
+      lerp(0.96, 1, targetOpacity),
+      lerp(16, 0, targetOpacity),
+    );
+
+    return { current, next, transition: true, transitionProgress, segmentProgress };
+  }
+
+  function orbitPoint(particle: HeroParticle, time: number, center: HeroPoint) {
+    const angle = particle.angle + time * 0.00115 * particle.speed;
+    const radius = particle.orbit * (0.9 + Math.sin(time * 0.0018 + particle.angle) * 0.08);
+
+    return {
+      x: center.x + Math.cos(angle) * radius,
+      y: center.y + Math.sin(angle) * radius * 0.68,
+    };
+  }
+
+  function drawParticles(time: number, current: number, next: number, transitionProgress: number) {
+    const sourcePoints = sceneTargets[current] ?? [];
+    const targetPoints = sceneTargets[next] ?? [];
+
+    if (!sourcePoints.length || !targetPoints.length) {
+      return;
+    }
+
+    const center = {
+      x: width * 0.5 + (mouse.x - 0.5) * 12,
+      y: height * 0.5 + (mouse.y - 0.5) * 12,
+    };
+
+    const orbitGlow = heroContext.createRadialGradient(center.x, center.y, 0, center.x, center.y, 110);
+    orbitGlow.addColorStop(0, "rgba(255,231,163,0.12)");
+    orbitGlow.addColorStop(0.5, "rgba(115,169,255,0.08)");
+    orbitGlow.addColorStop(1, "rgba(115,169,255,0)");
+    heroContext.fillStyle = orbitGlow;
+    heroContext.beginPath();
+    heroContext.arc(center.x, center.y, 110, 0, Math.PI * 2);
+    heroContext.fill();
+
+    for (let index = 0; index < particleCount; index += 1) {
+      const source = sourcePoints[index];
+      const target = targetPoints[index];
+      const particle = particles[index];
+      const spreadX = (seededNoise(index * 13 + 1) - 0.5) * 28 * particle.depth;
+      const spreadY = (seededNoise(index * 17 + 3) - 0.5) * 22 * particle.depth;
+      const travelTarget = {
+        x: lerp(source.x, center.x, 0.72) + spreadX * 0.32,
+        y: lerp(source.y, center.y, 0.72) + spreadY * 0.32,
+      };
+      const orbit = orbitPoint(particle, time, center);
+
+      let x = source.x;
+      let y = source.y;
+      let alpha = particle.alpha * 0.7;
+
+      if (transitionProgress < 0.38) {
+        const progress = easeInOut(transitionProgress / 0.38);
+        x = lerp(source.x, travelTarget.x, progress);
+        y = lerp(source.y, travelTarget.y, progress);
+        alpha = particle.alpha * lerp(0.42, 0.92, progress);
+      } else if (transitionProgress < 0.68) {
+        const progress = easeInOut((transitionProgress - 0.38) / 0.3);
+        x = lerp(travelTarget.x, orbit.x, progress);
+        y = lerp(travelTarget.y, orbit.y, progress);
+        alpha = particle.alpha;
+      } else {
+        const progress = easeInOut((transitionProgress - 0.68) / 0.32);
+        x = lerp(orbit.x, target.x, progress);
+        y = lerp(orbit.y, target.y, progress);
+        alpha = particle.alpha * lerp(1, 0.76, progress);
+      }
+
+      x += (mouse.x - 0.5) * particle.depth * 5;
+      y += (mouse.y - 0.5) * particle.depth * 4;
+
+      heroContext.beginPath();
+      heroContext.arc(x, y, particle.size * 2.15, 0, Math.PI * 2);
+      heroContext.fillStyle = `rgba(${particle.color},${alpha * 0.12})`;
+      heroContext.fill();
+
+      heroContext.beginPath();
+      heroContext.arc(x, y, particle.size, 0, Math.PI * 2);
+      heroContext.fillStyle = `rgba(${particle.color},${alpha})`;
+      heroContext.fill();
+    }
+  }
+
+  function resizeCanvas() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    width = heroCinema.clientWidth;
+    height = heroCinema.clientHeight;
+    heroCanvas.width = Math.max(1, Math.floor(width * dpr));
+    heroCanvas.height = Math.max(1, Math.floor(height * dpr));
+    heroCanvas.style.width = `${width}px`;
+    heroCanvas.style.height = `${height}px`;
+    heroContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+    buildSceneTargets();
+  }
+
+  function showFirstSceneImmediately() {
+    scenes.forEach((scene, index) => setSceneStyle(scene, index === 0 ? 1 : 0, 0, 1, 0));
+    resetScanSceneState();
+    resetProfileSceneState();
+    resetMatchSceneState();
+    resetRoutineSceneState();
+    resetResultSceneState();
+    heroContext.clearRect(0, 0, width, height);
+  }
+
+  function isHeroPlaybackReady() {
+    return document.body.classList.contains("intro-complete") || !document.body.classList.contains("intro-lock");
+  }
+
+  function render(time: number) {
+    if (destroyed) {
+      return;
+    }
+
+    if (!isHeroPlaybackReady()) {
+      loopStartTime = null;
+      showFirstSceneImmediately();
+      animationFrame = window.requestAnimationFrame(render);
+      return;
+    }
+
+    if (loopStartTime === null) {
+      loopStartTime = time;
+    }
+
+    const cycleTime = (time - loopStartTime) % loopMs;
+    const state = applySceneStates(cycleTime);
+    updateScanSceneState(
+      state.current,
+      state.next,
+      state.segmentProgress,
+      state.transition,
+      state.transitionProgress,
+    );
+    updateProfileSceneState(
+      state.current,
+      state.next,
+      state.segmentProgress,
+      state.transition,
+    );
+    updateMatchSceneState(
+      state.current,
+      state.segmentProgress,
+      state.transition,
+      state.transitionProgress,
+    );
+    updateRoutineSceneState(
+      state.current,
+      state.next,
+      state.segmentProgress,
+      state.transition,
+    );
+    updateResultSceneState(
+      state.current,
+      state.segmentProgress,
+      state.transition,
+      state.transitionProgress,
+    );
+    heroContext.clearRect(0, 0, width, height);
+
+    if (state.transition) {
+      buildSceneTargets();
+      drawParticles(time, state.current, state.next, state.transitionProgress);
+    }
+
+    animationFrame = window.requestAnimationFrame(render);
+  }
+
+  const onMouseMove = (event: MouseEvent) => {
+    const rect = heroCinema.getBoundingClientRect();
+    mouse.x = (event.clientX - rect.left) / rect.width;
+    mouse.y = (event.clientY - rect.top) / rect.height;
+    heroCinema.style.transform = `perspective(1000px) rotateY(${(mouse.x - 0.5) * 4.5}deg) rotateX(${-(mouse.y - 0.5) * 4.5}deg)`;
   };
 
-  applyMode(mode);
+  const onMouseLeave = () => {
+    mouse.x = 0.5;
+    mouse.y = 0.5;
+    heroCinema.style.transform = "perspective(1000px) rotateY(0deg) rotateX(0deg)";
+  };
+
+  heroCinema.addEventListener("mousemove", onMouseMove);
+  heroCinema.addEventListener("mouseleave", onMouseLeave);
+
+  if (prefersReducedMotion) {
+    scenes.forEach((scene, index) => setSceneStyle(scene, index === 0 ? 1 : 0, 0, 1, 0));
+    resetScanSceneState();
+    resetProfileSceneState();
+    resetMatchSceneState();
+    resetRoutineSceneState();
+    resetResultSceneState();
+    return () => {
+      heroCinema.removeEventListener("mousemove", onMouseMove);
+      heroCinema.removeEventListener("mouseleave", onMouseLeave);
+    };
+  }
+
+  const resizeObserver = new ResizeObserver(() => resizeCanvas());
+  resizeObserver.observe(heroCinema);
   resizeCanvas();
-  syncWithActiveChip();
-
-  loadFaceMesh()
-    .then((asset) => {
-      if (destroyed) {
-        return;
-      }
-
-      points = asset.points;
-      emptyState.hidden = true;
-      frameId = window.requestAnimationFrame(render);
-    })
-    .catch(() => {
-      emptyState.textContent = "Face mesh unavailable";
-    });
+  showFirstSceneImmediately();
+  animationFrame = window.requestAnimationFrame(render);
 
   return () => {
     destroyed = true;
-    window.cancelAnimationFrame(frameId);
+    window.cancelAnimationFrame(animationFrame);
     resizeObserver.disconnect();
-    window.removeEventListener("resize", resizeCanvas);
-    stage.removeEventListener("pointermove", onPointerMove);
-    stage.removeEventListener("pointerleave", onPointerLeave);
-    chipListeners.forEach(({ chip, handler }) => chip.removeEventListener("click", handler));
+    heroCinema.removeEventListener("mousemove", onMouseMove);
+    heroCinema.removeEventListener("mouseleave", onMouseLeave);
+    scenes.forEach((scene, index) => setSceneStyle(scene, index === 0 ? 1 : 0, 0, 1, 0));
+    resetScanSceneState();
+    resetProfileSceneState();
+    resetMatchSceneState();
+    resetRoutineSceneState();
+    resetResultSceneState();
+    heroContext.clearRect(0, 0, width, height);
   };
 }
 
-const landingHtml = `<div class="loader"><div class="loader-brand">NABI</div><div class="loader-slit"></div><div class="loader-sub">private skin intelligence system</div></div>
+const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanvas" aria-hidden="true"></canvas><div class="loader-grid"></div><div class="loader-vignette"></div><div class="loader-copy"><div class="loader-kicker" id="loaderPhase">calibrating brand object</div><div class="loader-brand-shell"><div class="loader-brand">NABI</div><div class="loader-sub">private skin intelligence system</div></div><div class="loader-progress"><span id="loaderProgressFill"></span></div></div><div class="loader-hud loader-hud-a"><span>Mode</span>Brand ignition</div><div class="loader-hud loader-hud-b"><span>Asset</span>3D identity mark</div></div>
   <div class="cursor" id="cursor"></div><div class="glow" id="glow"></div><div class="noise"></div>
 
   <nav class="nav">
     <div class="logo" aria-label="NABI"><img class="logo-img" src="/nabi-logo-cropped.png" alt="NABI" /></div>
-    <div class="nav-links"><a href="#problem">Problem</a><a href="#journey">Journey</a><a href="#simulator">Experience</a></div>
+    <div class="nav-links"><a href="#problem">Problem</a><a href="#journey">Journey</a><a href="#simulator">Why Skin ID</a></div>
     <a class="cta magnetic" href="${calendlyUrl}" target="_blank" rel="noreferrer"><span class="btn-text">Request a Demo</span></a>
   </nav>
 
   <section class="hero">
     <div class="hero-inner">
       <div>
-        <div class="eyebrow"><span class="dot"></span>Private AI conversion system for skincare brands</div>
-        <h1>Turn skincare browsing into <span class="gradient-text">personalized buying decisions.</span></h1>
-        <p>NABI Skin ID helps skincare brands convert more visitors into <span class="highlight-word highlight-gold">higher-value carts</span> through <span class="highlight-word highlight-blue">AI-powered skin analysis</span>, <span class="highlight-word highlight-cyan">catalog logic</span> and Shopify-native implementation.</p>
-        <div class="hero-actions"><a class="cta magnetic" href="${calendlyUrl}" target="_blank" rel="noreferrer"><span class="btn-text">Discover Skin ID</span></a><a class="cta ghost magnetic" href="#simulator"><span class="btn-text">Try the concept</span></a></div>
-        <div class="hero-note">No public demo. No marketplace plugin. Every deployment is configured around the brand's catalog, UX, routine logic and revenue goals.</div>
+        <div class="eyebrow"><span class="dot"></span>Enterprise ready</div>
+        <h1>Skincare Shouldn't Be <span class="gradient-text">Generic.</span></h1>
+        <p class="hero-statement"><span class="hero-statement-accessible">Personalized routines. Better decisions. More conversions.</span><span class="hero-slot" aria-hidden="true"><span class="hero-slot-reel"><span class="hero-slot-item hero-routines">Personalized routines.</span><span class="hero-slot-item hero-decisions">Better decisions.</span><span class="hero-slot-item hero-conversions">More conversions.</span><span class="hero-slot-item hero-routines">Personalized routines.</span></span></span></p>
+        <div class="hero-actions"><a class="cta magnetic" href="${calendlyUrl}" target="_blank" rel="noreferrer"><span class="btn-text">Discover Skin ID</span></a><a class="cta ghost magnetic" href="#simulator"><span class="btn-text">See why brands choose it</span></a></div>
+        <div class="hero-platforms" data-open="false">
+          <button class="hero-platform-toggle" type="button" aria-expanded="false" aria-controls="heroPlatformPanel">
+            <span class="hero-platform-toggle-text">Supported Platforms</span>
+            <span class="hero-platform-toggle-icon" aria-hidden="true">
+              <span class="hero-platform-toggle-ring"></span>
+              <svg viewBox="0 0 12 12" focusable="false">
+                <path d="M6 2v8M2 6h8" />
+              </svg>
+            </span>
+          </button>
+          <div class="hero-platform-panel" id="heroPlatformPanel" aria-hidden="true">
+            <div class="hero-platform-panel-shell">
+              <span class="hero-platform-more" aria-hidden="true">And more</span>
+              <div class="hero-platform-list" role="list" aria-label="Supported platforms">
+                <span class="hero-platform-logo platform-shopify" role="img" aria-label="Shopify" style="--token-x:0px;--token-y:-108px;--token-delay:.04s">
+                  <img class="hero-platform-logo-image" src="/platform-logos/shopify.png" alt="" aria-hidden="true" />
+                </span>
+                <span class="hero-platform-logo platform-woo" role="img" aria-label="WooCommerce" style="--token-x:102px;--token-y:-34px;--token-delay:.1s">
+                  <img class="hero-platform-logo-image" src="/platform-logos/woocommerce.png" alt="" aria-hidden="true" />
+                </span>
+                <span class="hero-platform-logo platform-wix" role="img" aria-label="Wix" style="--token-x:64px;--token-y:90px;--token-delay:.16s">
+                  <img class="hero-platform-logo-image" src="/platform-logos/wix.png" alt="" aria-hidden="true" />
+                </span>
+                <span class="hero-platform-logo platform-squarespace" role="img" aria-label="Squarespace" style="--token-x:-64px;--token-y:90px;--token-delay:.22s">
+                  <img class="hero-platform-logo-image" src="/platform-logos/squarespace.png" alt="" aria-hidden="true" />
+                </span>
+                <span class="hero-platform-logo platform-bigcommerce" role="img" aria-label="BigCommerce" style="--token-x:-102px;--token-y:-34px;--token-delay:.28s">
+                  <img class="hero-platform-logo-image" src="/platform-logos/bigcommerce.png" alt="" aria-hidden="true" />
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="cinema" id="cinema">
-        <canvas id="heroCanvas"></canvas><div class="scanner-beam"></div><div class="status"><span class="dot"></span>Live personalization layer</div>
-        <div class="data-panel a"><div class="label">Visitor signal</div><div class="value">Sensitive + dry</div><div class="meter"><span></span></div></div>
-        <div class="data-panel b"><div class="label">Primary intent</div><div class="value">Hydration</div><div class="meter"><span></span></div></div>
-        <div class="data-panel c"><div class="label">Cart direction</div><div class="value">Routine bundle ready</div><div class="meter"><span></span></div></div>
+        <canvas id="heroCanvas" aria-hidden="true"></canvas><div class="status"><span class="dot"></span>Live personalization layer</div>
+        <div class="hero-sim" aria-hidden="true">
+          <div class="sim-glow sim-glow-a"></div>
+          <div class="sim-glow sim-glow-b"></div>
+          <div class="hero-scene scene-scan">
+            <div class="scene-shell scan-shell">
+              <div class="face-shell">
+                <div class="face-depth face-depth-a"></div>
+                <div class="face-depth face-depth-b"></div>
+                <div class="face-network">
+                  <span class="network-line line-a"></span>
+                  <span class="network-line line-b"></span>
+                  <span class="network-line line-c"></span>
+                  <span class="network-node node-a"></span>
+                  <span class="network-node node-b"></span>
+                  <span class="network-node node-c"></span>
+                  <span class="network-node node-d"></span>
+                  <span class="network-node node-e"></span>
+                </div>
+                <div class="face-ambient"></div>
+                <div class="face-reflection face-reflection-a"></div>
+                <div class="face-reflection face-reflection-b"></div>
+                <div class="face-ring"></div>
+                <div class="face-core">
+                  <div class="face-core-glow"></div>
+                  <div class="face-visual">
+                    <canvas class="face-model-canvas" id="faceModelCanvas" aria-hidden="true"></canvas>
+                  </div>
+                  <span class="analysis-zone zone-hydration-a"></span>
+                  <span class="analysis-zone zone-barrier"></span>
+                  <span class="analysis-zone zone-sensitivity"></span>
+                  <span class="analysis-zone zone-hydration-b"></span>
+                  <div class="scan-orbit">
+                    <span class="orbit-particle particle-a"></span>
+                    <span class="orbit-particle particle-b"></span>
+                    <span class="orbit-particle particle-c"></span>
+                    <span class="orbit-particle particle-d"></span>
+                    <span class="orbit-particle particle-e"></span>
+                    <span class="orbit-particle particle-f"></span>
+                  </div>
+                </div>
+                <div class="face-beam"></div>
+              </div>
+              <div class="scan-caption">
+                <div class="scan-caption-copy">
+                  <span class="scan-caption-label">Live skin analysis</span>
+                  <span class="scan-phase-value">Initializing</span>
+                </div>
+                <div class="scan-phase-track"><span class="scan-phase-fill"></span></div>
+                <div class="scan-phase-markers">
+                  <span class="scan-phase-marker"></span>
+                  <span class="scan-phase-marker"></span>
+                  <span class="scan-phase-marker"></span>
+                  <span class="scan-phase-marker"></span>
+                </div>
+                <div class="scan-confirmation"><span class="scan-check">✓</span><span>Analysis complete</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="hero-scene scene-profile">
+            <div class="scene-shell profile-shell">
+              <div class="profile-head">
+                <div class="scene-kicker">Detected skin profile</div>
+                <div class="profile-phase">
+                  <span class="profile-phase-dot"></span>
+                  <span class="profile-phase-value">Analyzing profile</span>
+                </div>
+              </div>
+              <div class="profile-stage">
+                <div class="profile-engine" aria-hidden="true">
+                  <span class="profile-beam beam-a"></span>
+                  <span class="profile-beam beam-b"></span>
+                  <span class="profile-beam beam-c"></span>
+                  <span class="profile-flow-node flow-node-a"></span>
+                  <span class="profile-flow-node flow-node-b"></span>
+                  <span class="profile-flow-node flow-node-c"></span>
+                  <span class="profile-flow-node flow-node-d"></span>
+                  <span class="profile-particle particle-a"></span>
+                  <span class="profile-particle particle-b"></span>
+                  <span class="profile-particle particle-c"></span>
+                  <span class="profile-particle particle-d"></span>
+                  <span class="profile-particle particle-e"></span>
+                  <span class="profile-particle particle-f"></span>
+                </div>
+                <div class="profile-line profile-line-a"></div>
+                <div class="profile-line profile-line-b"></div>
+                <div class="profile-line profile-line-c"></div>
+                <div class="profile-stack">
+                  <div class="profile-pill profile-card profile-type pill-a">
+                    <div class="profile-card-aura"></div>
+                    <div class="profile-label">Skin type</div>
+                    <div class="profile-value">Dry Skin</div>
+                    <div class="profile-subline">
+                      <span class="profile-subtitle">Primary type</span>
+                      <span class="profile-confidence">92% confidence</span>
+                    </div>
+                    <div class="profile-confidence-bar"><span></span></div>
+                    <div class="profile-type-visual" aria-hidden="true">
+                      <svg viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect class="type-frame" x="10.5" y="10.5" width="75" height="75" rx="18" />
+                        <path class="type-contour contour-a" d="M28 34c8-7 28-7 38 0" />
+                        <path class="type-contour contour-b" d="M24 49c11-9 37-9 48 0" />
+                        <path class="type-contour contour-c" d="M30 64c9-6 27-6 36 0" />
+                        <circle class="type-point point-a" cx="30" cy="36" r="2.5" />
+                        <circle class="type-point point-b" cx="62" cy="50" r="2.5" />
+                        <circle class="type-point point-c" cx="49" cy="63" r="2.5" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="profile-pill profile-card profile-sensitivity pill-b">
+                    <div class="profile-card-aura"></div>
+                    <div class="profile-card-head">
+                      <div class="profile-card-copy">
+                        <div class="profile-label">Sensitivity</div>
+                        <div class="profile-value">High Sensitivity</div>
+                      </div>
+                      <div class="sensitivity-signal" aria-hidden="true">
+                        <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle class="sens-halo" cx="22" cy="22" r="17.5" />
+                          <circle class="sens-ring sens-ring-a" cx="22" cy="22" r="14.5" />
+                          <circle class="sens-ring sens-ring-b" cx="22" cy="22" r="8.5" />
+                          <path class="sens-wave" d="M10 23.5h5l2.8-4.5 4.2 8 3.2-5 1.8 1.8H34" />
+                          <circle class="sens-core" cx="22" cy="22" r="3" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div class="profile-subtitle">Reactive barrier response</div>
+                  </div>
+                  <div class="profile-pill profile-card profile-environment pill-c">
+                    <div class="profile-card-aura"></div>
+                    <div class="profile-card-head">
+                      <div class="profile-card-copy">
+                        <div class="profile-label">Environment</div>
+                        <div class="profile-value">Urban Exposure</div>
+                      </div>
+                      <div class="environment-glyph" aria-hidden="true">
+                        <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path class="env-line env-line-a" d="M11 28.5 18.5 18l8 5.2 7-8.2" />
+                          <path class="env-line env-line-b" d="M18.5 18 26.5 23.2 33.5 15" />
+                          <circle class="env-node env-node-a" cx="11" cy="28.5" r="2.6" />
+                          <circle class="env-node env-node-b" cx="18.5" cy="18" r="2.6" />
+                          <circle class="env-node env-node-c" cx="26.5" cy="23.2" r="2.6" />
+                          <circle class="env-node env-node-d" cx="33.5" cy="15" r="2.6" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div class="profile-subtitle">Exposure profile</div>
+                  </div>
+                  <div class="profile-pill profile-card profile-goal pill-d">
+                    <div class="profile-card-aura"></div>
+                    <div class="profile-goal-top">
+                      <div class="profile-card-copy">
+                        <div class="profile-label">Primary goal</div>
+                        <div class="profile-value">Hydration</div>
+                      </div>
+                      <div class="goal-mark" aria-hidden="true">
+                        <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle class="goal-halo" cx="26" cy="26" r="20" />
+                          <circle class="goal-orb-ring" cx="26" cy="26" r="15" />
+                          <circle class="goal-orb-core" cx="26" cy="26" r="10" />
+                          <path class="goal-drop-shape" d="M27.8 17.4c3.9 4.8 6.6 8.3 6.6 12 0 4.6-3.8 8.4-8.4 8.4s-8.4-3.8-8.4-8.4c0-3.7 2.8-7.2 6.7-12 .9-1.1 2.6-1.1 3.5 0Z" />
+                          <circle class="goal-spark" cx="31.5" cy="21" r="2.2" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div class="profile-subtitle">Comfort + moisture retention</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="hero-scene scene-match">
+            <div class="scene-shell match-shell">
+                <div class="match-head">
+                  <div class="scene-kicker">Catalog selection</div>
+                  <div class="match-phase">
+                    <span class="match-phase-dot"></span>
+                    <span class="match-phase-value">Catalog search live</span>
+                  </div>
+                </div>
+              <div class="match-stage">
+                <div class="match-counter" aria-live="polite">
+                  <span class="match-counter-label">Catalog</span>
+                  <strong class="match-counter-value">247 products</strong>
+                </div>
+                <div class="selection-engine" aria-hidden="true">
+                  <div class="engine-ring ring-a"></div>
+                  <div class="engine-ring ring-b"></div>
+                  <div class="engine-ring ring-c"></div>
+                  <div class="engine-pulse"></div>
+                  <span class="engine-spark spark-a"></span>
+                  <span class="engine-spark spark-b"></span>
+                  <span class="engine-spark spark-c"></span>
+                  <span class="engine-orbit-dot orbit-dot-a"></span>
+                  <span class="engine-orbit-dot orbit-dot-b"></span>
+                  <span class="engine-orbit-dot orbit-dot-c"></span>
+                  <span class="engine-orbit-dot orbit-dot-d"></span>
+                  <div class="selection-engine-core">
+                    <span class="engine-core-label">Selecting</span>
+                  </div>
+                </div>
+                <div class="catalog-chip orbit-a catalog-foam" data-family="cleanser">Foaming Cleanser</div>
+                <div class="catalog-chip orbit-b catalog-vitamin" data-family="serum">Vitamin C</div>
+                <div class="catalog-chip orbit-c catalog-eye" data-family="spf">Eye Cream</div>
+                <div class="catalog-chip orbit-d catalog-essence" data-family="serum">Essence</div>
+                <div class="catalog-chip orbit-a catalog-retinol" data-family="serum">Retinol</div>
+                <div class="catalog-chip orbit-b catalog-toner" data-family="cleanser">Toner</div>
+                <div class="catalog-chip orbit-c catalog-barrier" data-family="moisturizer">Barrier Cream</div>
+                <div class="catalog-chip orbit-d catalog-mist" data-family="moisturizer">Mist</div>
+                <div class="catalog-chip orbit-a catalog-mask" data-family="spf">Sleeping Mask</div>
+                <div class="catalog-chip orbit-b catalog-oil" data-family="moisturizer">Oil</div>
+                <div class="catalog-chip orbit-c catalog-gel" data-family="cleanser">Gel Wash</div>
+                <div class="catalog-chip orbit-d catalog-peptide" data-family="spf">Peptide Cream</div>
+                <div class="catalog-chip orbit-a catalog-target target-cleanser is-target" data-family="cleanser">Cleanser</div>
+                <div class="catalog-chip orbit-b catalog-target target-serum is-target" data-family="serum">Serum</div>
+                <div class="catalog-chip orbit-c catalog-target target-moisturizer is-target" data-family="moisturizer">Moisturizer</div>
+                <div class="catalog-chip orbit-d catalog-target target-spf is-target" data-family="spf">SPF</div>
+              </div>
+            </div>
+          </div>
+          <div class="hero-scene scene-routine">
+            <div class="scene-shell routine-shell">
+              <div class="scene-kicker">Personalized routine</div>
+              <div class="sheet-title">Routine assembled</div>
+              <div class="sheet-meter"><span></span></div>
+              <div class="sheet-row row-a">
+                <span class="routine-label">Cleanser</span>
+                <div class="routine-product routine-product-cleanser">
+                  <canvas class="routine-product-canvas" id="cleanserProductCanvas" aria-hidden="true"></canvas>
+                </div>
+              </div>
+              <div class="sheet-row row-b">
+                <span class="routine-label">Serum</span>
+                <div class="routine-product routine-product-serum">
+                  <canvas class="routine-product-canvas" id="serumProductCanvas" aria-hidden="true"></canvas>
+                </div>
+              </div>
+              <div class="sheet-row row-c">
+                <span class="routine-label">Moisturizer</span>
+                <div class="routine-product routine-product-moisturizer">
+                  <canvas class="routine-product-canvas" id="moisturizerProductCanvas" aria-hidden="true"></canvas>
+                </div>
+              </div>
+              <div class="sheet-row row-d">
+                <span class="routine-label">SPF</span>
+                <div class="routine-product routine-product-spf">
+                  <canvas class="routine-product-canvas" id="spfProductCanvas" aria-hidden="true"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="hero-scene scene-result">
+            <div class="scene-shell result-shell">
+              <div class="result-engine" aria-hidden="true">
+                <span class="result-orbit orbit-a"></span>
+                <span class="result-orbit orbit-b"></span>
+                <span class="result-orbit orbit-c"></span>
+                <span class="result-particle particle-a"></span>
+                <span class="result-particle particle-b"></span>
+                <span class="result-particle particle-c"></span>
+                <span class="result-particle particle-d"></span>
+                <span class="result-particle particle-e"></span>
+                <span class="result-particle particle-f"></span>
+              </div>
+              <div class="result-status">
+                <span class="result-status-dot"></span>
+                <span class="result-status-value">Routine successfully generated</span>
+              </div>
+              <div class="result-checkmark" aria-hidden="true">
+                <span class="result-check-glow"></span>
+                <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle class="check-ring" cx="14" cy="14" r="11.5" />
+                  <path class="check-path" d="M9 14.4l3.2 3.2L19.4 10.6" />
+                </svg>
+              </div>
+              <div class="result-title">Personalization complete</div>
+              <div class="result-lead">Skin ID finished the routine with a profile match, a curated selection, and a cart-ready bundle.</div>
+              <div class="result-checklist">
+                <div class="result-check-item">
+                  <span class="result-item-check">✓</span>
+                  <span>Personalized Routine</span>
+                </div>
+                <div class="result-check-item">
+                  <span class="result-item-check">✓</span>
+                  <span>4 Products Selected</span>
+                </div>
+                <div class="result-check-item">
+                  <span class="result-item-check">✓</span>
+                  <span>Skin Profile Matched</span>
+                </div>
+                <div class="result-check-item">
+                  <span class="result-item-check">✓</span>
+                  <span>Ready for Cart</span>
+                </div>
+              </div>
+              <div class="result-routine-summary">
+                <span class="result-routine-chip chip-cleanser">Cleanser</span>
+                <span class="result-routine-chip chip-serum">Serum</span>
+                <span class="result-routine-chip chip-moisturizer">Moisturizer</span>
+                <span class="result-routine-chip chip-spf">SPF</span>
+              </div>
+              <div class="result-footnote">Profile aligned. Routine assembled. Cart intent unlocked.</div>
+              <div class="result-aura"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -414,21 +2810,919 @@ const landingHtml = `<div class="loader"><div class="loader-brand">NABI</div><di
   <section class="control-room" id="journey">
     <div class="control-pin">
       <div class="control-stage s1" id="controlStage">
-        <div class="control-copy"><div class="kicker" id="stageKicker">Before Skin ID</div><h3 id="stageTitle">A visitor enters. The store shows products. The decision gets harder.</h3></div>
+        <div class="control-copy"><div class="kicker" id="stageKicker">Before Skin ID</div><h3 id="stageTitle">More <span class="highlight-word highlight-gold">products.</span> Less <span class="highlight-word highlight-cyan">confidence.</span></h3></div>
         <div class="cloud" id="productCloud"></div>
         <div class="signal-core"><div class="orbit o1"></div><div class="orbit o2"></div><div class="orbit o3"></div></div>
-        <div class="decision-map"><svg viewBox="0 0 900 520"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#73a9ff"/><stop offset=".55" stop-color="#ffe7a3"/><stop offset="1" stop-color="#99ecff"/></linearGradient></defs><path class="path" d="M40 250 C200 60, 320 420, 450 250 S700 70, 860 250"/><path class="path" d="M140 410 C260 250, 390 90, 520 250 S680 420, 800 130"/><path class="path" d="M100 120 C260 250, 320 250, 450 250 S610 250, 760 390"/></svg></div>
-        <div class="routine-board"><strong>Personalized routine created</strong><div class="row"><span>Cleanse</span><span>Matched</span></div><div class="row"><span>Treat</span><span>Priority</span></div><div class="row"><span>Hydrate</span><span>Required</span></div><div class="row"><span>Protect</span><span>Recommended</span></div></div>
+        <div class="decision-map"><svg viewBox="0 0 900 520"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#73a9ff"/><stop offset=".55" stop-color="#ffe7a3"/><stop offset="1" stop-color="#99ecff"/></linearGradient></defs><path class="path" d="M0 252 C176 42, 318 430, 450 252 S724 84, 900 252"/><path class="path" d="M0 426 C214 210, 372 70, 520 252 S704 446, 900 112"/><path class="path" d="M0 112 C220 286, 336 262, 450 252 S642 220, 900 394"/></svg></div>
+        <div class="decision-summary-module" id="decisionSummaryModule">
+          <div class="routine-board decision-summary-board" id="decisionSummaryBoard" data-state="idle">
+            <div class="decision-summary-head">
+              <div class="decision-summary-copy">
+                <span class="decision-summary-label">Decision summary</span>
+                <strong class="decision-summary-title">Decision Summary</strong>
+              </div>
+              <span class="decision-summary-badge" id="decisionSummaryBadge">Inactive report</span>
+            </div>
+            <div class="decision-summary-rows">
+              <div class="decision-summary-row" data-key="scanned">
+                <span class="decision-summary-key">Products scanned</span>
+                <span class="decision-summary-value" id="decisionSummaryScanned">&mdash;</span>
+              </div>
+              <div class="decision-summary-row" data-key="compatible">
+                <span class="decision-summary-key">Compatible</span>
+                <span class="decision-summary-value" id="decisionSummaryCompatible">&mdash;</span>
+              </div>
+              <div class="decision-summary-row" data-key="candidates">
+                <span class="decision-summary-key">Final candidates</span>
+                <span class="decision-summary-value" id="decisionSummaryCandidates">&mdash;</span>
+              </div>
+              <div class="decision-summary-row" data-key="selected">
+                <span class="decision-summary-key">Selected products</span>
+                <span class="decision-summary-value" id="decisionSummarySelected">&mdash;</span>
+              </div>
+              <div class="decision-summary-row decision-summary-row-confidence" data-key="confidence">
+                <div class="decision-summary-confidence-head">
+                  <span class="decision-summary-key">Match confidence</span>
+                  <span class="decision-summary-value" id="decisionSummaryConfidenceValue">&mdash;</span>
+                </div>
+                <div class="decision-summary-confidence-track">
+                  <span class="decision-summary-confidence-fill" id="decisionSummaryConfidenceFill"></span>
+                </div>
+              </div>
+              <div class="decision-summary-row decision-summary-row-status" data-key="status">
+                <span class="decision-summary-key">Status</span>
+                <div class="decision-summary-status-line">
+                  <span class="decision-summary-check" id="decisionSummaryCheckIcon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle class="decision-summary-check-ring" cx="12" cy="12" r="9.5" />
+                      <path class="decision-summary-check-path" d="M8.2 12.3 10.8 14.9 15.8 9.8" />
+                    </svg>
+                  </span>
+                  <span class="decision-summary-status-value" id="decisionSummaryStatus">Waiting for analysis</span>
+                </div>
+              </div>
+            </div>
+            <div class="decision-summary-timeline" aria-hidden="true">
+              <span class="decision-summary-timeline-label">Analysis Path</span>
+              <div class="decision-summary-timeline-track">
+                <span class="decision-summary-timeline-step" data-stage="scan">
+                  <span class="decision-summary-timeline-dot"></span>
+                  <span class="decision-summary-timeline-text">Scan</span>
+                </span>
+                <span class="decision-summary-timeline-step" data-stage="profile">
+                  <span class="decision-summary-timeline-dot"></span>
+                  <span class="decision-summary-timeline-text">Profile</span>
+                </span>
+                <span class="decision-summary-timeline-step" data-stage="matching">
+                  <span class="decision-summary-timeline-dot"></span>
+                  <span class="decision-summary-timeline-text">Matching</span>
+                </span>
+                <span class="decision-summary-timeline-step" data-stage="routine">
+                  <span class="decision-summary-timeline-dot"></span>
+                  <span class="decision-summary-timeline-text">Routine</span>
+                </span>
+              </div>
+            </div>
+            <div class="decision-summary-completion-glow" id="decisionSummaryCompletionGlow"></div>
+            <div class="decision-summary-success-wave" id="decisionSummarySuccessWave"></div>
+          </div>
+          <button class="decision-summary-action" id="decisionSummaryAction" type="button" data-mode="run">
+            <span class="decision-summary-action-icon" aria-hidden="true">
+              <svg class="icon-play" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 3.5 12 8 5 12.5V3.5Z" />
+              </svg>
+              <svg class="icon-replay" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4.4 5.1H1.8V2.5" />
+                <path d="M2.1 5.1a5.7 5.7 0 1 1-.3 6.6" />
+              </svg>
+            </span>
+            <span class="decision-summary-action-label">Run the decision engine</span>
+          </button>
+        </div>
       </div>
     </div>
   </section>
 
-  <section class="simulator" id="simulator">
-    <div class="sim-box">
-      <div class="sim-header"><div class="eyebrow"><span class="dot"></span>Interactive concept</div><h2>Make the visitor create the <span class="highlight-word highlight-blue">argument.</span></h2><p class="lead">This is not the real demo. It is a controlled interaction that makes the <span class="highlight-word highlight-gold">value obvious</span> without exposing the product.</p></div>
-      <div class="sim-grid">
-        <div class="choice-panel" data-concern="hydration"><div class="choice-top"><div><div class="choice-label">Choose visitor concern</div><h3 class="choice-heading">Select the concern. Let the interface isolate the signal before the recommendation appears.</h3></div><div class="mesh-badge"><span class="dot"></span>3D face topology</div></div><div class="chips" id="chips"><button class="chip active" data-mode="hydration">Dryness</button><button class="chip" data-mode="sensitivity">Sensitivity</button><button class="chip" data-mode="acne">Breakouts</button><button class="chip" data-mode="aging">Fine lines</button></div><div class="skin-face mesh-stage"><canvas id="faceMeshCanvas" aria-label="3D face mesh preview"></canvas><div class="mesh-empty" id="meshEmpty">Loading face topology...</div><div class="mesh-grid"></div><div class="mesh-scanline"></div><div class="mesh-hud mesh-hud-a"><span class="hud-label">Concern</span><strong id="meshConcern">Hydration depletion</strong></div><div class="mesh-hud mesh-hud-b"><span class="hud-label">Focus zone</span><strong id="meshFocus">Barrier + cheeks</strong></div><div class="mesh-hud mesh-hud-c"><span class="hud-label">Reading</span><strong id="meshReading">The routine starts by restoring comfort before actives.</strong></div></div><div class="choice-summary"><p id="meshSummary">The 3D face gives a concrete visual anchor, so the diagnosis feels guided rather than guessed.</p><div class="choice-stats"><div class="choice-stat"><span class="stat-label">Depth</span><strong id="meshDepth">Barrier-first scan</strong></div><div class="choice-stat"><span class="stat-label">Lens</span><strong id="meshLens">Hydration mapping</strong></div></div></div></div>
-        <div class="result-panel"><div class="result-top"><div><div class="choice-label">Skin ID output</div><h3 id="resultTitle" style="font-size:34px;letter-spacing:-.06em;margin:0;">Hydration-first routine</h3></div><div class="score" id="score">91</div></div><div class="result-list"><div class="result-item"><span>Main decision</span><span id="decision">Repair barrier first</span></div><div class="result-item"><span>Routine direction</span><span id="routine">Cleanser + serum + cream</span></div><div class="result-item"><span>Cart logic</span><span id="cart">Bundle recommended</span></div><div class="result-item"><span>Customer feeling</span><span id="feeling">Clear next step</span></div></div></div>
+  <section class="simulator brand-story" id="simulator" aria-labelledby="brandStoryTitle">
+    <div class="story-shell">
+      <div class="story-header">
+        <div class="eyebrow"><span class="dot"></span>Decision-First Skincare</div>
+        <div class="story-header-row">
+          <div class="story-header-copy">
+            <h2 id="brandStoryTitle">Why brands choose Skin ID.</h2>
+            <p class="lead">Every slide answers a different question brands ask before they decide to move forward.</p>
+          </div>
+          <div class="story-nav-group" aria-label="Carousel controls">
+            <button class="story-nav" type="button" data-story-nav="prev" aria-label="Previous reason">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 5 8 12l7 7" />
+              </svg>
+            </button>
+            <button class="story-nav" type="button" data-story-nav="next" aria-label="Next reason">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                <path d="m9 5 7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="story-frame" tabindex="0" role="region" aria-label="Why brands choose Skin ID" aria-describedby="brandStoryProgressText">
+        <div class="brand-story-track" id="brandStoryTrack">
+          <article class="story-slide story-slide-scale is-active" data-state="active" aria-label="Traditional browsing versus guided decisions">
+            <div class="story-slide-top">
+              <span class="story-kicker">Browse vs decide</span>
+              <h3>
+                Most skincare stores are built to <span class="impact-browse-lock">
+                  <span class="impact-browse-word" aria-label="browse">
+                    <span class="impact-browse-text">browse</span>
+                    <span class="impact-browse-glass" aria-hidden="true">
+                      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="28" cy="28" r="14" />
+                        <path d="M38 38L50 50" />
+                      </svg>
+                    </span>
+                  </span>,
+                </span> not to <span class="impact-decide-word">decide</span>.
+              </h3>
+              <p>Customers don&rsquo;t need more products. They need a clear path to the right one.</p>
+            </div>
+            <div class="story-commerce-toggle" role="group" aria-label="Choose comparison view">
+              <button class="story-commerce-toggle-button" type="button" data-mobile-view-option="chaos" aria-pressed="false">
+                Traditional Store
+              </button>
+              <button class="story-commerce-toggle-button is-active" type="button" data-mobile-view-option="guided" aria-pressed="true">
+                With Skin ID
+              </button>
+            </div>
+            <div class="story-commerce-compare" data-mobile-view="guided" aria-label="Comparison between a traditional store and a guided Skin ID journey">
+              <div class="story-commerce-column story-commerce-chaos">
+                <div class="story-commerce-head">
+                  <span class="story-commerce-label">Traditional Store</span>
+                </div>
+                <div class="story-chaos-stage" aria-hidden="true">
+                  <span class="story-chaos-connector connector-a"></span>
+                  <span class="story-chaos-connector connector-b"></span>
+                  <span class="story-chaos-connector connector-c"></span>
+                  <span class="story-chaos-connector connector-d"></span>
+                  <span class="story-chaos-wanderer"></span>
+                  <div class="story-chaos-card card-cleanser">Cleanser</div>
+                  <div class="story-chaos-card card-serum">Serum</div>
+                  <div class="story-chaos-card card-moisturizer">Moisturizer</div>
+                  <div class="story-chaos-card card-spf">SPF</div>
+                  <div class="story-chaos-card card-eye">Eye Cream</div>
+                  <div class="story-chaos-card card-mask">Mask</div>
+                  <div class="story-chaos-card card-toner">Toner</div>
+                  <div class="story-chaos-card card-mist">Mist</div>
+                </div>
+              </div>
+              <div class="story-commerce-column story-commerce-guided">
+                <div class="story-commerce-head">
+                  <span class="story-commerce-label">With Skin ID</span>
+                </div>
+                <div class="story-guided-stage" aria-hidden="true">
+                  <span class="story-guided-line"></span>
+                  <div class="story-guided-step step-scan">
+                    <span class="story-guided-dot"></span>
+                    <div class="story-guided-card">
+                      <span class="story-guided-card-label">Face Scan</span>
+                      <span class="story-guided-card-icon" aria-hidden="true">
+                        <svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <defs>
+                            <linearGradient id="gold" x1="280" y1="280" x2="744" y2="744" gradientUnits="userSpaceOnUse">
+                              <stop offset="0" stop-color="#F8E08B"/>
+                              <stop offset="0.45" stop-color="#D9B44A"/>
+                              <stop offset="1" stop-color="#FFF0A8"/>
+                            </linearGradient>
+                            <linearGradient id="bg" x1="128" y1="128" x2="896" y2="896" gradientUnits="userSpaceOnUse">
+                              <stop stop-color="#171717"/>
+                              <stop offset="1" stop-color="#050505"/>
+                            </linearGradient>
+                          </defs>
+                          <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+                          <rect x="1.5" y="1.5" width="1021" height="1021" rx="218.5" stroke="#2B2B2B" stroke-width="3"/>
+                          <path d="M290 365V315C290 287.386 312.386 265 340 265H390" stroke="url(#gold)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M634 265H684C711.614 265 734 287.386 734 315V365" stroke="url(#gold)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M290 659V709C290 736.614 312.386 759 340 759H390" stroke="url(#gold)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M634 759H684C711.614 759 734 736.614 734 709V659" stroke="url(#gold)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M512 315 C414 315 366 382 366 470 V515 C343 506 326 521 326 549 C326 583 342 611 368 613 C375 687 429 755 512 755 C595 755 649 687 656 613 C682 611 698 583 698 549 C698 521 681 506 658 515 V470 C658 382 610 315 512 315Z" stroke="url(#gold)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="story-guided-step step-profile">
+                    <span class="story-guided-dot"></span>
+                    <div class="story-guided-card">
+                      <span class="story-guided-card-label">Skin Profile</span>
+                      <span class="story-guided-card-icon" aria-hidden="true">
+                        <img src="/skin_profile_exact.png" alt="" />
+                      </span>
+                    </div>
+                    </div>
+                    <div class="story-guided-step step-routine">
+                      <span class="story-guided-dot"></span>
+                      <div class="story-guided-card">
+                        <span class="story-guided-card-label">Personalized Routine</span>
+                        <span class="story-guided-card-icon" aria-hidden="true">
+                          <img src="/personalized_routine_icon.png" alt="" />
+                        </span>
+                      </div>
+                    </div>
+                    <div class="story-guided-step step-checkout">
+                      <span class="story-guided-dot"></span>
+                      <div class="story-guided-card">
+                        <span class="story-guided-card-label">Checkout</span>
+                        <span class="story-guided-card-icon" aria-hidden="true">
+                          <img src="/checkout_icon.png" alt="" />
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+            </div>
+            <div class="story-scale-lane" aria-label="Catalog reduction from 247 products to one routine">
+              <div class="story-metric-card">
+                <span class="story-metric-value" data-target="247">247</span>
+                <span class="story-metric-label">Possible choices</span>
+              </div>
+              <span class="story-scale-arrow" aria-hidden="true">→</span>
+              <div class="story-metric-card">
+                <span class="story-metric-value" data-target="81">81</span>
+                <span class="story-metric-label">Compatible products</span>
+              </div>
+              <span class="story-scale-arrow" aria-hidden="true">→</span>
+              <div class="story-metric-card">
+                <span class="story-metric-value" data-target="19">19</span>
+                <span class="story-metric-label">Worth considering</span>
+              </div>
+              <span class="story-scale-arrow" aria-hidden="true">→</span>
+              <div class="story-metric-card">
+                <span class="story-metric-value" data-target="4">4</span>
+                <span class="story-metric-label">Best matches</span>
+              </div>
+              <span class="story-scale-arrow" aria-hidden="true">→</span>
+              <div class="story-metric-card story-metric-card-final">
+                <span class="story-metric-value" data-target="1">1</span>
+                <span class="story-metric-label">Confident decision</span>
+              </div>
+            </div>
+            <div class="story-scale-summary">
+              <div class="story-confidence-card">
+                <span class="story-confidence-value story-metric-value" data-target="96" data-suffix="%">96%</span>
+                <span class="story-confidence-label">Match confidence</span>
+              </div>
+              <div class="story-scale-note">
+                <span class="story-scale-line"></span>
+                <p>Less choice. More confidence.</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="story-slide story-slide-impact" data-state="peek" aria-label="Business impact">
+            <div class="story-slide-top">
+              <span class="story-kicker">Business impact</span>
+              <h3>
+                Built to <span class="impact-convert-word" aria-label="convert">
+                  <span class="impact-convert-text">convert</span>
+                  <span class="impact-convert-dollar" aria-hidden="true">$</span>
+                </span>
+              </h3>
+              <p>When customers stop guessing, better commercial outcomes naturally follow.</p>
+            </div>
+            <div class="story-impact-grid">
+              <div class="story-impact-card impact-conversions">
+                <span class="story-impact-icon" aria-hidden="true">
+                  <svg class="icon-graph" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 36H38" />
+                    <path d="M14 30L21 23L27 28L36 17" />
+                    <path d="M30 17H36V23" />
+                  </svg>
+                </span>
+                <strong>
+                  More
+                  <span class="impact-conversion-word">
+                    Conversions
+                    <span class="impact-dollar impact-dollar-a" aria-hidden="true">$</span>
+                    <span class="impact-dollar impact-dollar-b" aria-hidden="true">$</span>
+                    <span class="impact-dollar impact-dollar-c" aria-hidden="true">$</span>
+                    <span class="impact-dollar impact-dollar-d" aria-hidden="true">$</span>
+                  </span>
+                </strong>
+                <p>More visitors reach a <span class="impact-body-emphasis">confident buying decision</span>.</p>
+              </div>
+              <div class="story-impact-card impact-carts">
+                <span class="story-impact-icon" aria-hidden="true">
+                  <svg class="icon-cart" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 14H15L18 29H33L37 19H20" />
+                    <path d="M21 34.5C21 35.9 19.9 37 18.5 37C17.1 37 16 35.9 16 34.5C16 33.1 17.1 32 18.5 32C19.9 32 21 33.1 21 34.5Z" />
+                    <path d="M35 34.5C35 35.9 33.9 37 32.5 37C31.1 37 30 35.9 30 34.5C30 33.1 31.1 32 32.5 32C33.9 32 35 33.1 35 34.5Z" />
+                  </svg>
+                </span>
+                <strong><span class="impact-cart-word">Larger</span> Carts</strong>
+                <p><span class="impact-body-emphasis">Complete routines</span> naturally increase average order value.</p>
+              </div>
+              <div class="story-impact-card impact-hesitation">
+                <span class="story-impact-icon" aria-hidden="true">
+                  <svg class="icon-spark" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M24 12L27.5 20.5L36 24L27.5 27.5L24 36L20.5 27.5L12 24L20.5 20.5L24 12Z" />
+                    <path d="M34 11L35.5 14.5L39 16L35.5 17.5L34 21L32.5 17.5L29 16L32.5 14.5L34 11Z" />
+                  </svg>
+                </span>
+                <strong class="impact-hesitation-title" aria-label="Less Hesitation">
+                  <span class="impact-hesitation-word" aria-hidden="true">
+                    <span class="impact-hesitation-letter" style="--impact-letter-index:0">L</span>
+                    <span class="impact-hesitation-letter" style="--impact-letter-index:1">e</span>
+                    <span class="impact-hesitation-letter" style="--impact-letter-index:2">s</span>
+                    <span class="impact-hesitation-letter" style="--impact-letter-index:3">s</span>
+                  </span>
+                  <span class="impact-hesitation-word" aria-hidden="true">
+                    <span class="impact-hesitation-letter" style="--impact-letter-index:4">H</span>
+                    <span class="impact-hesitation-letter" style="--impact-letter-index:5">e</span>
+                    <span class="impact-hesitation-letter" style="--impact-letter-index:6">s</span>
+                    <span class="impact-hesitation-letter" style="--impact-letter-index:7">i</span>
+                    <span class="impact-hesitation-letter" style="--impact-letter-index:8">t</span>
+                    <span class="impact-hesitation-letter" style="--impact-letter-index:9">a</span>
+                    <span class="impact-hesitation-letter" style="--impact-letter-index:10">t</span>
+                    <span class="impact-hesitation-letter" style="--impact-letter-index:11">i</span>
+                    <span class="impact-hesitation-letter" style="--impact-letter-index:12">o</span>
+                    <span class="impact-hesitation-letter" style="--impact-letter-index:13">n</span>
+                  </span>
+                </strong>
+                <p><span class="impact-body-emphasis">Clear recommendations</span> remove buying friction.</p>
+              </div>
+              <div class="story-impact-card impact-discovery">
+                <span class="story-impact-icon" aria-hidden="true">
+                  <svg class="icon-discovery" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="8" y="10" width="10" height="10" rx="3" />
+                    <rect x="30" y="10" width="10" height="10" rx="3" />
+                    <rect x="19" y="28" width="10" height="10" rx="3" />
+                    <path d="M18 15H30" />
+                    <path d="M13 20V24C13 26.2 14.8 28 17 28H24" />
+                    <path d="M35 20V24C35 26.2 33.2 28 31 28H24" />
+                  </svg>
+                </span>
+                <strong>
+                  More
+                  <span class="impact-discovery-word">
+                    Discovery
+                    <span class="impact-discovery-burst impact-discovery-burst-a" aria-hidden="true">
+                      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="6.2" y="4.2" width="7.6" height="2.4" rx="1.2" />
+                        <path d="M7.1 6.6H12.9C13.9 6.6 14.7 7.4 14.7 8.4V14C14.7 15 13.9 15.8 12.9 15.8H7.1C6.1 15.8 5.3 15 5.3 14V8.4C5.3 7.4 6.1 6.6 7.1 6.6Z" />
+                      </svg>
+                    </span>
+                    <span class="impact-discovery-burst impact-discovery-burst-b" aria-hidden="true">
+                      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="4.6" y="7.1" width="10.8" height="7.6" rx="2.4" />
+                        <path d="M6.6 7.1V5.9C6.6 5.1 7.2 4.5 8 4.5H12C12.8 4.5 13.4 5.1 13.4 5.9V7.1" />
+                      </svg>
+                    </span>
+                    <span class="impact-discovery-burst impact-discovery-burst-c" aria-hidden="true">
+                      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M8.2 4.4H11.8L13.2 7.1H6.8L8.2 4.4Z" />
+                        <path d="M7.2 7.1H12.8C13.8 7.1 14.6 7.9 14.6 8.9V14C14.6 15 13.8 15.8 12.8 15.8H7.2C6.2 15.8 5.4 15 5.4 14V8.9C5.4 7.9 6.2 7.1 7.2 7.1Z" />
+                      </svg>
+                    </span>
+                    <span class="impact-discovery-burst impact-discovery-burst-d" aria-hidden="true">
+                      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M8.2 4.4H11.8L13.2 7.1H6.8L8.2 4.4Z" />
+                        <path d="M7.2 7.1H12.8C13.8 7.1 14.6 7.9 14.6 8.9V14C14.6 15 13.8 15.8 12.8 15.8H7.2C6.2 15.8 5.4 15 5.4 14V8.9C5.4 7.9 6.2 7.1 7.2 7.1Z" />
+                      </svg>
+                    </span>
+                  </span>
+                </strong>
+                <p>The <span class="impact-body-emphasis">right products</span> become easier to find.</p>
+              </div>
+              <div class="story-impact-card impact-confidence">
+                <span class="story-impact-icon" aria-hidden="true">
+                  <svg class="icon-shield" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M24 10L35 14V23.5C35 30.2 30.3 36.2 24 38C17.7 36.2 13 30.2 13 23.5V14L24 10Z" />
+                    <path d="M19 24.5L22.5 28L29.5 20.5" />
+                  </svg>
+                </span>
+                <strong>
+                  More
+                  <span class="impact-confidence-word">
+                    Confidence
+                    <span class="impact-confidence-burst impact-confidence-burst-a" aria-hidden="true">
+                      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 2.8L11.9 7L16.2 8.9L11.9 10.8L10 15L8.1 10.8L3.8 8.9L8.1 7L10 2.8Z" />
+                      </svg>
+                    </span>
+                    <span class="impact-confidence-burst impact-confidence-burst-b" aria-hidden="true">
+                      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 16.4L4.2 10.7C2.8 9.3 2.8 7 4.2 5.6C5.6 4.2 7.8 4.2 9.2 5.6L10 6.4L10.8 5.6C12.2 4.2 14.4 4.2 15.8 5.6C17.2 7 17.2 9.3 15.8 10.7L10 16.4Z" />
+                      </svg>
+                    </span>
+                    <span class="impact-confidence-burst impact-confidence-burst-c" aria-hidden="true">
+                      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 2.8L11.9 7L16.2 8.9L11.9 10.8L10 15L8.1 10.8L3.8 8.9L8.1 7L10 2.8Z" />
+                      </svg>
+                    </span>
+                    <span class="impact-confidence-burst impact-confidence-burst-d" aria-hidden="true">
+                      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 16.4L4.2 10.7C2.8 9.3 2.8 7 4.2 5.6C5.6 4.2 7.8 4.2 9.2 5.6L10 6.4L10.8 5.6C12.2 4.2 14.4 4.2 15.8 5.6C17.2 7 17.2 9.3 15.8 10.7L10 16.4Z" />
+                      </svg>
+                    </span>
+                  </span>
+                </strong>
+                <p>Customers <span class="impact-body-emphasis">trust recommendations</span> instead of guessing.</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="story-slide story-slide-contrast" data-state="upcoming" aria-label="Not another skincare quiz">
+            <div class="story-slide-top">
+              <span class="story-kicker">Category difference</span>
+              <h3>Not another skincare quiz.</h3>
+              <p>A quiz collects answers. Skin ID turns customer context and catalog logic into a decision.</p>
+            </div>
+            <div class="story-contrast-grid">
+              <div class="story-contrast-bridge" aria-hidden="true">
+                <span class="story-contrast-bridge-line"></span>
+              </div>
+              <div class="story-contrast-card story-contrast-card-muted">
+                <div class="story-contrast-head">
+                  <span class="story-contrast-tag">Most Quiz Tools</span>
+                </div>
+                <ul class="story-contrast-list">
+                  <li class="story-contrast-item" style="--story-contrast-gap:0px">
+                    <div class="story-contrast-row" data-pair="row-1" data-side="left" data-tone="blue">
+                      <span class="story-contrast-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="4" y="5" width="16" height="14" rx="3" />
+                          <path d="M8 9.5H16" />
+                          <path d="M8 12.5H13.5" />
+                          <path d="M8 15.5H12" />
+                        </svg>
+                      </span>
+                      <span class="story-contrast-copy">Static questions</span>
+                    </div>
+                  </li>
+                  <li class="story-contrast-item" style="--story-contrast-gap:14px">
+                    <div class="story-contrast-row" data-pair="row-2" data-side="left" data-tone="gold">
+                      <span class="story-contrast-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="4" y="7" width="4" height="10" rx="1.8" />
+                          <rect x="10" y="9" width="4" height="8" rx="1.8" />
+                          <rect x="16" y="6" width="4" height="11" rx="1.8" />
+                          <path d="M7 5.5L12 3.5L17 5.5" />
+                        </svg>
+                      </span>
+                      <span class="story-contrast-copy">Broad product suggestions</span>
+                    </div>
+                  </li>
+                  <li class="story-contrast-item" style="--story-contrast-gap:14px">
+                    <div class="story-contrast-row" data-pair="row-3" data-side="left" data-tone="mint">
+                      <span class="story-contrast-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="5" y="6" width="5" height="5" rx="1.5" />
+                          <rect x="14" y="6" width="5" height="5" rx="1.5" />
+                          <rect x="5" y="13" width="5" height="5" rx="1.5" />
+                          <rect x="14" y="13" width="5" height="5" rx="1.5" />
+                          <path d="M10 8.5H14" />
+                          <path d="M10 15.5H14" />
+                        </svg>
+                      </span>
+                      <span class="story-contrast-copy">Same logic for every catalog</span>
+                    </div>
+                  </li>
+                  <li class="story-contrast-item" style="--story-contrast-gap:14px">
+                    <div class="story-contrast-row" data-pair="row-4" data-side="left" data-tone="blue">
+                      <span class="story-contrast-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="8" y="6" width="8" height="12" rx="2.4" />
+                          <path d="M10 6V4.5C10 3.67 10.67 3 11.5 3H12.5C13.33 3 14 3.67 14 4.5V6" />
+                          <path d="M9.5 11H14.5" />
+                        </svg>
+                      </span>
+                      <span class="story-contrast-copy">Isolated recommendations</span>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+              <div class="story-contrast-card story-contrast-card-accent">
+                <div class="story-contrast-head">
+                  <span class="story-contrast-tag">Skin ID</span>
+                </div>
+                <ul class="story-contrast-list">
+                  <li class="story-contrast-item" style="--story-contrast-gap:0px">
+                    <div class="story-contrast-row" data-pair="row-1" data-side="right" data-tone="blue">
+                      <span class="story-contrast-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M7.5 8.5C8.7 6.3 10.2 5.2 12 5.2C13.8 5.2 15.3 6.3 16.5 8.5" />
+                          <path d="M8.3 14.8C9.1 16.7 10.3 18 12 18C13.7 18 14.9 16.7 15.7 14.8" />
+                          <path d="M9.2 10.6H9.3" />
+                          <path d="M14.7 10.6H14.8" />
+                          <circle cx="18.2" cy="8.2" r="2.2" />
+                          <path d="M18.2 4.8V3.6" />
+                          <path d="M21.6 8.2H22.8" />
+                        </svg>
+                      </span>
+                      <span class="story-contrast-copy">Skin analysis and customer signals</span>
+                    </div>
+                  </li>
+                  <li class="story-contrast-item" style="--story-contrast-gap:14px">
+                    <div class="story-contrast-row" data-pair="row-2" data-side="right" data-tone="gold">
+                      <span class="story-contrast-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="7" cy="12" r="2.2" />
+                          <circle cx="12" cy="7" r="2.2" />
+                          <circle cx="17" cy="12" r="2.2" />
+                          <circle cx="12" cy="17" r="2.2" />
+                          <path d="M8.8 10.3L10.3 8.8" />
+                          <path d="M13.7 8.8L15.2 10.3" />
+                          <path d="M15.2 13.7L13.7 15.2" />
+                          <path d="M10.3 15.2L8.8 13.7" />
+                        </svg>
+                      </span>
+                      <span class="story-contrast-copy">Catalog-specific decision logic</span>
+                    </div>
+                  </li>
+                  <li class="story-contrast-item" style="--story-contrast-gap:14px">
+                    <div class="story-contrast-row" data-pair="row-3" data-side="right" data-tone="mint">
+                      <span class="story-contrast-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="7" y="5" width="10" height="4.2" rx="1.6" />
+                          <rect x="5" y="10.2" width="14" height="4.2" rx="1.6" />
+                          <rect x="8.2" y="15.4" width="7.6" height="3.6" rx="1.4" />
+                        </svg>
+                      </span>
+                      <span class="story-contrast-copy">Complete routine construction</span>
+                    </div>
+                  </li>
+                  <li class="story-contrast-item" style="--story-contrast-gap:14px">
+                    <div class="story-contrast-row" data-pair="row-4" data-side="right" data-tone="blue">
+                      <span class="story-contrast-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M5 17.5C7.2 16.8 8.8 15.5 10.3 13.6C11.5 12.1 12.8 10.1 15 8.7C16.3 7.9 17.7 7.4 19 7.2" />
+                          <path d="M15.5 7.2H19V10.7" />
+                          <circle cx="8.2" cy="16.7" r="1.7" />
+                          <circle cx="16.9" cy="7.6" r="1.7" />
+                        </svg>
+                      </span>
+                      <span class="story-contrast-copy">Clear recommendation path</span>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </article>
+
+          <article class="story-slide story-slide-flow" data-state="upcoming" aria-label="Custom implementation">
+            <div class="story-slide-top">
+              <span class="story-kicker">Custom implementation</span>
+              <h3>Built around your <span class="story-flow-brand-word">brand</span>.</h3>
+              <p>Every deployment starts with understanding the brand, then building, reviewing, designing, testing and finally launching a fully tailored experience.</p>
+            </div>
+            <div class="story-flow-shell">
+              <div class="story-flow-track" aria-label="Skin ID custom implementation timeline">
+                <div class="story-flow-line" aria-hidden="true">
+                  <span class="story-flow-line-fill"></span>
+                </div>
+
+                <div class="story-flow-step" data-step="1" data-state="upcoming">
+                  <span class="story-flow-node">
+                    <span class="story-flow-index">01</span>
+                  </span>
+                  <div class="story-flow-card">
+                    <span class="story-flow-icon story-flow-icon-discovery" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6.5 8.9C6.5 7.3 7.8 6 9.4 6H14.2C15.8 6 17.1 7.3 17.1 8.9V11.1C17.1 12.7 15.8 14 14.2 14H10.7L8.3 16V14C7.3 13.6 6.5 12.5 6.5 11.2V8.9Z" />
+                        <path d="M9.7 10H13.9" />
+                        <path d="M9.7 12H12.4" />
+                        <path d="M18.4 6.2L19 7.7L20.5 8.3L19 8.9L18.4 10.4L17.8 8.9L16.3 8.3L17.8 7.7L18.4 6.2Z" />
+                      </svg>
+                    </span>
+                    <div class="story-flow-copy">
+                      <strong>Discovery</strong>
+                      <p>We start by understanding your brand.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="story-flow-step" data-step="2" data-state="upcoming">
+                  <span class="story-flow-node">
+                    <span class="story-flow-index">02</span>
+                  </span>
+                  <div class="story-flow-card">
+                    <span class="story-flow-icon story-flow-icon-engine" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6.5 15.8L12 6.8L17.5 15.8" />
+                        <path d="M8.5 12.5H15.5" />
+                        <path d="M9.6 15.8L12 11.8L14.4 15.8" />
+                        <path d="M10.8 9.1H13.2" />
+                      </svg>
+                    </span>
+                    <div class="story-flow-copy">
+                      <strong>Foundation</strong>
+                      <p>We build your decision engine around your products, routines and brand logic.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="story-flow-step" data-step="3" data-state="upcoming">
+                  <span class="story-flow-node">
+                    <span class="story-flow-index">03</span>
+                  </span>
+                  <div class="story-flow-card">
+                    <span class="story-flow-icon story-flow-icon-review" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="7" y="6.5" width="10" height="12" rx="2.4" />
+                        <path d="M10 6.5V5.6C10 4.72 10.72 4 11.6 4H12.4C13.28 4 14 4.72 14 5.6V6.5" />
+                        <path d="M9.5 10H14.5" />
+                        <path d="M9.5 12.8H13.1" />
+                        <path d="M9.7 15.4L11.3 16.9L14.7 13.5" />
+                        <path d="M17.8 7.1L18.3 8.3L19.5 8.8L18.3 9.3L17.8 10.5L17.3 9.3L16.1 8.8L17.3 8.3L17.8 7.1Z" />
+                      </svg>
+                    </span>
+                    <div class="story-flow-copy">
+                      <strong>Brand Review</strong>
+                      <p>Nothing goes live without your approval.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="story-flow-step" data-step="4" data-state="upcoming">
+                  <span class="story-flow-node">
+                    <span class="story-flow-index">04</span>
+                  </span>
+                  <div class="story-flow-card">
+                    <span class="story-flow-icon story-flow-icon-experience" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="6" width="14" height="12" rx="2.8" />
+                        <path d="M5 9.4H19" />
+                        <path d="M9 9.4V18" />
+                        <rect x="11.6" y="11.3" width="4.8" height="3.9" rx="1.1" />
+                        <path d="M7.1 12.5H7.2" />
+                        <path d="M7.1 15H7.2" />
+                        <path d="M16.8 5.1L17.3 6.3L18.5 6.8L17.3 7.3L16.8 8.5L16.3 7.3L15.1 6.8L16.3 6.3L16.8 5.1Z" />
+                      </svg>
+                    </span>
+                    <div class="story-flow-copy">
+                      <strong>Custom Experience</strong>
+                      <p>Designed to look like your brand.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="story-flow-step" data-step="5" data-state="upcoming">
+                  <span class="story-flow-node">
+                    <span class="story-flow-index">05</span>
+                  </span>
+                  <div class="story-flow-card">
+                    <span class="story-flow-icon story-flow-icon-testing" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 4.8L17.5 7.2V11.7C17.5 14.8 15.33 17.66 12.34 18.98L12 19.12L11.66 18.98C8.67 17.66 6.5 14.8 6.5 11.7V7.2L12 4.8Z" />
+                        <path d="M9.6 12.2L11.3 13.9L14.7 10.5" />
+                      </svg>
+                    </span>
+                    <div class="story-flow-copy">
+                      <strong>Testing</strong>
+                      <p>We test the experience before it reaches your customers.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="story-flow-step story-flow-step-launch" data-step="6" data-state="upcoming">
+                  <span class="story-flow-node">
+                    <span class="story-flow-index">06</span>
+                  </span>
+                  <div class="story-flow-card">
+                    <span class="story-flow-icon story-flow-icon-launch" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M13.9 4.7C16.2 4.9 18.1 6.8 18.3 9.1L14.4 13L10 8.6L13.9 4.7Z" />
+                        <path d="M10 8.6L7.2 9.2L4.9 11.5L8.5 11.9" />
+                        <path d="M14.4 13L14 16.6L11.7 18.9L11.1 16.1" />
+                        <path d="M8.5 11.9L10.5 13.9L12.8 16.2" />
+                        <circle cx="13.9" cy="8.8" r="1.45" />
+                        <path d="M8.8 15.5L4.7 19.6" />
+                        <path d="M10.1 16.8L7.1 19.8" />
+                        <path d="M7.5 14.2L4.5 17.2" />
+                      </svg>
+                    </span>
+                    <div class="story-flow-copy">
+                      <strong>Launch</strong>
+                      <p>Launch with confidence.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="story-slide story-slide-engine" data-state="upcoming" aria-label="Decision engine">
+            <div class="story-slide-top">
+              <span class="story-kicker">The decision engine</span>
+              <h3>Customer context meets the brand&rsquo;s own catalog logic.</h3>
+              <p>Inputs flow into a central engine that resolves one personalized routine instead of a pile of loose suggestions.</p>
+            </div>
+            <div class="story-engine-visual" aria-hidden="true">
+              <div class="story-engine-column story-engine-inputs">
+                <span class="story-engine-node tone-blue">Skin profile</span>
+                <span class="story-engine-node tone-mint">Sensitivity</span>
+                <span class="story-engine-node tone-gold">Goals</span>
+                <span class="story-engine-node tone-blue">Environment</span>
+                <span class="story-engine-node tone-mint">Routine preference</span>
+                <span class="story-engine-node tone-gold">Product catalog</span>
+                <span class="story-engine-node tone-blue">Product rules</span>
+              </div>
+              <div class="story-engine-core">
+                <span class="story-engine-orbit orbit-a"></span>
+                <span class="story-engine-orbit orbit-b"></span>
+                <span class="story-engine-particle particle-a"></span>
+                <span class="story-engine-particle particle-b"></span>
+                <span class="story-engine-particle particle-c"></span>
+                <div class="story-engine-core-card">
+                  <span class="story-engine-core-label">Skin ID</span>
+                  <strong>Decision engine</strong>
+                  <p>Catalog-specific reasoning, routine construction and confidence calibration.</p>
+                </div>
+              </div>
+              <div class="story-engine-output">
+                <span class="story-engine-output-label">Output</span>
+                <strong>One personalized routine</strong>
+                <p>Clear recommendation path, ready for cart behavior.</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="story-slide story-slide-insights" data-state="upcoming" aria-label="Post-launch insights">
+            <div class="story-slide-top">
+              <span class="story-kicker">Post-launch intelligence</span>
+              <h3>Understand customers beyond the checkout.</h3>
+              <p>Every interaction becomes insight, helping brands better understand customer needs, refine recommendation logic and improve commercial decisions over time.</p>
+            </div>
+            <div class="story-intel-dashboard" aria-hidden="true">
+              <div class="story-intel-grid">
+                <section class="story-intel-widget story-intel-widget-needs" style="--story-intel-delay:.2s">
+                  <div class="story-intel-widget-head">
+                    <div>
+                      <span class="story-intel-widget-kicker">What customers need</span>
+                      <h4>Live concern ranking</h4>
+                    </div>
+                    <span class="story-intel-widget-signal"></span>
+                  </div>
+                  <div class="story-intel-rank-list">
+                    <div class="story-intel-rank-row" style="--story-intel-fill:.92;--story-intel-item-delay:.34s">
+                      <span>Hydration</span>
+                      <div class="story-intel-rank-bar"><span></span></div>
+                    </div>
+                    <div class="story-intel-rank-row" style="--story-intel-fill:.8;--story-intel-item-delay:.46s">
+                      <span>Barrier Repair</span>
+                      <div class="story-intel-rank-bar"><span></span></div>
+                    </div>
+                    <div class="story-intel-rank-row" style="--story-intel-fill:.66;--story-intel-item-delay:.58s">
+                      <span>Acne</span>
+                      <div class="story-intel-rank-bar"><span></span></div>
+                    </div>
+                    <div class="story-intel-rank-row" style="--story-intel-fill:.58;--story-intel-item-delay:.7s">
+                      <span>Sensitivity</span>
+                      <div class="story-intel-rank-bar"><span></span></div>
+                    </div>
+                    <div class="story-intel-rank-row" style="--story-intel-fill:.46;--story-intel-item-delay:.82s">
+                      <span>Brightening</span>
+                      <div class="story-intel-rank-bar"><span></span></div>
+                    </div>
+                  </div>
+                  <p class="story-intel-widget-note">Most selected concern</p>
+                </section>
+
+                <section class="story-intel-widget story-intel-widget-profile" style="--story-intel-delay:.56s">
+                  <div class="story-intel-widget-head">
+                    <div>
+                      <span class="story-intel-widget-kicker">Skin profile distribution</span>
+                      <h4>Detected profile mix</h4>
+                    </div>
+                    <span class="story-intel-widget-signal"></span>
+                  </div>
+                  <div class="story-intel-profile-shell">
+                    <div class="story-intel-profile-chart-wrap">
+                      <div class="story-intel-profile-chart">
+                        <svg viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
+                          <circle class="story-intel-ring-track" cx="70" cy="70" r="44"></circle>
+                          <circle class="story-intel-ring-segment tone-blue" cx="70" cy="70" r="44" style="--story-intel-segment:94;--story-intel-offset:0;--story-intel-item-delay:.9s"></circle>
+                          <circle class="story-intel-ring-segment tone-mint" cx="70" cy="70" r="44" style="--story-intel-segment:72;--story-intel-offset:-100;--story-intel-item-delay:1.02s"></circle>
+                          <circle class="story-intel-ring-segment tone-gold" cx="70" cy="70" r="44" style="--story-intel-segment:56;--story-intel-offset:-178;--story-intel-item-delay:1.14s"></circle>
+                          <circle class="story-intel-ring-segment tone-soft" cx="70" cy="70" r="44" style="--story-intel-segment:40;--story-intel-offset:-240;--story-intel-item-delay:1.26s"></circle>
+                        </svg>
+                      </div>
+                      <div class="story-intel-counter" aria-label="1248 profiles mapped">
+                        <div class="story-intel-counter-digits">
+                          <span class="story-intel-digit-window"><span class="story-intel-digit-track" style="--story-intel-digit:1;--story-intel-item-delay:1.16s"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span></span></span>
+                          <span class="story-intel-digit-window"><span class="story-intel-digit-track" style="--story-intel-digit:2;--story-intel-item-delay:1.22s"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span></span></span>
+                          <span class="story-intel-digit-window"><span class="story-intel-digit-track" style="--story-intel-digit:4;--story-intel-item-delay:1.28s"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span></span></span>
+                          <span class="story-intel-digit-window"><span class="story-intel-digit-track" style="--story-intel-digit:8;--story-intel-item-delay:1.34s"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span></span></span>
+                        </div>
+                        <span class="story-intel-counter-label">Profiles mapped</span>
+                      </div>
+                    </div>
+                    <div class="story-intel-profile-legend">
+                      <div class="story-intel-legend-row" style="--story-intel-item-delay:1.18s"><span class="tone tone-blue"></span><span>Combination</span><span>34%</span></div>
+                      <div class="story-intel-legend-row" style="--story-intel-item-delay:1.3s"><span class="tone tone-mint"></span><span>Sensitive</span><span>26%</span></div>
+                      <div class="story-intel-legend-row" style="--story-intel-item-delay:1.42s"><span class="tone tone-gold"></span><span>Dry</span><span>20%</span></div>
+                      <div class="story-intel-legend-row" style="--story-intel-item-delay:1.54s"><span class="tone tone-soft"></span><span>Oily</span><span>20%</span></div>
+                    </div>
+                  </div>
+                  <p class="story-intel-widget-note">Combination and sensitive profiles lead</p>
+                </section>
+
+                <section class="story-intel-widget story-intel-widget-products" style="--story-intel-delay:.9s">
+                  <div class="story-intel-widget-head">
+                    <div>
+                      <span class="story-intel-widget-kicker">Most recommended products</span>
+                      <h4>Recommendations arriving live</h4>
+                    </div>
+                    <span class="story-intel-widget-signal"></span>
+                  </div>
+                  <div class="story-intel-feed">
+                    <div class="story-intel-feed-row" style="--story-intel-item-delay:1.08s"><span>Barrier Serum</span><span>Recovery step</span></div>
+                    <div class="story-intel-feed-row" style="--story-intel-item-delay:1.22s"><span>Gel Cleanser</span><span>AM routine</span></div>
+                    <div class="story-intel-feed-row" style="--story-intel-item-delay:1.36s"><span>Mineral SPF</span><span>Daily finish</span></div>
+                    <div class="story-intel-feed-row" style="--story-intel-item-delay:1.5s"><span>Recovery Cream</span><span>Barrier support</span></div>
+                    <div class="story-intel-feed-row" style="--story-intel-item-delay:1.64s"><span>Clarifying Mist</span><span>Routine add-on</span></div>
+                  </div>
+                  <p class="story-intel-widget-note">Frequently included after serum</p>
+                </section>
+
+                <section class="story-intel-widget story-intel-widget-routines" style="--story-intel-delay:1.18s">
+                  <div class="story-intel-widget-head">
+                    <div>
+                      <span class="story-intel-widget-kicker">Most recommended routines</span>
+                      <h4>Routine size preference</h4>
+                    </div>
+                    <span class="story-intel-widget-signal"></span>
+                  </div>
+                  <div class="story-intel-routine-bars">
+                    <div class="story-intel-routine-bar" style="--story-intel-fill:.82;--story-intel-item-delay:1.32s"><span>4-step</span><i></i></div>
+                    <div class="story-intel-routine-bar" style="--story-intel-fill:.66;--story-intel-item-delay:1.44s"><span>5-step</span><i></i></div>
+                    <div class="story-intel-routine-bar" style="--story-intel-fill:.44;--story-intel-item-delay:1.56s"><span>6-step</span><i></i></div>
+                    <div class="story-intel-routine-bar" style="--story-intel-fill:.26;--story-intel-item-delay:1.68s"><span>7-step</span><i></i></div>
+                  </div>
+                  <p class="story-intel-widget-note">Customers prefer shorter routines</p>
+                </section>
+
+                <section class="story-intel-widget story-intel-widget-goals" style="--story-intel-delay:1.46s">
+                  <div class="story-intel-widget-head">
+                    <div>
+                      <span class="story-intel-widget-kicker">Top customer goals</span>
+                      <h4>Priority ranking</h4>
+                    </div>
+                    <span class="story-intel-widget-signal"></span>
+                  </div>
+                  <div class="story-intel-goal-list">
+                    <div class="story-intel-goal-row" style="--story-intel-item-delay:1.56s"><span>01</span><strong>Hydration</strong></div>
+                    <div class="story-intel-goal-row" style="--story-intel-item-delay:1.66s"><span>02</span><strong>Clear Skin</strong></div>
+                    <div class="story-intel-goal-row" style="--story-intel-item-delay:1.76s"><span>03</span><strong>Anti-aging</strong></div>
+                    <div class="story-intel-goal-row" style="--story-intel-item-delay:1.86s"><span>04</span><strong>Barrier Repair</strong></div>
+                  </div>
+                  <p class="story-intel-widget-note">Hydration and clear skin lead</p>
+                </section>
+
+                <section class="story-intel-widget story-intel-widget-environments" style="--story-intel-delay:1.7s">
+                  <div class="story-intel-widget-head">
+                    <div>
+                      <span class="story-intel-widget-kicker">Customer environments</span>
+                      <h4>Where routines are anchored</h4>
+                    </div>
+                    <span class="story-intel-widget-signal"></span>
+                  </div>
+                  <div class="story-intel-environment-stack" style="--story-intel-item-delay:1.82s">
+                    <span class="segment urban"></span>
+                    <span class="segment suburban"></span>
+                    <span class="segment rural"></span>
+                  </div>
+                  <div class="story-intel-environment-legend">
+                    <div class="story-intel-environment-row" style="--story-intel-item-delay:1.92s"><span class="tone urban"></span><span>Urban</span><strong>48%</strong></div>
+                    <div class="story-intel-environment-row" style="--story-intel-item-delay:2.02s"><span class="tone suburban"></span><span>Suburban</span><strong>32%</strong></div>
+                    <div class="story-intel-environment-row" style="--story-intel-item-delay:2.12s"><span class="tone rural"></span><span>Rural</span><strong>20%</strong></div>
+                  </div>
+                  <p class="story-intel-widget-note">Urban routines lean lighter and faster</p>
+                </section>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="story-footer">
+        <div class="story-progress">
+          <div class="story-progress-top">
+            <span class="story-progress-label">Swipe, drag or use the keyboard to move through the story</span>
+            <span class="story-progress-text" id="brandStoryProgressText"><span id="brandStoryCurrent">01</span> / <span id="brandStoryTotal">06</span></span>
+          </div>
+          <div class="story-progress-line" aria-hidden="true">
+            <span id="brandStoryProgressFill"></span>
+          </div>
+        </div>
+        <div class="story-dots" role="tablist" aria-label="Why brands choose Skin ID slides">
+          <button class="story-dot is-active" type="button" role="tab" aria-selected="true" aria-label="Go to slide 1" tabindex="0"></button>
+          <button class="story-dot" type="button" role="tab" aria-selected="false" aria-label="Go to slide 2" tabindex="-1"></button>
+          <button class="story-dot" type="button" role="tab" aria-selected="false" aria-label="Go to slide 3" tabindex="-1"></button>
+          <button class="story-dot" type="button" role="tab" aria-selected="false" aria-label="Go to slide 4" tabindex="-1"></button>
+          <button class="story-dot" type="button" role="tab" aria-selected="false" aria-label="Go to slide 5" tabindex="-1"></button>
+          <button class="story-dot" type="button" role="tab" aria-selected="false" aria-label="Go to slide 6" tabindex="-1"></button>
+        </div>
       </div>
     </div>
   </section>
@@ -454,21 +3748,70 @@ const landingHtml = `<div class="loader"><div class="loader-brand">NABI</div><di
     <div class="blackout-pin"><canvas class="final-canvas" id="finalCanvas"></canvas><div class="blackout-bg" id="blackoutBg"></div><div class="final-word"><h2><span class="final-line" id="f1">Your <span class="highlight-word highlight-gold">visitors</span> already have questions.</span><span class="final-line" id="f2">Your store needs to <span class="highlight-word highlight-blue">answer</span> them.</span></h2><p class="final-line" id="f3">Skin ID turns <span class="highlight-word highlight-gold">product confusion</span> into a <span class="highlight-word highlight-cyan">personalized buying path</span> configured around your catalog, UX and growth goals.</p><a class="cta magnetic final-line" id="f4" href="${calendlyUrl}" target="_blank" rel="noreferrer"><span class="btn-text">Discover Skin ID</span></a></div></div>
   </section>`;
 
-const landingScript = "document.querySelectorAll(\".problem-card,.depth-card\").forEach(card=>{\n  card.addEventListener(\"mousemove\",e=>{\n    const r=card.getBoundingClientRect();\n    card.style.setProperty(\"--mx\", ((e.clientX-r.left)/r.width*100)+\"%\");\n    card.style.setProperty(\"--my\", ((e.clientY-r.top)/r.height*100)+\"%\");\n  });\n});\n\nconst cursor=document.getElementById(\"cursor\"),glow=document.getElementById(\"glow\"),magnets=document.querySelectorAll(\".magnetic\");\nwindow.addEventListener(\"mousemove\",e=>{cursor.style.left=e.clientX+\"px\";cursor.style.top=e.clientY+\"px\";glow.style.left=e.clientX+\"px\";glow.style.top=e.clientY+\"px\";let active=false;magnets.forEach(el=>{const r=el.getBoundingClientRect(),x=e.clientX-(r.left+r.width/2),y=e.clientY-(r.top+r.height/2),d=Math.sqrt(x*x+y*y);if(d<140){el.style.transform=`translate(${x*.14}px,${y*.2}px)`;active=true}else el.style.transform=\"translate(0,0)\"});cursor.style.width=active?\"48px\":\"18px\";cursor.style.height=active?\"48px\":\"18px\";cursor.style.background=active?\"rgba(255,231,163,.14)\":\"transparent\"});\ndocument.querySelectorAll(\".problem-card\").forEach(c=>new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add(\"reveal\")}),{threshold:.22}).observe(c));\n\nconst canvas=document.getElementById(\"heroCanvas\"),ctx=canvas.getContext(\"2d\"),cinema=document.getElementById(\"cinema\");let pts=[],mouse={x:.5,y:.5};\nfunction resizeHero(){const dpr=Math.min(devicePixelRatio||1,2);canvas.width=cinema.clientWidth*dpr;canvas.height=cinema.clientHeight*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);buildHero()}\nfunction buildHero(){pts=[];const w=cinema.clientWidth,h=cinema.clientHeight;for(let i=0;i<470;i++){const a=Math.random()*Math.PI*2,r=Math.sqrt(Math.random())*Math.min(w,h)*.35;pts.push({ox:w/2+Math.cos(a)*r,oy:h/2+Math.sin(a)*r*.82,x:w/2+Math.cos(a)*r,y:h/2+Math.sin(a)*r*.82,vx:0,vy:0,s:Math.random()*2.2+.65,g:Math.floor(Math.random()*5),ph:Math.random()*Math.PI*2})}}\ncinema.addEventListener(\"mousemove\",e=>{const r=cinema.getBoundingClientRect();mouse.x=(e.clientX-r.left)/r.width;mouse.y=(e.clientY-r.top)/r.height;cinema.style.transform=`perspective(1000px) rotateY(${(mouse.x-.5)*4.5}deg) rotateX(${-(mouse.y-.5)*4.5}deg)`});\nfunction drawHero(t){const w=cinema.clientWidth,h=cinema.clientHeight;ctx.clearRect(0,0,w,h);const centers=[{x:w*.30,y:h*.32},{x:w*.67,y:h*.28},{x:w*.36,y:h*.65},{x:w*.70,y:h*.62},{x:w*.50,y:h*.45}],pull=Math.min(1,(Math.abs(mouse.x-.5)+Math.abs(mouse.y-.5))*1.65);for(const p of pts){const c=centers[p.g],wave=Math.sin(t*.0015+p.ph)*13,tx=p.ox*(1-pull)+c.x*pull,ty=(p.oy+wave)*(1-pull)+c.y*pull;p.vx+=(tx-p.x)*.014;p.vy+=(ty-p.y)*.014;p.vx*=.87;p.vy*=.87;p.x+=p.vx;p.y+=p.vy;ctx.beginPath();ctx.arc(p.x,p.y,p.s,0,Math.PI*2);ctx.fillStyle=p.g%2===0?\"rgba(115,169,255,.73)\":\"rgba(255,231,163,.68)\";ctx.fill()}requestAnimationFrame(drawHero)}\naddEventListener(\"resize\",resizeHero);resizeHero();requestAnimationFrame(drawHero);\n\nconst cloud=document.getElementById(\"productCloud\");[[74,420,-19],[240,255,15],[450,435,28],[690,210,-25],[875,395,19],[145,570,22],[555,260,-8],[930,120,8],[360,92,-16],[760,565,-10],[1010,520,14],[70,165,24],[515,585,-22],[640,90,11],[995,255,-17],[315,590,18]].forEach((p,i)=>{const el=document.createElement(\"div\");el.className=\"product\";el.style.left=p[0]+\"px\";el.style.top=p[1]+\"px\";el.style.setProperty(\"--r\",p[2]+\"deg\");el.style.animation=`float${i%4} ${5+i%5}s ease-in-out infinite alternate`;cloud.appendChild(el)});\nconst st=document.createElement(\"style\");st.textContent=`@keyframes float0{to{transform:translateY(-24px) rotate(8deg)}}@keyframes float1{to{transform:translate(14px,18px) rotate(-12deg)}}@keyframes float2{to{transform:translate(18px,-12px) rotate(18deg)}}@keyframes float3{to{transform:translate(-14px,16px) rotate(-8deg)}}`;document.head.appendChild(st);\n\nconst control=document.querySelector(\".control-room\"),stage=document.getElementById(\"controlStage\"),kicker=document.getElementById(\"stageKicker\"),title=document.getElementById(\"stageTitle\");\nconst copy=[[\"Before Skin ID\",\"A visitor enters. The store shows products. The decision gets harder.\"],[\"The leak\",\"Too many options. No personal answer. No reason to buy the routine.\"],[\"Skin ID activated\",\"Signals become structure. Product chaos becomes decision logic.\"],[\"Decision engine\",\"Skin profile, catalog logic and buying intent connect in one path.\"],[\"After Skin ID\",\"The customer leaves with a complete routine, not confusion.\"]];\naddEventListener(\"scroll\",()=>{const r=control.getBoundingClientRect(),total=control.offsetHeight-innerHeight,p=Math.min(1,Math.max(0,-r.top/total));let s=p<.13?1:p<.30?2:p<.50?3:p<.68?4:5;stage.className=\"control-stage s\"+s;kicker.textContent=copy[s-1][0];title.textContent=copy[s-1][1];const black=document.querySelector(\".blackout\"),br=black.getBoundingClientRect(),bt=black.offsetHeight-innerHeight,bp=Math.min(1,Math.max(0,-br.top/bt));document.getElementById(\"blackoutBg\").style.opacity=.05+bp*.78;[\"f1\",\"f2\",\"f3\",\"f4\"].forEach((id,i)=>document.getElementById(id).classList.toggle(\"show\",bp>0.14+i*.16))});\n\nconst data={hydration:[\"Hydration-first routine\",\"91\",\"Repair barrier first\",\"Cleanser + serum + cream\",\"Bundle recommended\",\"Clear next step\"],sensitivity:[\"Sensitivity-safe routine\",\"88\",\"Reduce irritation risk\",\"Gentle cleanse + barrier cream\",\"Low-friction bundle\",\"Feels understood\"],acne:[\"Breakout-control routine\",\"86\",\"Clarify without stripping\",\"Cleanser + treatment + SPF\",\"Problem-solution bundle\",\"Confident choice\"],aging:[\"Texture-support routine\",\"90\",\"Support renewal gradually\",\"Serum + cream + SPF\",\"Premium routine path\",\"Higher trust\"]};\ndocument.querySelectorAll(\".chip\").forEach(chip=>chip.addEventListener(\"click\",()=>{document.querySelectorAll(\".chip\").forEach(c=>c.classList.remove(\"active\"));chip.classList.add(\"active\");const d=data[chip.dataset.mode];document.getElementById(\"resultTitle\").textContent=d[0];document.getElementById(\"score\").textContent=d[1];document.getElementById(\"decision\").textContent=d[2];document.getElementById(\"routine\").textContent=d[3];document.getElementById(\"cart\").textContent=d[4];document.getElementById(\"feeling\").textContent=d[5]}));\nconst range=document.getElementById(\"beliefRange\"),fill=document.getElementById(\"rangeFill\"),belief=document.getElementById(\"beliefText\");range.addEventListener(\"input\",()=>{const v=+range.value;fill.style.width=`calc(${v}% - 24px)`;belief.innerHTML=v<35?`Most skincare stores sell <span class=\"change word-products\">products.</span>`:v<70?`Better skincare stores sell <span class=\"change word-routines\">routines.</span>`:`Top skincare brands sell <span class=\"change word-decisions\">decisions.</span>`});\n\nconst fc=document.getElementById(\"finalCanvas\"),fctx=fc.getContext(\"2d\");let fps=[];\nfunction fsize(){fc.width=innerWidth;fc.height=innerHeight;fps=Array.from({length:120},()=>({x:Math.random()*fc.width,y:Math.random()*fc.height,vx:(Math.random()-.5)*.6,vy:(Math.random()-.5)*.6,s:Math.random()*2+1}))}\nfunction fdraw(){fctx.clearRect(0,0,fc.width,fc.height);for(let i=0;i<fps.length;i++){let p=fps[i];p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>fc.width)p.vx*=-1;if(p.y<0||p.y>fc.height)p.vy*=-1;fctx.beginPath();fctx.arc(p.x,p.y,p.s,0,Math.PI*2);fctx.fillStyle=i%2?\"rgba(255,231,163,.35)\":\"rgba(115,169,255,.32)\";fctx.fill();for(let j=i+1;j<fps.length;j++){let q=fps[j],dx=p.x-q.x,dy=p.y-q.y,d=Math.sqrt(dx*dx+dy*dy);if(d<110){fctx.beginPath();fctx.moveTo(p.x,p.y);fctx.lineTo(q.x,q.y);fctx.strokeStyle=`rgba(255,231,163,${(1-d/110)*.12})`;fctx.stroke()}}}requestAnimationFrame(fdraw)}\naddEventListener(\"resize\",fsize);fsize();fdraw();";
+const landingScript = "document.querySelectorAll(\".problem-card,.depth-card\").forEach(card=>{\n  card.addEventListener(\"mousemove\",e=>{\n    const r=card.getBoundingClientRect();\n    card.style.setProperty(\"--mx\", ((e.clientX-r.left)/r.width*100)+\"%\");\n    card.style.setProperty(\"--my\", ((e.clientY-r.top)/r.height*100)+\"%\");\n  });\n});\n\nconst cursor=document.getElementById(\"cursor\"),glow=document.getElementById(\"glow\"),magnets=document.querySelectorAll(\".magnetic\");\nwindow.addEventListener(\"mousemove\",e=>{cursor.style.left=e.clientX+\"px\";cursor.style.top=e.clientY+\"px\";glow.style.left=e.clientX+\"px\";glow.style.top=e.clientY+\"px\";let active=false;magnets.forEach(el=>{const r=el.getBoundingClientRect(),x=e.clientX-(r.left+r.width/2),y=e.clientY-(r.top+r.height/2),d=Math.sqrt(x*x+y*y);if(d<140){el.style.transform=`translate(${x*.14}px,${y*.2}px)`;active=true}else el.style.transform=\"translate(0,0)\"});cursor.style.width=active?\"48px\":\"18px\";cursor.style.height=active?\"48px\":\"18px\";cursor.style.background=active?\"rgba(255,231,163,.14)\":\"transparent\"});\ndocument.querySelectorAll(\".problem-card\").forEach(c=>new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add(\"reveal\")}),{threshold:.22}).observe(c));\n\nconst cinema=document.getElementById(\"cinema\");if(cinema){cinema.addEventListener(\"mouseleave\",()=>{cinema.style.transform=\"perspective(1000px) rotateY(0deg) rotateX(0deg)\"})}\n\nconst cloud=document.getElementById(\"productCloud\");[[74,420,-19],[240,255,15],[450,435,28],[690,210,-25],[875,395,19],[145,570,22],[555,260,-8],[930,120,8],[360,92,-16],[760,565,-10],[1010,520,14],[70,165,24],[515,585,-22],[640,90,11],[995,255,-17],[315,590,18]].forEach((p,i)=>{const el=document.createElement(\"div\");el.className=\"product\";el.style.left=p[0]+\"px\";el.style.top=p[1]+\"px\";el.style.setProperty(\"--r\",p[2]+\"deg\");el.style.animation=`float${i%4} ${5+i%5}s ease-in-out infinite alternate`;cloud.appendChild(el)});\nconst st=document.createElement(\"style\");st.textContent=`@keyframes float0{to{transform:translateY(-24px) rotate(8deg)}}@keyframes float1{to{transform:translate(14px,18px) rotate(-12deg)}}@keyframes float2{to{transform:translate(18px,-12px) rotate(18deg)}}@keyframes float3{to{transform:translate(-14px,16px) rotate(-8deg)}}`;document.head.appendChild(st);\n\nconst control=document.querySelector(\".control-room\"),stage=document.getElementById(\"controlStage\"),kicker=document.getElementById(\"stageKicker\"),title=document.getElementById(\"stageTitle\");\nconst copy=[[\"Before Skin ID\",\"More <span class=\\\"highlight-word highlight-gold\\\">products.</span> Less <span class=\\\"highlight-word highlight-cyan\\\">confidence.</span>\"],[\"The leak\",\"Too many <span class=\\\"highlight-word highlight-gold\\\">options.</span> No <span class=\\\"highlight-word highlight-blue\\\">personal</span> answer. No reason to buy the <span class=\\\"highlight-word highlight-cyan\\\">routine.</span>\"],[\"Skin ID activated\",\"<span class=\\\"highlight-word highlight-gold\\\">Confusion</span> becomes <span class=\\\"highlight-word highlight-cyan\\\">clarity.</span> <span class=\\\"highlight-word highlight-gold\\\">⭐⭐⭐⭐⭐</span>\"],[\"Decision engine\",\"Every <span class=\\\"highlight-word highlight-blue\\\">recommendation</span> has a <span class=\\\"highlight-word highlight-gold\\\">reason.</span>\"],[\"After Skin ID\",\"The customer leaves with a complete <span class=\\\"highlight-word highlight-cyan\\\">routine</span>, not <span class=\\\"highlight-word highlight-gold\\\">confusion.</span>\"]];\naddEventListener(\"scroll\",()=>{const r=control.getBoundingClientRect(),total=control.offsetHeight-innerHeight,p=Math.min(1,Math.max(0,-r.top/total));let s=p<.13?1:p<.30?2:p<.50?3:p<.68?4:5;stage.className=\"control-stage s\"+s;kicker.textContent=copy[s-1][0];title.innerHTML=copy[s-1][1];const black=document.querySelector(\".blackout\"),br=black.getBoundingClientRect(),bt=black.offsetHeight-innerHeight,bp=Math.min(1,Math.max(0,-br.top/bt));document.getElementById(\"blackoutBg\").style.opacity=.05+bp*.78;[\"f1\",\"f2\",\"f3\",\"f4\"].forEach((id,i)=>document.getElementById(id).classList.toggle(\"show\",bp>0.14+i*.16))});\n\nconst data={hydration:[\"Hydration-first routine\",\"91\",\"Repair barrier first\",\"Cleanser + serum + cream\",\"Bundle recommended\",\"Clear next step\"],sensitivity:[\"Sensitivity-safe routine\",\"88\",\"Reduce irritation risk\",\"Gentle cleanse + barrier cream\",\"Low-friction bundle\",\"Feels understood\"],acne:[\"Breakout-control routine\",\"86\",\"Clarify without stripping\",\"Cleanser + treatment + SPF\",\"Problem-solution bundle\",\"Confident choice\"],aging:[\"Texture-support routine\",\"90\",\"Support renewal gradually\",\"Serum + cream + SPF\",\"Premium routine path\",\"Higher trust\"]};\ndocument.querySelectorAll(\".chip\").forEach(chip=>chip.addEventListener(\"click\",()=>{document.querySelectorAll(\".chip\").forEach(c=>c.classList.remove(\"active\"));chip.classList.add(\"active\");const d=data[chip.dataset.mode];document.getElementById(\"resultTitle\").textContent=d[0];document.getElementById(\"score\").textContent=d[1];document.getElementById(\"decision\").textContent=d[2];document.getElementById(\"routine\").textContent=d[3];document.getElementById(\"cart\").textContent=d[4];document.getElementById(\"feeling\").textContent=d[5]}));\nconst range=document.getElementById(\"beliefRange\"),fill=document.getElementById(\"rangeFill\"),belief=document.getElementById(\"beliefText\");range.addEventListener(\"input\",()=>{const v=+range.value;fill.style.width=`calc(${v}% - 24px)`;belief.innerHTML=v<35?`Most skincare stores sell <span class=\"change word-products\">products.</span>`:v<70?`Better skincare stores sell <span class=\"change word-routines\">routines.</span>`:`Top skincare brands sell <span class=\"change word-decisions\">decisions.</span>`});\n\nconst fc=document.getElementById(\"finalCanvas\"),fctx=fc.getContext(\"2d\");let fps=[];\nfunction fsize(){fc.width=innerWidth;fc.height=innerHeight;fps=Array.from({length:120},()=>({x:Math.random()*fc.width,y:Math.random()*fc.height,vx:(Math.random()-.5)*.6,vy:(Math.random()-.5)*.6,s:Math.random()*2+1}))}\nfunction fdraw(){fctx.clearRect(0,0,fc.width,fc.height);for(let i=0;i<fps.length;i++){let p=fps[i];p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>fc.width)p.vx*=-1;if(p.y<0||p.y>fc.height)p.vy*=-1;fctx.beginPath();fctx.arc(p.x,p.y,p.s,0,Math.PI*2);fctx.fillStyle=i%2?\"rgba(255,231,163,.35)\":\"rgba(115,169,255,.32)\";fctx.fill();for(let j=i+1;j<fps.length;j++){let q=fps[j],dx=p.x-q.x,dy=p.y-q.y,d=Math.sqrt(dx*dx+dy*dy);if(d<110){fctx.beginPath();fctx.moveTo(p.x,p.y);fctx.lineTo(q.x,q.y);fctx.strokeStyle=`rgba(255,231,163,${(1-d/110)*.12})`;fctx.stroke()}}}requestAnimationFrame(fdraw)}\naddEventListener(\"resize\",fsize);fsize();fdraw();";
 
 export default function App() {
   useEffect(() => {
-    if (!(window as any).__nabiLandingInitialized) {
-      (window as any).__nabiLandingInitialized = true;
+    let introDisposed = false;
+    let cleanupLogoIntro: () => void = () => undefined;
+    let cleanupFaceScanModel: () => void = () => undefined;
+    let cleanupRoutineProductModel: () => void = () => undefined;
+
+    const landingWindow = window as LandingWindow;
+
+    if (!landingWindow.__nabiLandingInitialized) {
+      landingWindow.__nabiLandingInitialized = true;
 
       const runLandingScript = new Function(landingScript);
       runLandingScript();
     }
 
-    const cleanupFaceSection = setupVisitorFaceSection();
+    void import("./lib/setupLogoIntro")
+      .then(({ setupLogoIntro }) => {
+        if (introDisposed) {
+          return;
+        }
+
+        cleanupLogoIntro = setupLogoIntro();
+      })
+      .catch(() => undefined);
+
+    void import("./lib/setupFaceScanModel")
+      .then(({ setupFaceScanModel }) => {
+        if (introDisposed) {
+          return;
+        }
+
+        cleanupFaceScanModel = setupFaceScanModel();
+      })
+      .catch(() => undefined);
+
+    void import("./lib/setupRoutineProductModel")
+      .then(({ setupRoutineProductModel }) => {
+        if (introDisposed) {
+          return;
+        }
+
+        cleanupRoutineProductModel = setupRoutineProductModel();
+      })
+      .catch(() => undefined);
+
+    const cleanupBrandStoryCarousel = setupBrandStoryCarousel();
+    const cleanupHeroPlatformToggle = setupHeroPlatformToggle();
+    const cleanupHeroValueEngine = setupHeroValueEngine();
+    const cleanupHeroSceneTransitions = setupHeroSceneTransitions();
+    const cleanupDecisionSummaryBoard = setupDecisionSummaryBoard();
 
     return () => {
-      cleanupFaceSection();
+      introDisposed = true;
+      cleanupLogoIntro();
+      cleanupFaceScanModel();
+      cleanupRoutineProductModel();
+      cleanupBrandStoryCarousel();
+      cleanupHeroPlatformToggle();
+      cleanupHeroValueEngine();
+      cleanupHeroSceneTransitions();
+      cleanupDecisionSummaryBoard();
     };
   }, []);
 
