@@ -74,6 +74,9 @@ export function setupFaceScanModel() {
   });
   const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
   const maxPixelRatio = touchDevice ? 1 : 1.5;
+  const baseUrl = import.meta.env.BASE_URL;
+  const modelUrl = touchDevice ? `${baseUrl}face-mobile.glb` : `${baseUrl}face.glb`;
+  const containingScene = viewport.closest<HTMLElement>(".hero-scene");
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1;
@@ -87,10 +90,12 @@ export function setupFaceScanModel() {
   const fillLight = new DirectionalLight("#d7ecff", 1.6);
   const rimLight = new DirectionalLight("#ffe7a3", 1.15);
   const pmremGenerator = new PMREMGenerator(renderer);
-  const environmentTarget = pmremGenerator.fromScene(new RoomEnvironment(), 0.05);
+  const roomEnvironment = new RoomEnvironment();
+  const environmentTarget = pmremGenerator.fromScene(roomEnvironment, 0.05);
+  roomEnvironment.dispose();
   const loader = new GLTFLoader();
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const shouldAnimate = !prefersReducedMotion && !touchDevice;
+  const shouldAnimate = !prefersReducedMotion;
 
   let model: Object3D | null = null;
   let destroyed = false;
@@ -112,6 +117,15 @@ export function setupFaceScanModel() {
 
   const renderFrame = () => {
     renderer.render(scene, camera);
+  };
+
+  const isSceneActive = () => {
+    if (!containingScene) {
+      return true;
+    }
+
+    const opacity = Number.parseFloat(containingScene.style.opacity);
+    return Number.isNaN(opacity) || opacity > 0.02;
   };
 
   const stopAnimation = () => {
@@ -138,14 +152,13 @@ export function setupFaceScanModel() {
       return;
     }
 
-    if (model && shouldAnimate && isVisible) {
+    if (model && shouldAnimate && isVisible && isSceneActive()) {
       const drift = time * 0.001;
       model.position.y = baseY + Math.sin(drift * 1.15) * 0.028;
       model.rotation.x = baseRotationX + Math.sin(drift * 0.7) * 0.018;
       model.rotation.y = baseRotationY + Math.sin(drift * 0.9) * 0.028;
+      renderFrame();
     }
-
-    renderFrame();
 
     if (shouldAnimate && isVisible) {
       startAnimation();
@@ -189,9 +202,20 @@ export function setupFaceScanModel() {
   visibilityObserver.observe(viewport);
 
   void loader
-    .loadAsync("/face.glb")
+    .loadAsync(modelUrl)
     .then((gltf) => {
       if (destroyed) {
+        gltf.scene.traverse((child) => {
+          if (child instanceof Mesh) {
+            child.geometry.dispose();
+
+            if (Array.isArray(child.material)) {
+              child.material.forEach((material) => material.dispose());
+            } else {
+              child.material.dispose();
+            }
+          }
+        });
         return;
       }
 
@@ -226,6 +250,7 @@ export function setupFaceScanModel() {
     window.removeEventListener("resize", resize);
     renderer.dispose();
     renderer.forceContextLoss();
+    scene.environment = null;
     environmentTarget.dispose();
     pmremGenerator.dispose();
     resources.geometries.forEach((geometry) => geometry.dispose());

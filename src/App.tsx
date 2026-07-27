@@ -3802,8 +3802,63 @@ export default function App() {
     let cleanupLogoIntro: () => void = () => undefined;
     let cleanupFaceScanModel: () => void = () => undefined;
     let cleanupRoutineProductModel: () => void = () => undefined;
+    let setupFaceScanModel: (() => () => void) | null = null;
+    let setupRoutineProductModel: (() => () => void) | null = null;
+    let faceScanModelActive = false;
+    let routineProductModelActive = false;
+    let heroModelsVisible = false;
 
     const landingWindow = window as LandingWindow;
+    const heroCinema = document.getElementById("cinema");
+
+    const startHeroModels = () => {
+      if (introDisposed || !heroModelsVisible) {
+        return;
+      }
+
+      if (setupFaceScanModel && !faceScanModelActive) {
+        cleanupFaceScanModel = setupFaceScanModel();
+        faceScanModelActive = true;
+      }
+
+      if (setupRoutineProductModel && !routineProductModelActive) {
+        cleanupRoutineProductModel = setupRoutineProductModel();
+        routineProductModelActive = true;
+      }
+    };
+
+    const stopHeroModels = () => {
+      if (faceScanModelActive) {
+        cleanupFaceScanModel();
+        cleanupFaceScanModel = () => undefined;
+        faceScanModelActive = false;
+      }
+
+      if (routineProductModelActive) {
+        cleanupRoutineProductModel();
+        cleanupRoutineProductModel = () => undefined;
+        routineProductModelActive = false;
+      }
+    };
+
+    const heroModelObserver = new IntersectionObserver(
+      ([entry]) => {
+        heroModelsVisible = entry?.isIntersecting ?? false;
+
+        if (heroModelsVisible) {
+          startHeroModels();
+        } else {
+          stopHeroModels();
+        }
+      },
+      { rootMargin: "120px 0px" },
+    );
+
+    if (heroCinema) {
+      const heroRect = heroCinema.getBoundingClientRect();
+      heroModelsVisible = heroRect.bottom >= -120 && heroRect.top <= window.innerHeight + 120;
+      heroModelObserver.observe(heroCinema);
+    }
 
     if (!landingWindow.__nabiLandingInitialized) {
       landingWindow.__nabiLandingInitialized = true;
@@ -3823,22 +3878,24 @@ export default function App() {
       .catch(() => undefined);
 
     void import("./lib/setupFaceScanModel")
-      .then(({ setupFaceScanModel }) => {
+      .then((module) => {
         if (introDisposed) {
           return;
         }
 
-        cleanupFaceScanModel = setupFaceScanModel();
+        setupFaceScanModel = module.setupFaceScanModel;
+        startHeroModels();
       })
       .catch(() => undefined);
 
     void import("./lib/setupRoutineProductModel")
-      .then(({ setupRoutineProductModel }) => {
+      .then((module) => {
         if (introDisposed) {
           return;
         }
 
-        cleanupRoutineProductModel = setupRoutineProductModel();
+        setupRoutineProductModel = module.setupRoutineProductModel;
+        startHeroModels();
       })
       .catch(() => undefined);
 
@@ -3850,9 +3907,9 @@ export default function App() {
 
     return () => {
       introDisposed = true;
+      heroModelObserver.disconnect();
       cleanupLogoIntro();
-      cleanupFaceScanModel();
-      cleanupRoutineProductModel();
+      stopHeroModels();
       cleanupBrandStoryCarousel();
       cleanupHeroPlatformToggle();
       cleanupHeroValueEngine();

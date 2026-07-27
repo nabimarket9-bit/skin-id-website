@@ -2,6 +2,7 @@ import {
   ACESFilmicToneMapping,
   AmbientLight,
   Box3,
+  BufferGeometry,
   DirectionalLight,
   Group,
   Material,
@@ -20,10 +21,13 @@ const INTRO_DURATION_MS = 3600;
 const REDUCED_MOTION_DURATION_MS = 1500;
 
 type IntroResources = {
+  geometries: Set<BufferGeometry>;
   materials: Set<Material>;
 };
 
 function markDisposableMesh(mesh: Mesh, resources: IntroResources) {
+  resources.geometries.add(mesh.geometry);
+
   if (Array.isArray(mesh.material)) {
     mesh.material.forEach((material) => resources.materials.add(material));
     return;
@@ -86,6 +90,7 @@ export function setupLogoIntro() {
   }
 
   const resources: IntroResources = {
+    geometries: new Set(),
     materials: new Set(),
   };
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -109,7 +114,9 @@ export function setupLogoIntro() {
   const keyLight = new DirectionalLight("#ffffff", 2.8);
   const rimLight = new DirectionalLight("#ffffff", 1.9);
   const pmremGenerator = new PMREMGenerator(renderer);
-  const environmentTarget = pmremGenerator.fromScene(new RoomEnvironment(), 0.04);
+  const roomEnvironment = new RoomEnvironment();
+  const environmentTarget = pmremGenerator.fromScene(roomEnvironment, 0.04);
+  roomEnvironment.dispose();
 
   let destroyed = false;
   let frameId = 0;
@@ -117,6 +124,24 @@ export function setupLogoIntro() {
   let hideTimeout = 0;
   let fallbackTimeout = 0;
   let exitStarted = false;
+  let rendererReleased = false;
+
+  const releaseRenderer = () => {
+    if (rendererReleased) {
+      return;
+    }
+
+    rendererReleased = true;
+    destroyed = true;
+    window.cancelAnimationFrame(frameId);
+    scene.environment = null;
+    resources.geometries.forEach((geometry) => geometry.dispose());
+    resources.materials.forEach((material) => material.dispose());
+    environmentTarget.dispose();
+    pmremGenerator.dispose();
+    renderer.dispose();
+    renderer.forceContextLoss();
+  };
 
   document.body.classList.add("intro-lock");
 
@@ -155,6 +180,8 @@ export function setupLogoIntro() {
       loader.classList.add("is-hidden");
       document.body.classList.remove("intro-lock");
       document.body.classList.add("intro-complete");
+      window.removeEventListener("resize", resize);
+      releaseRenderer();
     }, reducedMotion ? 260 : 720);
   };
 
@@ -216,9 +243,6 @@ export function setupLogoIntro() {
     window.clearTimeout(fallbackTimeout);
     window.removeEventListener("resize", resize);
     document.body.classList.remove("intro-lock");
-    renderer.dispose();
-    environmentTarget.dispose();
-    pmremGenerator.dispose();
-    resources.materials.forEach((material) => material.dispose());
+    releaseRenderer();
   };
 }

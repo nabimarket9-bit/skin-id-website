@@ -120,6 +120,7 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
   });
   const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
   const maxPixelRatio = touchDevice ? 1 : 1.5;
+  const containingScene = viewport.closest<HTMLElement>(".hero-scene");
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.5;
@@ -135,10 +136,12 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
   const rimLight = new DirectionalLight("#ffe7a3", 3.2);
   const backLight = new DirectionalLight("#bfe3ff", 2.5);
   const pmremGenerator = new PMREMGenerator(renderer);
-  const environmentTarget = pmremGenerator.fromScene(new RoomEnvironment(), 0.05);
+  const roomEnvironment = new RoomEnvironment();
+  const environmentTarget = pmremGenerator.fromScene(roomEnvironment, 0.05);
+  roomEnvironment.dispose();
   const loader = new GLTFLoader();
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const shouldAnimate = !prefersReducedMotion && !touchDevice;
+  const shouldAnimate = !prefersReducedMotion;
 
   let model: Object3D | null = null;
   let destroyed = false;
@@ -166,6 +169,15 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
     renderer.render(scene, camera);
   };
 
+  const isSceneActive = () => {
+    if (!containingScene) {
+      return true;
+    }
+
+    const opacity = Number.parseFloat(containingScene.style.opacity);
+    return Number.isNaN(opacity) || opacity > 0.02;
+  };
+
   const stopAnimation = () => {
     if (!frameId) {
       return;
@@ -190,15 +202,14 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
       return;
     }
 
-    if (model && shouldAnimate && isVisible) {
+    if (model && shouldAnimate && isVisible && isSceneActive()) {
       const drift = time * 0.001;
       model.position.y = baseY + Math.sin(drift * 0.96) * 0.012;
       model.rotation.x = baseRotationX + Math.sin(drift * 0.56) * 0.024;
       model.rotation.y = baseRotationY + Math.sin(drift * 0.82) * 0.28;
       model.rotation.z = baseRotationZ + Math.sin(drift * 0.62) * 0.038;
+      renderFrame();
     }
-
-    renderFrame();
 
     if (shouldAnimate && isVisible) {
       startAnimation();
@@ -247,6 +258,17 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
     .loadAsync(config.modelUrl)
     .then((gltf) => {
       if (destroyed) {
+        gltf.scene.traverse((child) => {
+          if (child instanceof Mesh) {
+            child.geometry.dispose();
+
+            if (Array.isArray(child.material)) {
+              child.material.forEach((material) => material.dispose());
+            } else {
+              child.material.dispose();
+            }
+          }
+        });
         return;
       }
 
@@ -292,6 +314,7 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
     window.removeEventListener("resize", resize);
     renderer.dispose();
     renderer.forceContextLoss();
+    scene.environment = null;
     environmentTarget.dispose();
     pmremGenerator.dispose();
     resources.geometries.forEach((geometry) => geometry.dispose());
@@ -301,26 +324,38 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
 
 export function setupRoutineProductModel() {
   const baseUrl = import.meta.env.BASE_URL;
+  const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+  const modelUrl = (desktopName: string, mobileName: string) =>
+    `${baseUrl}${touchDevice ? mobileName : desktopName}`;
   const cleanupHandlers = [
     setupSingleRoutineProduct({
       viewportSelector: ".routine-product-cleanser",
       canvasId: "cleanserProductCanvas",
-      modelUrl: `${baseUrl}minimalist_skincare_bottle__3d_model.glb`,
+      modelUrl: modelUrl(
+        "minimalist_skincare_bottle__3d_model.glb",
+        "minimalist-skincare-bottle-mobile.glb",
+      ),
     }),
     setupSingleRoutineProduct({
       viewportSelector: ".routine-product-serum",
       canvasId: "serumProductCanvas",
-      modelUrl: `${baseUrl}serum_bottle.glb`,
+      modelUrl: modelUrl("serum_bottle.glb", "serum-bottle-mobile.glb"),
     }),
     setupSingleRoutineProduct({
       viewportSelector: ".routine-product-moisturizer",
       canvasId: "moisturizerProductCanvas",
-      modelUrl: `${baseUrl}simple_3d_skincare_cream_jar_3d_model.glb`,
+      modelUrl: modelUrl(
+        "simple_3d_skincare_cream_jar_3d_model.glb",
+        "skincare-cream-jar-mobile.glb",
+      ),
     }),
     setupSingleRoutineProduct({
       viewportSelector: ".routine-product-spf",
       canvasId: "spfProductCanvas",
-      modelUrl: `${baseUrl}skincare_small_tube_pack.glb`,
+      modelUrl: modelUrl(
+        "skincare_small_tube_pack.glb",
+        "skincare-small-tube-pack-mobile.glb",
+      ),
     }),
   ];
 
