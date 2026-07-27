@@ -1276,6 +1276,18 @@
     }
 
     @media(max-width:768px){
+      .brand-story.is-mobile-static .story-header-row{display:block}
+      .brand-story.is-mobile-static .story-nav-group,
+      .brand-story.is-mobile-static .story-footer{display:none}
+      .brand-story.is-mobile-static .story-frame{overflow:visible;border-radius:0}
+      .brand-story.is-mobile-static .brand-story-track{grid-auto-flow:row;grid-auto-columns:auto;gap:18px;overflow:visible;padding:8px 0 0;scroll-snap-type:none;touch-action:auto;cursor:default}
+      .brand-story.is-mobile-static .story-slide{opacity:1;filter:none;transform:none;min-height:unset}
+      .brand-story.is-mobile-static .story-impact-card{opacity:1;transform:none}
+      .brand-story.is-mobile-static .story-slide-contrast .story-contrast-item{opacity:1;max-height:none;margin-top:var(--story-contrast-gap,14px);transform:none}
+      .brand-story.is-mobile-static .story-slide-contrast .story-contrast-item:first-child{margin-top:0}
+      .brand-story.is-mobile-static .story-flow-copy p{max-height:none;opacity:1;transform:none}
+      .brand-story.is-mobile-static .story-guided-step{opacity:1}
+      .brand-story.is-mobile-static .story-guided-line:after{transform:scaleY(1)}
       .story-shell{padding:24px;border-radius:32px}
       .story-header{gap:22px}
       .story-header-copy h2{font-size:clamp(32px,10vw,48px)}
