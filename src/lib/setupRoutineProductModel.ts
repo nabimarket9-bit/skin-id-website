@@ -134,8 +134,8 @@ function createSingleRoutineProductController(config: RoutineProductConfig): Rou
     antialias,
     powerPreference: touchDevice ? "low-power" : "high-performance",
   });
-  const maxPixelRatio = touchDevice ? 1 : 1.5;
-  const mobileFramebufferPixelBudget = 160_000;
+  const maxPixelRatio = touchDevice ? 1.25 : 1.5;
+  const mobileFramebufferPixelBudget = 200_000;
   const baseUrl = import.meta.env.BASE_URL;
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
