@@ -1343,27 +1343,10 @@ function setupHeroSceneTransitions() {
   const heroSim = cinema?.querySelector<HTMLElement>(".hero-sim");
   const scenes = heroSim ? Array.from(heroSim.querySelectorAll<HTMLElement>(".hero-scene")) : [];
   const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+  const mobileDiagnostic = touchDevice && document.body.classList.contains("mobile-diagnostic");
 
   if (!cinema || !heroSim || scenes.length !== 5) {
     return () => undefined;
-  }
-
-  if (touchDevice && document.body.classList.contains("mobile-diagnostic")) {
-    scenes.forEach((scene, index) => {
-      scene.style.display = index === 0 ? "grid" : "none";
-      scene.style.opacity = index === 0 ? "1" : "0";
-      scene.style.transform = "translate3d(0,0,0) scale(1)";
-      scene.style.filter = "none";
-    });
-
-    return () => {
-      scenes.forEach((scene, index) => {
-        scene.style.display = index === 0 ? "grid" : "none";
-        scene.style.opacity = index === 0 ? "1" : "0";
-        scene.style.transform = "translate3d(0,0,0) scale(1)";
-        scene.style.filter = "none";
-      });
-    };
   }
 
   const canvas = document.getElementById("heroCanvas") as HTMLCanvasElement | null;
@@ -2338,6 +2321,62 @@ function setupHeroSceneTransitions() {
     });
   }
 
+  function recalculateMobileDiagnosticTargets() {
+    const {
+      faceShell,
+      faceCore,
+      faceVisual,
+      faceBeam,
+      faceRing,
+      analysisZones,
+      scanTrack,
+      scanMarkers,
+      scanConfirmation,
+    } = sceneTargetNodes;
+
+    if (
+      !faceShell ||
+      !faceCore ||
+      !faceVisual ||
+      !faceBeam ||
+      !faceRing ||
+      !scanTrack ||
+      !scanConfirmation
+    ) {
+      sceneTargets = [normalizePoints([], particleCount)];
+      return;
+    }
+
+    const faceRect = relativeRect(faceVisual);
+    const faceCoreRect = relativeRect(faceCore);
+    const beamRect = relativeRect(faceBeam);
+    const trackRect = relativeRect(scanTrack);
+    const scanPoints = [
+      ...sampleEllipse(faceRect, 112, 0.12, 0.08),
+      ...sampleEllipse(faceCoreRect, 42, 0.14, 0.06),
+      ...sampleLine(
+        { x: beamRect.left + 8, y: beamRect.top + beamRect.height / 2 },
+        {
+          x: beamRect.left + beamRect.width - 8,
+          y: beamRect.top + beamRect.height / 2,
+        },
+        72,
+      ),
+      ...analysisZones.flatMap((target, index) =>
+        sampleCluster(relativeRect(target), 22, 300 + index * 17),
+      ),
+      ...sampleRectFill(trackRect, 34, 420),
+      ...scanMarkers.flatMap((marker, index) =>
+        sampleCluster(relativeRect(marker), 10, 470 + index * 19),
+      ),
+      ...sampleRectFill(relativeRect(scanConfirmation), 28, 560),
+      ...sampleRectOutline(relativeRect(faceRing), 42),
+      ...sampleRectOutline(relativeRect(faceShell), 58),
+    ];
+
+    sceneTargets = [normalizePoints(scanPoints, particleCount)];
+  }
+
   function syncHeroSectionAnimations(shouldPlay: boolean) {
     heroSection?.getAnimations({ subtree: true }).forEach((animation) => {
       const target = (animation.effect as KeyframeEffect | null)?.target;
@@ -2651,6 +2690,147 @@ function setupHeroSceneTransitions() {
 
     animationFrame = window.requestAnimationFrame(render);
   };
+
+  if (mobileDiagnostic) {
+    const mobileCanvasMaxPixels = 430_000;
+
+    const showMobileDiagnosticScene = () => {
+      scenes.forEach((scene, index) => {
+        scene.style.display = index === 0 ? "grid" : "none";
+        scene.style.opacity = index === 0 ? "1" : "0";
+        scene.style.transform = "translate3d(0,0,0) scale(1)";
+        scene.style.filter = "none";
+      });
+
+      publishModelScene(null);
+      resetScanSceneState();
+      resetProfileSceneState();
+      resetMatchSceneState();
+      resetRoutineSceneState();
+      resetResultSceneState();
+    };
+
+    const resizeMobileDiagnosticCanvas = () => {
+      const cssWidth = Math.max(1, Math.round(heroCinema.clientWidth));
+      const cssHeight = Math.max(1, Math.round(heroCinema.clientHeight));
+      let dpr = Math.min(window.devicePixelRatio || 1, 1);
+      const projectedPixels = cssWidth * cssHeight * dpr * dpr;
+
+      if (projectedPixels > mobileCanvasMaxPixels) {
+        dpr = Math.sqrt(mobileCanvasMaxPixels / Math.max(1, cssWidth * cssHeight));
+      }
+
+      width = cssWidth;
+      height = cssHeight;
+      heroCanvas.width = Math.max(1, Math.floor(cssWidth * dpr));
+      heroCanvas.height = Math.max(1, Math.floor(cssHeight * dpr));
+      heroCanvas.style.width = `${cssWidth}px`;
+      heroCanvas.style.height = `${cssHeight}px`;
+      heroContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+      recalculateMobileDiagnosticTargets();
+    };
+
+    const drawMobileDiagnosticCanvas = () => {
+      heroContext.clearRect(0, 0, width, height);
+
+      const points = sceneTargets[0] ?? [];
+
+      if (!points.length) {
+        return;
+      }
+
+      const center = { x: width * 0.5, y: height * 0.47 };
+      const glowRadius = Math.min(width, height) * 0.34;
+      const ambientGlow = heroContext.createRadialGradient(
+        center.x,
+        center.y,
+        0,
+        center.x,
+        center.y,
+        glowRadius,
+      );
+      ambientGlow.addColorStop(0, "rgba(255,231,163,0.08)");
+      ambientGlow.addColorStop(0.46, "rgba(115,169,255,0.07)");
+      ambientGlow.addColorStop(1, "rgba(115,169,255,0)");
+      heroContext.fillStyle = ambientGlow;
+      heroContext.beginPath();
+      heroContext.arc(center.x, center.y, glowRadius, 0, Math.PI * 2);
+      heroContext.fill();
+
+      points.forEach((point, index) => {
+        const particle = particles[index];
+
+        if (!particle) {
+          return;
+        }
+
+        const offsetX = (seededNoise(index * 13 + 1) - 0.5) * 18 * particle.depth;
+        const offsetY = (seededNoise(index * 17 + 3) - 0.5) * 14 * particle.depth;
+        const x = point.x + offsetX;
+        const y = point.y + offsetY;
+        const baseAlpha = particle.alpha * 0.76;
+
+        heroContext.beginPath();
+        heroContext.arc(x, y, particle.size * 1.9, 0, Math.PI * 2);
+        heroContext.fillStyle = `rgba(${particle.color},${baseAlpha * 0.12})`;
+        heroContext.fill();
+
+        heroContext.beginPath();
+        heroContext.arc(x, y, particle.size * 0.88, 0, Math.PI * 2);
+        heroContext.fillStyle = `rgba(${particle.color},${baseAlpha})`;
+        heroContext.fill();
+      });
+    };
+
+    const scheduleMobileDiagnosticRender = () => {
+      if (destroyed || animationFrame || !isVisible) {
+        return;
+      }
+
+      animationFrame = window.requestAnimationFrame(() => {
+        animationFrame = 0;
+
+        if (destroyed || !isVisible) {
+          return;
+        }
+
+        drawMobileDiagnosticCanvas();
+      });
+    };
+
+    const resizeObserver = new ResizeObserver(() => {
+      resizeMobileDiagnosticCanvas();
+      scheduleMobileDiagnosticRender();
+    });
+    const visibilityObserver = new IntersectionObserver(
+      ([entry]) => {
+        isVisible = entry?.isIntersecting ?? false;
+
+        if (isVisible) {
+          resizeMobileDiagnosticCanvas();
+          scheduleMobileDiagnosticRender();
+        } else {
+          stopAnimation();
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    resizeObserver.observe(heroCinema);
+    visibilityObserver.observe(heroCinema);
+    showMobileDiagnosticScene();
+    resizeMobileDiagnosticCanvas();
+    scheduleMobileDiagnosticRender();
+
+    return () => {
+      destroyed = true;
+      stopAnimation();
+      resizeObserver.disconnect();
+      visibilityObserver.disconnect();
+      showMobileDiagnosticScene();
+      heroContext.clearRect(0, 0, width, height);
+    };
+  }
 
   if (!touchDevice) {
     heroCinema.addEventListener("mousemove", onMouseMove);
@@ -4516,10 +4696,6 @@ const landingHtmlMobileDiagnostic = landingHtml
   .replace(
     '<canvas id="loaderLogoCanvas" aria-hidden="true"></canvas>',
     '<div class="mobile-static-logo" aria-hidden="true"></div>',
-  )
-  .replace(
-    '<canvas id="heroCanvas" aria-hidden="true"></canvas>',
-    '<div class="mobile-hero-static-backdrop" aria-hidden="true"></div>',
   )
   .replace(
     '<canvas class="face-model-canvas" id="faceModelCanvas" aria-hidden="true"></canvas>',
