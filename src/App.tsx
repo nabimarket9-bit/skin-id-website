@@ -1503,7 +1503,9 @@ function setupHeroSceneTransitions() {
   let activeScanPhase = -1;
   let activeProfilePhase = -1;
   let isVisible = true;
+  let documentVisible = !document.hidden;
   let publishedModelScene: number | null | undefined;
+  let pauseTimestamp: number | null = null;
   const sceneAnimationStates = new WeakMap<HTMLElement, boolean>();
 
   heroCinema.style.setProperty("--hero-loop", `${loopMs / 1000}s`);
@@ -2321,62 +2323,6 @@ function setupHeroSceneTransitions() {
     });
   }
 
-  function recalculateMobileDiagnosticTargets() {
-    const {
-      faceShell,
-      faceCore,
-      faceVisual,
-      faceBeam,
-      faceRing,
-      analysisZones,
-      scanTrack,
-      scanMarkers,
-      scanConfirmation,
-    } = sceneTargetNodes;
-
-    if (
-      !faceShell ||
-      !faceCore ||
-      !faceVisual ||
-      !faceBeam ||
-      !faceRing ||
-      !scanTrack ||
-      !scanConfirmation
-    ) {
-      sceneTargets = [normalizePoints([], particleCount)];
-      return;
-    }
-
-    const faceRect = relativeRect(faceVisual);
-    const faceCoreRect = relativeRect(faceCore);
-    const beamRect = relativeRect(faceBeam);
-    const trackRect = relativeRect(scanTrack);
-    const scanPoints = [
-      ...sampleEllipse(faceRect, 112, 0.12, 0.08),
-      ...sampleEllipse(faceCoreRect, 42, 0.14, 0.06),
-      ...sampleLine(
-        { x: beamRect.left + 8, y: beamRect.top + beamRect.height / 2 },
-        {
-          x: beamRect.left + beamRect.width - 8,
-          y: beamRect.top + beamRect.height / 2,
-        },
-        72,
-      ),
-      ...analysisZones.flatMap((target, index) =>
-        sampleCluster(relativeRect(target), 22, 300 + index * 17),
-      ),
-      ...sampleRectFill(trackRect, 34, 420),
-      ...scanMarkers.flatMap((marker, index) =>
-        sampleCluster(relativeRect(marker), 10, 470 + index * 19),
-      ),
-      ...sampleRectFill(relativeRect(scanConfirmation), 28, 560),
-      ...sampleRectOutline(relativeRect(faceRing), 42),
-      ...sampleRectOutline(relativeRect(faceShell), 58),
-    ];
-
-    sceneTargets = [normalizePoints(scanPoints, particleCount)];
-  }
-
   function syncHeroSectionAnimations(shouldPlay: boolean) {
     heroSection?.getAnimations({ subtree: true }).forEach((animation) => {
       const target = (animation.effect as KeyframeEffect | null)?.target;
@@ -2604,8 +2550,16 @@ function setupHeroSceneTransitions() {
       return;
     }
 
-    if (!isVisible) {
+    if (!isPlaybackVisible()) {
       return;
+    }
+
+    if (touchDevice && pauseTimestamp !== null) {
+      if (loopStartTime !== null) {
+        loopStartTime += time - pauseTimestamp;
+      }
+
+      pauseTimestamp = null;
     }
 
     if (!isHeroPlaybackReady()) {
@@ -2683,8 +2637,18 @@ function setupHeroSceneTransitions() {
     animationFrame = 0;
   };
 
+  const isPlaybackVisible = () => isVisible && (!touchDevice || documentVisible);
+
+  const markPlaybackPaused = () => {
+    if (!touchDevice || pauseTimestamp !== null) {
+      return;
+    }
+
+    pauseTimestamp = performance.now();
+  };
+
   const startAnimation = () => {
-    if (destroyed || prefersReducedMotion || animationFrame || !isVisible) {
+    if (destroyed || prefersReducedMotion || animationFrame || !isPlaybackVisible()) {
       return;
     }
 
@@ -2694,20 +2658,10 @@ function setupHeroSceneTransitions() {
   if (mobileDiagnostic) {
     const mobileCanvasMaxPixels = 430_000;
 
-    const showMobileDiagnosticScene = () => {
-      scenes.forEach((scene, index) => {
-        scene.style.display = index === 0 ? "grid" : "none";
-        scene.style.opacity = index === 0 ? "1" : "0";
-        scene.style.transform = "translate3d(0,0,0) scale(1)";
-        scene.style.filter = "none";
+    const prepareMobileDiagnosticScenes = () => {
+      scenes.forEach((scene) => {
+        scene.style.display = "grid";
       });
-
-      publishModelScene(null);
-      resetScanSceneState();
-      resetProfileSceneState();
-      resetMatchSceneState();
-      resetRoutineSceneState();
-      resetResultSceneState();
     };
 
     const resizeMobileDiagnosticCanvas = () => {
@@ -2727,107 +2681,62 @@ function setupHeroSceneTransitions() {
       heroCanvas.style.width = `${cssWidth}px`;
       heroCanvas.style.height = `${cssHeight}px`;
       heroContext.setTransform(dpr, 0, 0, dpr, 0, 0);
-      recalculateMobileDiagnosticTargets();
-    };
-
-    const drawMobileDiagnosticCanvas = () => {
-      heroContext.clearRect(0, 0, width, height);
-
-      const points = sceneTargets[0] ?? [];
-
-      if (!points.length) {
-        return;
-      }
-
-      const center = { x: width * 0.5, y: height * 0.47 };
-      const glowRadius = Math.min(width, height) * 0.34;
-      const ambientGlow = heroContext.createRadialGradient(
-        center.x,
-        center.y,
-        0,
-        center.x,
-        center.y,
-        glowRadius,
-      );
-      ambientGlow.addColorStop(0, "rgba(255,231,163,0.08)");
-      ambientGlow.addColorStop(0.46, "rgba(115,169,255,0.07)");
-      ambientGlow.addColorStop(1, "rgba(115,169,255,0)");
-      heroContext.fillStyle = ambientGlow;
-      heroContext.beginPath();
-      heroContext.arc(center.x, center.y, glowRadius, 0, Math.PI * 2);
-      heroContext.fill();
-
-      points.forEach((point, index) => {
-        const particle = particles[index];
-
-        if (!particle) {
-          return;
-        }
-
-        const offsetX = (seededNoise(index * 13 + 1) - 0.5) * 18 * particle.depth;
-        const offsetY = (seededNoise(index * 17 + 3) - 0.5) * 14 * particle.depth;
-        const x = point.x + offsetX;
-        const y = point.y + offsetY;
-        const baseAlpha = particle.alpha * 0.76;
-
-        heroContext.beginPath();
-        heroContext.arc(x, y, particle.size * 1.9, 0, Math.PI * 2);
-        heroContext.fillStyle = `rgba(${particle.color},${baseAlpha * 0.12})`;
-        heroContext.fill();
-
-        heroContext.beginPath();
-        heroContext.arc(x, y, particle.size * 0.88, 0, Math.PI * 2);
-        heroContext.fillStyle = `rgba(${particle.color},${baseAlpha})`;
-        heroContext.fill();
-      });
-    };
-
-    const scheduleMobileDiagnosticRender = () => {
-      if (destroyed || animationFrame || !isVisible) {
-        return;
-      }
-
-      animationFrame = window.requestAnimationFrame(() => {
-        animationFrame = 0;
-
-        if (destroyed || !isVisible) {
-          return;
-        }
-
-        drawMobileDiagnosticCanvas();
-      });
+      recalculateSceneTargets();
     };
 
     const resizeObserver = new ResizeObserver(() => {
       resizeMobileDiagnosticCanvas();
-      scheduleMobileDiagnosticRender();
+      if (isPlaybackVisible()) {
+        startAnimation();
+      }
     });
     const visibilityObserver = new IntersectionObserver(
       ([entry]) => {
         isVisible = entry?.isIntersecting ?? false;
+        syncHeroSectionAnimations(isPlaybackVisible());
 
-        if (isVisible) {
+        if (isPlaybackVisible()) {
           resizeMobileDiagnosticCanvas();
-          scheduleMobileDiagnosticRender();
+          startAnimation();
         } else {
+          markPlaybackPaused();
           stopAnimation();
         }
       },
       { threshold: 0.1 },
     );
+    const onDocumentVisibilityChange = () => {
+      documentVisible = !document.hidden;
+      syncHeroSectionAnimations(isPlaybackVisible());
+
+      if (isPlaybackVisible()) {
+        startAnimation();
+      } else {
+        markPlaybackPaused();
+        stopAnimation();
+      }
+    };
 
     resizeObserver.observe(heroCinema);
     visibilityObserver.observe(heroCinema);
-    showMobileDiagnosticScene();
+    document.addEventListener("visibilitychange", onDocumentVisibilityChange);
+    prepareMobileDiagnosticScenes();
     resizeMobileDiagnosticCanvas();
-    scheduleMobileDiagnosticRender();
+    showFirstSceneImmediately();
+    syncHeroSectionAnimations(isPlaybackVisible());
+    startAnimation();
 
     return () => {
       destroyed = true;
       stopAnimation();
       resizeObserver.disconnect();
       visibilityObserver.disconnect();
-      showMobileDiagnosticScene();
+      document.removeEventListener("visibilitychange", onDocumentVisibilityChange);
+      pauseTimestamp = null;
+      scenes.forEach((scene) => {
+        scene.style.removeProperty("display");
+      });
+      showFirstSceneImmediately();
       heroContext.clearRect(0, 0, width, height);
     };
   }
@@ -4784,8 +4693,9 @@ export default function App() {
           return;
         }
 
+        const faceSceneVisible = requestedHeroModel === "face" || requestedHeroModel === "both";
         faceScanController.setHeroVisible(heroModelsVisible && introFinished && !introDisposed);
-        faceScanController.setSceneVisible(true);
+        faceScanController.setSceneVisible(faceSceneVisible);
       };
       const syncMobileFaceModel = () => {
         if (introDisposed) {
@@ -4836,11 +4746,17 @@ export default function App() {
         },
         { rootMargin: "120px 0px" },
       );
+      const onMobileHeroModelScene = (event: Event) => {
+        const { sceneIndex } = (event as CustomEvent<HeroModelSceneDetail>).detail;
+        requestedHeroModel = sceneIndex === 0 ? "face" : sceneIndex === 3 ? "routine" : null;
+        syncMobileFaceModel();
+      };
 
       if (heroCinema) {
         const heroRect = heroCinema.getBoundingClientRect();
         heroModelsVisible = heroRect.bottom >= -120 && heroRect.top <= window.innerHeight + 120;
         heroModelObserver.observe(heroCinema);
+        heroCinema.addEventListener(heroModelSceneEvent, onMobileHeroModelScene);
       }
 
       if (!introFinished) {
@@ -4874,6 +4790,7 @@ export default function App() {
         cleanupLogoIntro();
         introStateObserver.disconnect();
         heroModelObserver.disconnect();
+        heroCinema?.removeEventListener(heroModelSceneEvent, onMobileHeroModelScene);
         faceScanController?.destroy();
         faceScanController = null;
         faceScanModelActive = false;
