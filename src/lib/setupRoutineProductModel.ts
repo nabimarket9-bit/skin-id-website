@@ -30,6 +30,12 @@ type RoutineProductConfig = {
   viewportSelector: string;
 };
 
+export type RoutineProductModelController = {
+  destroy: () => void;
+  setHeroVisible: (visible: boolean) => void;
+  setSceneVisible: (visible: boolean) => void;
+};
+
 function markDisposableMesh(mesh: Mesh, resources: RoutineProductResources) {
   resources.geometries.add(mesh.geometry);
 
@@ -55,7 +61,11 @@ function frameCamera(camera: PerspectiveCamera, object: Object3D, viewport: HTML
 
   camera.near = Math.max(0.01, maxDimension / 100);
   camera.far = Math.max(100, maxDimension * 20);
-  camera.position.set(center.x + maxDimension * 0.03, center.y + maxDimension * 0.01, center.z + distance);
+  camera.position.set(
+    center.x + maxDimension * 0.03,
+    center.y + maxDimension * 0.01,
+    center.z + distance,
+  );
   camera.lookAt(center);
   camera.updateProjectionMatrix();
 
@@ -100,28 +110,33 @@ function enhanceMaterialVisibility(material: Material) {
   material.needsUpdate = true;
 }
 
-function setupSingleRoutineProduct(config: RoutineProductConfig) {
+function createSingleRoutineProductController(config: RoutineProductConfig): RoutineProductModelController {
   const viewport = document.querySelector<HTMLElement>(config.viewportSelector);
   const canvas = document.getElementById(config.canvasId) as HTMLCanvasElement | null;
 
   if (!viewport || !canvas) {
-    return () => undefined;
+    return {
+      destroy: () => undefined,
+      setHeroVisible: () => undefined,
+      setSceneVisible: () => undefined,
+    };
   }
 
   const resources: RoutineProductResources = {
     geometries: new Set(),
     materials: new Set(),
   };
-  const antialias = !window.matchMedia("(hover: none), (pointer: coarse)").matches;
+  const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+  const antialias = !touchDevice;
   const renderer = new WebGLRenderer({
     canvas,
     alpha: true,
     antialias,
-    powerPreference: "high-performance",
+    powerPreference: touchDevice ? "low-power" : "high-performance",
   });
-  const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
-  const maxPixelRatio = touchDevice ? 0.85 : 1.5;
-  const containingScene = viewport.closest<HTMLElement>(".hero-scene");
+  const maxPixelRatio = touchDevice ? 0.75 : 1.5;
+  const mobileFramebufferPixelBudget = 120_000;
+  const baseUrl = import.meta.env.BASE_URL;
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.5;
@@ -152,7 +167,14 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
   let baseRotationX = 0;
   let baseRotationY = 0;
   let baseRotationZ = 0;
-  let isVisible = true;
+  let heroVisible = true;
+  let sceneVisible = true;
+  let viewportVisible = true;
+  let documentVisible = !document.hidden;
+  let lastWidth = 0;
+  let lastHeight = 0;
+  let lastPixelRatio = 0;
+  let modelFramed = false;
 
   scene.environment = environmentTarget.texture;
   keyLight.position.set(2.8, 2.7, 4.6);
@@ -171,13 +193,14 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
     renderer.render(scene, camera);
   };
 
-  const isSceneActive = () => {
-    if (!containingScene) {
-      return true;
+  const frameLoadedModel = () => {
+    if (!model) {
+      return;
     }
 
-    const opacity = Number.parseFloat(containingScene.style.opacity);
-    return Number.isNaN(opacity) || opacity > 0.02;
+    frameCamera(camera, model, viewport);
+    modelFramed = true;
+    renderFrame();
   };
 
   const stopAnimation = () => {
@@ -189,8 +212,39 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
     frameId = 0;
   };
 
+  const canRender = () => heroVisible && sceneVisible && viewportVisible && documentVisible;
+
+  const syncCanvasVisibility = () => {
+    canvas.style.visibility = canRender() ? "visible" : "hidden";
+  };
+
+  const syncRenderState = () => {
+    syncCanvasVisibility();
+
+    if (!model || destroyed) {
+      stopAnimation();
+      return;
+    }
+
+    if (shouldAnimate) {
+      if (canRender()) {
+        startAnimation();
+      } else {
+        stopAnimation();
+      }
+
+      return;
+    }
+
+    stopAnimation();
+
+    if (canRender()) {
+      renderFrame();
+    }
+  };
+
   const startAnimation = () => {
-    if (!shouldAnimate || !model || frameId || !isVisible) {
+    if (!shouldAnimate || !model || frameId || !canRender()) {
       return;
     }
 
@@ -204,7 +258,7 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
       return;
     }
 
-    if (model && shouldAnimate && isVisible && isSceneActive()) {
+    if (model && shouldAnimate && canRender()) {
       const drift = time * 0.001;
       model.position.y = baseY + Math.sin(drift * 0.96) * 0.012;
       model.rotation.x = baseRotationX + Math.sin(drift * 0.56) * 0.024;
@@ -213,46 +267,76 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
       renderFrame();
     }
 
-    if (shouldAnimate && isVisible) {
+    if (shouldAnimate && canRender()) {
       startAnimation();
     }
   };
 
-  const resize = () => {
-    const { clientWidth, clientHeight } = viewport;
+  const resolvePixelRatio = (width: number, height: number) => {
+    let pixelRatio = Math.min(window.devicePixelRatio || 1, maxPixelRatio);
+
+    if (touchDevice) {
+      const projectedPixels = width * height * pixelRatio * pixelRatio;
+
+      if (projectedPixels > mobileFramebufferPixelBudget) {
+        pixelRatio = Math.sqrt(mobileFramebufferPixelBudget / Math.max(1, width * height));
+      }
+    }
+
+    return pixelRatio;
+  };
+
+  const resize = (forceFrame = false) => {
+    const clientWidth = Math.max(1, Math.round(viewport.clientWidth));
+    const clientHeight = Math.max(1, Math.round(viewport.clientHeight));
 
     if (!clientWidth || !clientHeight) {
       return;
     }
 
+    const pixelRatio = resolvePixelRatio(clientWidth, clientHeight);
+
+    if (
+      !forceFrame &&
+      clientWidth === lastWidth &&
+      clientHeight === lastHeight &&
+      Math.abs(pixelRatio - lastPixelRatio) < 0.001
+    ) {
+      return;
+    }
+
+    lastWidth = clientWidth;
+    lastHeight = clientHeight;
+    lastPixelRatio = pixelRatio;
     camera.aspect = clientWidth / clientHeight;
     camera.updateProjectionMatrix();
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxPixelRatio));
+    renderer.setPixelRatio(pixelRatio);
     renderer.setSize(clientWidth, clientHeight, false);
 
-    if (model) {
-      frameCamera(camera, model, viewport);
-      renderFrame();
+    if (model && (forceFrame || !modelFramed)) {
+      frameLoadedModel();
     }
   };
 
-  const resizeObserver = new ResizeObserver(() => resize());
+  const resizeViewport = () => {
+    resize(false);
+  };
+
+  const resizeObserver = new ResizeObserver(() => {
+    resizeViewport();
+  });
   const visibilityObserver = new IntersectionObserver(
     ([entry]) => {
-      isVisible = entry?.isIntersecting ?? false;
-
-      if (isVisible) {
-        if (shouldAnimate) {
-          startAnimation();
-        } else if (model) {
-          renderFrame();
-        }
-      } else {
-        stopAnimation();
-      }
+      viewportVisible = entry?.isIntersecting ?? false;
+      syncRenderState();
     },
     { threshold: 0.2 },
   );
+  const onVisibilityChange = () => {
+    documentVisible = !document.hidden;
+    syncRenderState();
+  };
+
   resizeObserver.observe(viewport);
   visibilityObserver.observe(viewport);
 
@@ -269,7 +353,7 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
         return null;
       }
 
-      return loader.parseAsync(buffer, import.meta.env.BASE_URL);
+      return loader.parseAsync(buffer, baseUrl);
     })
     .then((gltf) => {
       if (!gltf) {
@@ -310,13 +394,8 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
       baseRotationX = model.rotation.x;
       baseRotationY = model.rotation.y;
       baseRotationZ = model.rotation.z;
-      resize();
-
-      if (shouldAnimate) {
-        startAnimation();
-      } else {
-        renderFrame();
-      }
+      resize(true);
+      syncRenderState();
     })
     .catch((error) => {
       if (error instanceof DOMException && error.name === "AbortError") {
@@ -326,33 +405,57 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
       console.error("Unable to load routine product model", error);
     });
 
-  window.addEventListener("resize", resize);
-  resize();
+  window.addEventListener("resize", resizeViewport);
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  resizeViewport();
+  syncCanvasVisibility();
 
-  return () => {
-    destroyed = true;
-    loadController.abort();
-    stopAnimation();
-    resizeObserver.disconnect();
-    visibilityObserver.disconnect();
-    window.removeEventListener("resize", resize);
-    viewport.style.removeProperty("--routine-product-ready");
-    if (model) {
-      scene.remove(model);
-      model = null;
-    }
-    scene.environment = null;
-    resources.geometries.forEach((geometry) => geometry.dispose());
-    resources.materials.forEach((material) => material.dispose());
-    environmentTarget.dispose();
-    pmremGenerator.dispose();
-    renderer.renderLists.dispose();
-    renderer.dispose();
-    renderer.forceContextLoss();
-    canvas.width = 1;
-    canvas.height = 1;
-    canvas.replaceWith(canvas.cloneNode(false));
+  return {
+    destroy: () => {
+      destroyed = true;
+      loadController.abort();
+      stopAnimation();
+      resizeObserver.disconnect();
+      visibilityObserver.disconnect();
+      window.removeEventListener("resize", resizeViewport);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      viewport.style.removeProperty("--routine-product-ready");
+      canvas.style.removeProperty("visibility");
+      if (model) {
+        scene.remove(model);
+        model = null;
+      }
+      modelFramed = false;
+      scene.environment = null;
+      resources.geometries.forEach((geometry) => geometry.dispose());
+      resources.materials.forEach((material) => material.dispose());
+      environmentTarget.dispose();
+      pmremGenerator.dispose();
+      renderer.renderLists.dispose();
+      renderer.dispose();
+      renderer.forceContextLoss();
+      canvas.width = 1;
+      canvas.height = 1;
+      canvas.replaceWith(canvas.cloneNode(false));
+    },
+    setHeroVisible: (visible) => {
+      heroVisible = visible;
+      syncRenderState();
+    },
+    setSceneVisible: (visible) => {
+      sceneVisible = visible;
+      syncRenderState();
+    },
   };
+}
+
+export function createRoutineProductModelController(): RoutineProductModelController {
+  const baseUrl = import.meta.env.BASE_URL;
+  return createSingleRoutineProductController({
+    viewportSelector: ".routine-product-serum",
+    canvasId: "serumProductCanvas",
+    modelUrl: `${baseUrl}serum-bottle-mobile.glb`,
+  });
 }
 
 export function setupRoutineProductModel() {
@@ -360,44 +463,34 @@ export function setupRoutineProductModel() {
   const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
 
   if (touchDevice) {
-    return () => undefined;
+    const controller = createRoutineProductModelController();
+    return () => controller.destroy();
   }
 
-  const modelUrl = (desktopName: string, mobileName: string) =>
-    `${baseUrl}${touchDevice ? mobileName : desktopName}`;
   const cleanupHandlers = [
-    setupSingleRoutineProduct({
+    createSingleRoutineProductController({
       viewportSelector: ".routine-product-cleanser",
       canvasId: "cleanserProductCanvas",
-      modelUrl: modelUrl(
-        "minimalist_skincare_bottle__3d_model.glb",
-        "minimalist-skincare-bottle-mobile.glb",
-      ),
+      modelUrl: `${baseUrl}minimalist_skincare_bottle__3d_model.glb`,
     }),
-    setupSingleRoutineProduct({
+    createSingleRoutineProductController({
       viewportSelector: ".routine-product-serum",
       canvasId: "serumProductCanvas",
-      modelUrl: modelUrl("serum_bottle.glb", "serum-bottle-mobile.glb"),
+      modelUrl: `${baseUrl}serum_bottle.glb`,
     }),
-    setupSingleRoutineProduct({
+    createSingleRoutineProductController({
       viewportSelector: ".routine-product-moisturizer",
       canvasId: "moisturizerProductCanvas",
-      modelUrl: modelUrl(
-        "simple_3d_skincare_cream_jar_3d_model.glb",
-        "skincare-cream-jar-mobile.glb",
-      ),
+      modelUrl: `${baseUrl}simple_3d_skincare_cream_jar_3d_model.glb`,
     }),
-    setupSingleRoutineProduct({
+    createSingleRoutineProductController({
       viewportSelector: ".routine-product-spf",
       canvasId: "spfProductCanvas",
-      modelUrl: modelUrl(
-        "skincare_small_tube_pack.glb",
-        "skincare-small-tube-pack-mobile.glb",
-      ),
+      modelUrl: `${baseUrl}skincare_small_tube_pack.glb`,
     }),
   ];
 
   return () => {
-    cleanupHandlers.forEach((cleanup) => cleanup());
+    cleanupHandlers.forEach((controller) => controller.destroy());
   };
 }

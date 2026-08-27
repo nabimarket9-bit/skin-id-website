@@ -4631,10 +4631,6 @@ const landingHtmlMobileDiagnostic = landingHtml
     "",
   )
   .replace(
-    '<canvas class="routine-product-canvas" id="serumProductCanvas" aria-hidden="true"></canvas>',
-    "",
-  )
-  .replace(
     '<canvas class="routine-product-canvas" id="moisturizerProductCanvas" aria-hidden="true"></canvas>',
     "",
   )
@@ -4652,15 +4648,22 @@ export default function App() {
       setHeroVisible: (visible: boolean) => void;
       setSceneVisible: (visible: boolean) => void;
     };
+    type RoutineProductModelController = {
+      destroy: () => void;
+      setHeroVisible: (visible: boolean) => void;
+      setSceneVisible: (visible: boolean) => void;
+    };
 
     let introDisposed = false;
     let cleanupLogoIntro: () => void = () => undefined;
     let cleanupFaceScanModel: () => void = () => undefined;
     let cleanupRoutineProductModel: () => void = () => undefined;
     let createFaceScanModelController: (() => FaceScanModelController) | null = null;
+    let createRoutineProductModelController: (() => RoutineProductModelController) | null = null;
     let setupFaceScanModel: (() => () => void) | null = null;
     let setupRoutineProductModel: (() => () => void) | null = null;
     let faceScanController: FaceScanModelController | null = null;
+    let routineProductController: RoutineProductModelController | null = null;
     let faceModuleImportStarted = false;
     let routineModuleImportStarted = false;
     let faceScanModelActive = false;
@@ -4688,6 +4691,15 @@ export default function App() {
       const cleanupHeroValueEngine = setupHeroValueEngine();
       const cleanupDecisionSummaryBoard = setupDecisionSummaryBoard();
       const cleanupLandingInteractions = setupLandingInteractions();
+      const syncMobileRoutineControllerState = () => {
+        if (!routineProductController) {
+          return;
+        }
+
+        const routineSceneVisible = requestedHeroModel === "routine" || requestedHeroModel === "both";
+        routineProductController.setHeroVisible(heroModelsVisible && introFinished && !introDisposed);
+        routineProductController.setSceneVisible(routineSceneVisible);
+      };
       const syncMobileFaceControllerState = () => {
         if (!faceScanController) {
           return;
@@ -4696,6 +4708,46 @@ export default function App() {
         const faceSceneVisible = requestedHeroModel === "face" || requestedHeroModel === "both";
         faceScanController.setHeroVisible(heroModelsVisible && introFinished && !introDisposed);
         faceScanController.setSceneVisible(faceSceneVisible);
+      };
+      const syncMobileRoutineModel = () => {
+        if (introDisposed) {
+          routineProductController?.setHeroVisible(false);
+          return;
+        }
+
+        if (!introFinished || !heroModelsVisible) {
+          syncMobileRoutineControllerState();
+          return;
+        }
+
+        const routineSceneVisible = requestedHeroModel === "routine" || requestedHeroModel === "both";
+
+        if (!routineSceneVisible) {
+          syncMobileRoutineControllerState();
+          return;
+        }
+
+        if (!createRoutineProductModelController && !routineModuleImportStarted) {
+          routineModuleImportStarted = true;
+          void import("./lib/setupRoutineProductModel")
+            .then((module) => {
+              if (introDisposed) {
+                return;
+              }
+
+              createRoutineProductModelController = module.createRoutineProductModelController;
+              syncMobileRoutineModel();
+            })
+            .catch(() => undefined);
+          return;
+        }
+
+        if (createRoutineProductModelController && !routineProductController) {
+          routineProductController = createRoutineProductModelController();
+          routineProductModelActive = true;
+        }
+
+        syncMobileRoutineControllerState();
       };
       const syncMobileFaceModel = () => {
         if (introDisposed) {
@@ -4738,11 +4790,13 @@ export default function App() {
         introFinished = true;
         introStateObserver.disconnect();
         syncMobileFaceModel();
+        syncMobileRoutineModel();
       });
       const heroModelObserver = new IntersectionObserver(
         ([entry]) => {
           heroModelsVisible = entry?.isIntersecting ?? false;
           syncMobileFaceModel();
+          syncMobileRoutineModel();
         },
         { rootMargin: "120px 0px" },
       );
@@ -4750,6 +4804,7 @@ export default function App() {
         const { sceneIndex } = (event as CustomEvent<HeroModelSceneDetail>).detail;
         requestedHeroModel = sceneIndex === 0 ? "face" : sceneIndex === 3 ? "routine" : null;
         syncMobileFaceModel();
+        syncMobileRoutineModel();
       };
 
       if (heroCinema) {
@@ -4780,9 +4835,11 @@ export default function App() {
             loader?.classList.add("is-hidden");
             introStateObserver.disconnect();
             syncMobileFaceModel();
+            syncMobileRoutineModel();
           });
       } else {
         syncMobileFaceModel();
+        syncMobileRoutineModel();
       }
 
       return () => {
@@ -4792,8 +4849,11 @@ export default function App() {
         heroModelObserver.disconnect();
         heroCinema?.removeEventListener(heroModelSceneEvent, onMobileHeroModelScene);
         faceScanController?.destroy();
+        routineProductController?.destroy();
         faceScanController = null;
+        routineProductController = null;
         faceScanModelActive = false;
+        routineProductModelActive = false;
         document.body.classList.remove("mobile-diagnostic");
         cleanupBrandStoryCarousel();
         cleanupHeroPlatformToggle();

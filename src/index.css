@@ -3763,6 +3763,14 @@
         opacity: 1;
       }
 
+      body.mobile-diagnostic .routine-product-serum .routine-product-canvas {
+        display: block;
+      }
+
+      body.mobile-diagnostic .routine-product-serum .routine-product-mobile-sprite {
+        display: none;
+      }
+
       body.mobile-diagnostic .routine-product:before,
       body.mobile-diagnostic .routine-product:after {
         display: block;
