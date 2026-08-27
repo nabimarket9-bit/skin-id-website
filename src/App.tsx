@@ -4718,10 +4718,6 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
 
 const landingHtmlMobileDiagnostic = landingHtml
   .replace(
-    '<canvas class="face-model-canvas" id="faceModelCanvas" aria-hidden="true"></canvas>',
-    '<img class="face-model-static" src="/skin_profile_exact-mobile.png" width="384" height="384" loading="eager" decoding="async" alt="" />',
-  )
-  .replace(
     '<canvas class="routine-product-canvas" id="cleanserProductCanvas" aria-hidden="true"></canvas>',
     "",
   )
