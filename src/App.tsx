@@ -4718,10 +4718,6 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
 
 const landingHtmlMobileDiagnostic = landingHtml
   .replace(
-    '<canvas id="loaderLogoCanvas" aria-hidden="true"></canvas>',
-    '<div class="mobile-static-logo" aria-hidden="true"></div>',
-  )
-  .replace(
     '<canvas class="face-model-canvas" id="faceModelCanvas" aria-hidden="true"></canvas>',
     '<img class="face-model-static" src="/skin_profile_exact-mobile.png" width="384" height="384" loading="eager" decoding="async" alt="" />',
   )
@@ -4768,13 +4764,18 @@ export default function App() {
     let introFinished = document.body.classList.contains("intro-complete");
 
     const heroCinema = document.getElementById("cinema");
+    const loader = document.getElementById("loader");
     const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
     let requestedHeroModel: RequestedHeroModel = touchDevice ? "face" : "both";
 
     if (touchDevice) {
-      document.body.classList.remove("intro-lock");
-      document.body.classList.add("intro-complete", "mobile-diagnostic");
-      document.getElementById("loader")?.classList.add("is-hidden");
+      document.body.classList.add("mobile-diagnostic");
+
+      if (introFinished) {
+        loader?.classList.add("is-hidden");
+      } else {
+        loader?.classList.remove("is-hidden", "is-exiting", "is-ready", "is-fallback");
+      }
 
       const cleanupHeroSceneTransitions = setupHeroSceneTransitions();
       const cleanupBrandStoryCarousel = setupBrandStoryCarousel();
@@ -4783,7 +4784,26 @@ export default function App() {
       const cleanupDecisionSummaryBoard = setupDecisionSummaryBoard();
       const cleanupLandingInteractions = setupLandingInteractions();
 
+      if (!introFinished) {
+        void import("./lib/setupLogoIntro")
+          .then(({ setupLogoIntro }) => {
+            if (introDisposed) {
+              return;
+            }
+
+            cleanupLogoIntro = setupLogoIntro();
+          })
+          .catch(() => {
+            introFinished = true;
+            document.body.classList.remove("intro-lock");
+            document.body.classList.add("intro-complete");
+            loader?.classList.add("is-hidden");
+          });
+      }
+
       return () => {
+        introDisposed = true;
+        cleanupLogoIntro();
         document.body.classList.remove("mobile-diagnostic");
         cleanupBrandStoryCarousel();
         cleanupHeroPlatformToggle();

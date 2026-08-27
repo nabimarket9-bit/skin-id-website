@@ -3656,7 +3656,8 @@
         transform: translateX(-120%);
       }
 
-      body.mobile-diagnostic .loader {
+      body.mobile-diagnostic.intro-complete .loader,
+      body.mobile-diagnostic .loader.is-hidden {
         display: none;
       }
 

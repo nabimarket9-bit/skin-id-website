@@ -11,6 +11,7 @@ import {
   PerspectiveCamera,
   Scene,
   SRGBColorSpace,
+  Texture,
   Vector3,
   WebGLRenderer,
 } from "three";
@@ -23,19 +24,68 @@ const REDUCED_MOTION_DURATION_MS = 1500;
 type IntroResources = {
   geometries: Set<BufferGeometry>;
   materials: Set<Material>;
+  textures: Set<Texture>;
 };
 
 function markDisposableMesh(mesh: Mesh, resources: IntroResources) {
   resources.geometries.add(mesh.geometry);
 
-  if (Array.isArray(mesh.material)) {
-    mesh.material.forEach((material) => resources.materials.add(material));
-    return;
+  const materials = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
+
+  materials.forEach((material) => {
+    resources.materials.add(material);
+
+    Object.values(material).forEach((value) => {
+      if (value instanceof Texture) {
+        resources.textures.add(value);
+      }
+    });
+  });
+}
+
+function resetLoaderState(loader: HTMLElement) {
+  loader.classList.remove("is-ready", "is-exiting", "is-hidden", "is-fallback");
+}
+
+function hideLoader(loader: HTMLElement) {
+  loader.classList.add("is-hidden");
+  document.body.classList.remove("intro-lock");
+  document.body.classList.add("intro-complete");
+}
+
+function isTouchDevice() {
+  return window.matchMedia("(hover: none), (pointer: coarse)").matches;
+}
+
+function getMaxPixelRatio(touchDevice: boolean) {
+  return touchDevice ? 0.75 : 1.5;
+}
+
+function getPowerPreference(touchDevice: boolean): WebGLPowerPreference {
+  return touchDevice ? "low-power" : "high-performance";
+}
+
+function canResumeIntro(exitStarted: boolean, destroyed: boolean, logoLoaded: boolean) {
+  return !exitStarted && !destroyed && logoLoaded;
+}
+
+function pauseIntroFrame(frameId: number) {
+  window.cancelAnimationFrame(frameId);
+  return 0;
+}
+
+function resumeIntroFrame(
+  frameId: number,
+  animate: FrameRequestCallback,
+  exitStarted: boolean,
+  destroyed: boolean,
+  logoLoaded: boolean,
+) {
+  if (frameId || !canResumeIntro(exitStarted, destroyed, logoLoaded)) {
+    return frameId;
   }
 
-  if (mesh.material) {
-    resources.materials.add(mesh.material);
-  }
+  return window.requestAnimationFrame(animate);
 }
 
 function getFacingRotation(size: Vector3) {
@@ -92,16 +142,18 @@ export function setupLogoIntro() {
   const resources: IntroResources = {
     geometries: new Set(),
     materials: new Set(),
+    textures: new Set(),
   };
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
-  const maxPixelRatio = touchDevice ? 0.85 : 1.5;
+  const touchDevice = isTouchDevice();
+  const maxPixelRatio = getMaxPixelRatio(touchDevice);
   const introDuration = reducedMotion ? REDUCED_MOTION_DURATION_MS : INTRO_DURATION_MS;
+  resetLoaderState(loader);
   const renderer = new WebGLRenderer({
     canvas,
     alpha: true,
     antialias: !touchDevice,
-    powerPreference: "high-performance",
+    powerPreference: getPowerPreference(touchDevice),
   });
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
@@ -125,6 +177,8 @@ export function setupLogoIntro() {
   let fallbackTimeout = 0;
   let exitStarted = false;
   let rendererReleased = false;
+  let logoLoaded = false;
+  let pausedAt = 0;
 
   const releaseRenderer = () => {
     if (rendererReleased) {
@@ -133,10 +187,12 @@ export function setupLogoIntro() {
 
     rendererReleased = true;
     destroyed = true;
-    window.cancelAnimationFrame(frameId);
+    frameId = pauseIntroFrame(frameId);
     scene.environment = null;
+    logoGroup.clear();
     resources.geometries.forEach((geometry) => geometry.dispose());
     resources.materials.forEach((material) => material.dispose());
+    resources.textures.forEach((texture) => texture.dispose());
     environmentTarget.dispose();
     pmremGenerator.dispose();
     renderer.renderLists.dispose();
@@ -179,12 +235,12 @@ export function setupLogoIntro() {
     }
 
     exitStarted = true;
+    frameId = pauseIntroFrame(frameId);
     loader.classList.add("is-exiting");
     hideTimeout = window.setTimeout(() => {
-      loader.classList.add("is-hidden");
-      document.body.classList.remove("intro-lock");
-      document.body.classList.add("intro-complete");
+      hideLoader(loader);
       window.removeEventListener("resize", resize);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       releaseRenderer();
     }, reducedMotion ? 260 : 720);
   };
@@ -217,6 +273,21 @@ export function setupLogoIntro() {
     frameId = window.requestAnimationFrame(animate);
   };
 
+  const onVisibilityChange = () => {
+    if (document.hidden) {
+      pausedAt = performance.now();
+      frameId = pauseIntroFrame(frameId);
+      return;
+    }
+
+    if (pausedAt && startedAt) {
+      startedAt += performance.now() - pausedAt;
+      pausedAt = 0;
+    }
+
+    frameId = resumeIntroFrame(frameId, animate, exitStarted, destroyed, logoLoaded);
+  };
+
   fallbackTimeout = window.setTimeout(beginExit, reducedMotion ? 1200 : 4200);
 
   loadLogo(resources)
@@ -226,8 +297,9 @@ export function setupLogoIntro() {
       }
 
       window.clearTimeout(fallbackTimeout);
+      logoLoaded = true;
       logoGroup.add(logo);
-      frameId = window.requestAnimationFrame(animate);
+      frameId = resumeIntroFrame(frameId, animate, exitStarted, destroyed, logoLoaded);
     })
     .catch(() => {
       if (destroyed) {
@@ -238,14 +310,16 @@ export function setupLogoIntro() {
     });
 
   window.addEventListener("resize", resize);
+  document.addEventListener("visibilitychange", onVisibilityChange);
   resize();
 
   return () => {
     destroyed = true;
-    window.cancelAnimationFrame(frameId);
+    frameId = pauseIntroFrame(frameId);
     window.clearTimeout(hideTimeout);
     window.clearTimeout(fallbackTimeout);
     window.removeEventListener("resize", resize);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
     document.body.classList.remove("intro-lock");
     releaseRenderer();
   };
