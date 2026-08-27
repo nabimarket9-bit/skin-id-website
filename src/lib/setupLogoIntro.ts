@@ -58,11 +58,15 @@ function isTouchDevice() {
 }
 
 function getMaxPixelRatio(touchDevice: boolean) {
-  return touchDevice ? 0.75 : 1.5;
+  return touchDevice ? 1 : 1.5;
 }
 
 function getPowerPreference(touchDevice: boolean): WebGLPowerPreference {
   return touchDevice ? "low-power" : "high-performance";
+}
+
+function getMobileFramebufferPixelBudget(touchDevice: boolean) {
+  return touchDevice ? 430_000 : Number.POSITIVE_INFINITY;
 }
 
 function canResumeIntro(exitStarted: boolean, destroyed: boolean, logoLoaded: boolean) {
@@ -147,6 +151,7 @@ export function setupLogoIntro() {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const touchDevice = isTouchDevice();
   const maxPixelRatio = getMaxPixelRatio(touchDevice);
+  const mobileFramebufferPixelBudget = getMobileFramebufferPixelBudget(touchDevice);
   const introDuration = reducedMotion ? REDUCED_MOTION_DURATION_MS : INTRO_DURATION_MS;
   resetLoaderState(loader);
   const renderer = new WebGLRenderer({
@@ -218,14 +223,30 @@ export function setupLogoIntro() {
   scene.add(rimLight);
   scene.add(logoGroup);
 
+  const resolvePixelRatio = (width: number, height: number) => {
+    let pixelRatio = Math.min(window.devicePixelRatio || 1, maxPixelRatio);
+
+    if (touchDevice) {
+      const projectedPixels = width * height * pixelRatio * pixelRatio;
+
+      if (projectedPixels > mobileFramebufferPixelBudget) {
+        pixelRatio = Math.sqrt(mobileFramebufferPixelBudget / Math.max(1, width * height));
+      }
+    }
+
+    return pixelRatio;
+  };
+
   const resize = () => {
     const { clientWidth, clientHeight } = loader;
     if (!clientWidth || !clientHeight) {
       return;
     }
 
+    const pixelRatio = resolvePixelRatio(clientWidth, clientHeight);
     camera.aspect = clientWidth / clientHeight;
     camera.updateProjectionMatrix();
+    renderer.setPixelRatio(pixelRatio);
     renderer.setSize(clientWidth, clientHeight, false);
   };
 

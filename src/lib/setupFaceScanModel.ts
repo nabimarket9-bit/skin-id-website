@@ -90,8 +90,8 @@ export function createFaceScanModelController(): FaceScanModelController {
     antialias,
     powerPreference: touchDevice ? "low-power" : "high-performance",
   });
-  const maxPixelRatio = touchDevice ? 0.75 : 1.5;
-  const mobileFramebufferPixelBudget = 240_000;
+  const maxPixelRatio = touchDevice ? 1 : 1.5;
+  const mobileFramebufferPixelBudget = 300_000;
   const baseUrl = import.meta.env.BASE_URL;
   const modelUrl = touchDevice ? `${baseUrl}face-mobile.glb` : `${baseUrl}face.glb`;
   const containingScene = viewport.closest<HTMLElement>(".hero-scene");
