@@ -3196,9 +3196,7 @@ function setupLandingInteractions() {
     cleanupHandlers.push(() => range.removeEventListener("input", onInput));
   }
 
-  const finalCanvas = diagnosticMode
-    ? null
-    : (document.getElementById("finalCanvas") as HTMLCanvasElement | null);
+  const finalCanvas = document.getElementById("finalCanvas") as HTMLCanvasElement | null;
   const finalContext = finalCanvas?.getContext("2d");
   if (finalCanvas && finalContext) {
     type FinalParticle = {
@@ -3215,6 +3213,19 @@ function setupLandingInteractions() {
     let canvasVisible = false;
     let canvasWidth = 0;
     let canvasHeight = 0;
+    const mobileFinalCanvas = diagnosticMode && touchDevice;
+    const mobileParticleCount = 42;
+    const desktopParticleCount = 120;
+    const mobileCanvasMaxPixels = 360_000;
+
+    const buildParticles = (width: number, height: number, count: number) =>
+      Array.from({ length: count }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * (mobileFinalCanvas ? 0.35 : 0.6),
+        vy: (Math.random() - 0.5) * (mobileFinalCanvas ? 0.35 : 0.6),
+        size: Math.random() * (mobileFinalCanvas ? 1.4 : 2) + (mobileFinalCanvas ? 0.8 : 1),
+      }));
 
     const resizeFinalCanvas = () => {
       resizeFrame = 0;
@@ -3227,15 +3238,27 @@ function setupLandingInteractions() {
 
       canvasWidth = width;
       canvasHeight = height;
-      finalCanvas.width = width;
-      finalCanvas.height = height;
-      particles = Array.from({ length: 120 }, () => ({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.6,
-        vy: (Math.random() - 0.5) * 0.6,
-        size: Math.random() * 2 + 1,
-      }));
+      let dpr = 1;
+
+      if (mobileFinalCanvas) {
+        dpr = Math.min(window.devicePixelRatio || 1, 1);
+        const projectedPixels = width * height * dpr * dpr;
+
+        if (projectedPixels > mobileCanvasMaxPixels) {
+          dpr = Math.sqrt(mobileCanvasMaxPixels / Math.max(1, width * height));
+        }
+      }
+
+      finalCanvas.width = Math.max(1, Math.floor(width * dpr));
+      finalCanvas.height = Math.max(1, Math.floor(height * dpr));
+      finalCanvas.style.width = `${width}px`;
+      finalCanvas.style.height = `${height}px`;
+      finalContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+      particles = buildParticles(
+        width,
+        height,
+        mobileFinalCanvas ? mobileParticleCount : desktopParticleCount,
+      );
     };
 
     const stopFinalCanvas = () => {
@@ -3299,6 +3322,7 @@ function setupLandingInteractions() {
       ([entry]) => {
         canvasVisible = entry?.isIntersecting ?? false;
         if (canvasVisible) {
+          resizeFinalCanvas();
           startFinalCanvas();
         } else {
           stopFinalCanvas();
@@ -4716,10 +4740,6 @@ const landingHtmlMobileDiagnostic = landingHtml
   .replace(
     '<canvas class="routine-product-canvas" id="spfProductCanvas" aria-hidden="true"></canvas>',
     "",
-  )
-  .replace(
-    '<canvas class="final-canvas" id="finalCanvas"></canvas>',
-    '<div class="final-canvas-placeholder" aria-hidden="true"></div>',
   );
 
 
