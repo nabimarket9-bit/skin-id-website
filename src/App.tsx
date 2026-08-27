@@ -1401,6 +1401,30 @@ function setupHeroSceneTransitions() {
   const resultRoutineStartMs = 2550;
   const resultRoutineStaggerMs = 150;
   const resultRoutineDurationMs = 320;
+  const sceneTargetNodes = {
+    faceShell: heroCinema.querySelector<HTMLElement>(".scene-scan .face-shell"),
+    faceCore: heroCinema.querySelector<HTMLElement>(".scene-scan .face-core"),
+    faceVisual: heroCinema.querySelector<HTMLElement>(".scene-scan .face-visual"),
+    faceBeam: heroCinema.querySelector<HTMLElement>(".scene-scan .face-beam"),
+    faceRing: heroCinema.querySelector<HTMLElement>(".scene-scan .face-ring"),
+    analysisZones: Array.from(heroCinema.querySelectorAll<HTMLElement>(".scene-scan .analysis-zone")),
+    scanTrack: heroCinema.querySelector<HTMLElement>(".scene-scan .scan-phase-track"),
+    scanMarkers: Array.from(heroCinema.querySelectorAll<HTMLElement>(".scene-scan .scan-phase-marker")),
+    scanConfirmation: heroCinema.querySelector<HTMLElement>(".scene-scan .scan-confirmation"),
+    profilePills: Array.from(heroCinema.querySelectorAll<HTMLElement>(".scene-profile .profile-pill")),
+    matchCore: heroCinema.querySelector<HTMLElement>(".scene-match .selection-engine-core"),
+    matchChips: Array.from(heroCinema.querySelectorAll<HTMLElement>(".scene-match .catalog-chip")),
+    routineTitle: heroCinema.querySelector<HTMLElement>(".scene-routine .sheet-title"),
+    routineRows: Array.from(heroCinema.querySelectorAll<HTMLElement>(".scene-routine .sheet-row")),
+    resultTitleNode: heroCinema.querySelector<HTMLElement>(".scene-result .result-title"),
+    resultLeadNode: heroCinema.querySelector<HTMLElement>(".scene-result .result-lead"),
+    resultStatusNode: heroCinema.querySelector<HTMLElement>(".scene-result .result-status"),
+    resultCheckNode: heroCinema.querySelector<HTMLElement>(".scene-result .result-checkmark"),
+    resultItems: Array.from(heroCinema.querySelectorAll<HTMLElement>(".scene-result .result-check-item")),
+    resultSummary: Array.from(
+      heroCinema.querySelectorAll<HTMLElement>(".scene-result .result-routine-chip"),
+    ),
+  };
   const particles: HeroParticle[] = Array.from({ length: particleCount }, (_, index) => {
     const seed = index + 1;
 
@@ -2110,27 +2134,29 @@ function setupHeroSceneTransitions() {
     resultScene.style.setProperty("--result-transition", transition ? transitionProgress.toFixed(4) : "0");
   }
 
-  function buildSceneTargets() {
-    const faceShell = heroCinema.querySelector(".scene-scan .face-shell");
-    const faceCore = heroCinema.querySelector(".scene-scan .face-core");
-    const faceVisual = heroCinema.querySelector(".scene-scan .face-visual");
-    const faceBeam = heroCinema.querySelector(".scene-scan .face-beam");
-    const faceRing = heroCinema.querySelector(".scene-scan .face-ring");
-    const analysisZones = Array.from(heroCinema.querySelectorAll(".scene-scan .analysis-zone"));
-    const scanTrack = heroCinema.querySelector(".scene-scan .scan-phase-track");
-    const scanMarkers = Array.from(heroCinema.querySelectorAll(".scene-scan .scan-phase-marker"));
-    const scanConfirmation = heroCinema.querySelector(".scene-scan .scan-confirmation");
-    const profilePills = Array.from(heroCinema.querySelectorAll(".scene-profile .profile-pill"));
-    const matchCore = heroCinema.querySelector(".scene-match .selection-engine-core");
-    const matchChips = Array.from(heroCinema.querySelectorAll(".scene-match .catalog-chip"));
-    const routineTitle = heroCinema.querySelector(".scene-routine .sheet-title");
-    const routineRows = Array.from(heroCinema.querySelectorAll(".scene-routine .sheet-row"));
-    const resultTitleNode = heroCinema.querySelector(".scene-result .result-title");
-    const resultLeadNode = heroCinema.querySelector(".scene-result .result-lead");
-    const resultStatusNode = heroCinema.querySelector(".scene-result .result-status");
-    const resultCheckNode = heroCinema.querySelector(".scene-result .result-checkmark");
-    const resultItems = Array.from(heroCinema.querySelectorAll(".scene-result .result-check-item"));
-    const resultSummary = Array.from(heroCinema.querySelectorAll(".scene-result .result-routine-chip"));
+  function recalculateSceneTargets() {
+    const {
+      faceShell,
+      faceCore,
+      faceVisual,
+      faceBeam,
+      faceRing,
+      analysisZones,
+      scanTrack,
+      scanMarkers,
+      scanConfirmation,
+      profilePills,
+      matchCore,
+      matchChips,
+      routineTitle,
+      routineRows,
+      resultTitleNode,
+      resultLeadNode,
+      resultStatusNode,
+      resultCheckNode,
+      resultItems,
+      resultSummary,
+    } = sceneTargetNodes;
 
     if (
       !faceShell ||
@@ -2442,7 +2468,7 @@ function setupHeroSceneTransitions() {
     heroCanvas.style.width = `${width}px`;
     heroCanvas.style.height = `${height}px`;
     heroContext.setTransform(dpr, 0, 0, dpr, 0, 0);
-    buildSceneTargets();
+    recalculateSceneTargets();
   }
 
   function showFirstSceneImmediately() {
@@ -2518,7 +2544,6 @@ function setupHeroSceneTransitions() {
     heroContext.clearRect(0, 0, width, height);
 
     if (state.transition) {
-      buildSceneTargets();
       drawParticles(time, state.current, state.next, state.transitionProgress);
     }
 
@@ -2582,6 +2607,7 @@ function setupHeroSceneTransitions() {
       syncHeroSectionAnimations(isVisible);
 
       if (isVisible) {
+        recalculateSceneTargets();
         scenes.forEach((scene) => {
           sceneAnimationStates.delete(scene);
           const opacity = Number.parseFloat(scene.style.opacity);
@@ -3354,24 +3380,28 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
                 <span class="routine-label">Cleanser</span>
                 <div class="routine-product routine-product-cleanser">
                   <canvas class="routine-product-canvas" id="cleanserProductCanvas" aria-hidden="true"></canvas>
+                  <span class="routine-product-mobile-sprite routine-product-mobile-sprite-cleanser" aria-hidden="true"></span>
                 </div>
               </div>
               <div class="sheet-row row-b">
                 <span class="routine-label">Serum</span>
                 <div class="routine-product routine-product-serum">
                   <canvas class="routine-product-canvas" id="serumProductCanvas" aria-hidden="true"></canvas>
+                  <span class="routine-product-mobile-sprite routine-product-mobile-sprite-serum" aria-hidden="true"></span>
                 </div>
               </div>
               <div class="sheet-row row-c">
                 <span class="routine-label">Moisturizer</span>
                 <div class="routine-product routine-product-moisturizer">
                   <canvas class="routine-product-canvas" id="moisturizerProductCanvas" aria-hidden="true"></canvas>
+                  <span class="routine-product-mobile-sprite routine-product-mobile-sprite-moisturizer" aria-hidden="true"></span>
                 </div>
               </div>
               <div class="sheet-row row-d">
                 <span class="routine-label">SPF</span>
                 <div class="routine-product routine-product-spf">
                   <canvas class="routine-product-canvas" id="spfProductCanvas" aria-hidden="true"></canvas>
+                  <span class="routine-product-mobile-sprite routine-product-mobile-sprite-spf" aria-hidden="true"></span>
                 </div>
               </div>
             </div>
@@ -4394,13 +4424,20 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
 export default function App() {
   useEffect(() => {
     type RequestedHeroModel = "face" | "routine" | "both" | null;
+    type FaceScanModelController = {
+      destroy: () => void;
+      setHeroVisible: (visible: boolean) => void;
+      setSceneVisible: (visible: boolean) => void;
+    };
 
     let introDisposed = false;
     let cleanupLogoIntro: () => void = () => undefined;
     let cleanupFaceScanModel: () => void = () => undefined;
     let cleanupRoutineProductModel: () => void = () => undefined;
+    let createFaceScanModelController: (() => FaceScanModelController) | null = null;
     let setupFaceScanModel: (() => () => void) | null = null;
     let setupRoutineProductModel: (() => () => void) | null = null;
+    let faceScanController: FaceScanModelController | null = null;
     let faceModuleImportStarted = false;
     let routineModuleImportStarted = false;
     let faceScanModelActive = false;
@@ -4412,7 +4449,25 @@ export default function App() {
     const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
     let requestedHeroModel: RequestedHeroModel = touchDevice ? "face" : "both";
 
+    const syncFaceControllerState = () => {
+      if (!faceScanController) {
+        return;
+      }
+
+      const faceSceneVisible = requestedHeroModel === "face" || requestedHeroModel === "both";
+      faceScanController.setHeroVisible(heroModelsVisible && introFinished && !introDisposed);
+      faceScanController.setSceneVisible(faceSceneVisible);
+    };
+
     const stopFaceModel = () => {
+      if (touchDevice) {
+        faceScanController?.destroy();
+        faceScanController = null;
+        faceScanModelActive = false;
+        cleanupFaceScanModel = () => undefined;
+        return;
+      }
+
       if (!faceScanModelActive) {
         return;
       }
@@ -4433,6 +4488,35 @@ export default function App() {
     };
 
     const syncHeroModels = () => {
+      if (touchDevice) {
+        if (introDisposed || !introFinished) {
+          faceScanController?.setHeroVisible(false);
+          return;
+        }
+
+        if (!createFaceScanModelController && !faceModuleImportStarted) {
+          faceModuleImportStarted = true;
+          void import("./lib/setupFaceScanModel")
+            .then((module) => {
+              if (introDisposed) {
+                return;
+              }
+
+              createFaceScanModelController = module.createFaceScanModelController;
+              syncHeroModels();
+            })
+            .catch(() => undefined);
+        }
+
+        if (heroModelsVisible && createFaceScanModelController && !faceScanController) {
+          faceScanController = createFaceScanModelController();
+          faceScanModelActive = true;
+        }
+
+        syncFaceControllerState();
+        return;
+      }
+
       if (introDisposed || !introFinished || !heroModelsVisible) {
         stopFaceModel();
         stopRoutineModel();
@@ -4462,6 +4546,7 @@ export default function App() {
                 return;
               }
 
+              createFaceScanModelController = module.createFaceScanModelController;
               setupFaceScanModel = module.setupFaceScanModel;
               syncHeroModels();
             })
@@ -4490,6 +4575,11 @@ export default function App() {
     };
 
     const stopHeroModels = () => {
+      if (touchDevice) {
+        faceScanController?.setHeroVisible(false);
+        return;
+      }
+
       stopFaceModel();
       stopRoutineModel();
     };
@@ -4568,7 +4658,11 @@ export default function App() {
       introStateObserver.disconnect();
       heroModelObserver.disconnect();
       cleanupLogoIntro();
-      stopHeroModels();
+      if (touchDevice) {
+        stopFaceModel();
+      } else {
+        stopHeroModels();
+      }
       cleanupBrandStoryCarousel();
       cleanupHeroPlatformToggle();
       cleanupHeroValueEngine();

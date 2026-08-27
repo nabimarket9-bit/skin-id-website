@@ -112,14 +112,15 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
     geometries: new Set(),
     materials: new Set(),
   };
+  const antialias = !window.matchMedia("(hover: none), (pointer: coarse)").matches;
   const renderer = new WebGLRenderer({
     canvas,
     alpha: true,
-    antialias: true,
+    antialias,
     powerPreference: "high-performance",
   });
   const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
-  const maxPixelRatio = touchDevice ? 1 : 1.5;
+  const maxPixelRatio = touchDevice ? 0.85 : 1.5;
   const containingScene = viewport.closest<HTMLElement>(".hero-scene");
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
@@ -357,6 +358,11 @@ function setupSingleRoutineProduct(config: RoutineProductConfig) {
 export function setupRoutineProductModel() {
   const baseUrl = import.meta.env.BASE_URL;
   const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+
+  if (touchDevice) {
+    return () => undefined;
+  }
+
   const modelUrl = (desktopName: string, mobileName: string) =>
     `${baseUrl}${touchDevice ? mobileName : desktopName}`;
   const cleanupHandlers = [

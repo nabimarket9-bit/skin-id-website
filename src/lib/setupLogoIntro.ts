@@ -95,12 +95,12 @@ export function setupLogoIntro() {
   };
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
-  const maxPixelRatio = touchDevice ? 1 : 1.5;
+  const maxPixelRatio = touchDevice ? 0.85 : 1.5;
   const introDuration = reducedMotion ? REDUCED_MOTION_DURATION_MS : INTRO_DURATION_MS;
   const renderer = new WebGLRenderer({
     canvas,
     alpha: true,
-    antialias: true,
+    antialias: !touchDevice,
     powerPreference: "high-performance",
   });
   renderer.outputColorSpace = SRGBColorSpace;

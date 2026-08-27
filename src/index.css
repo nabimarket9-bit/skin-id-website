@@ -418,6 +418,7 @@
     .routine-product[data-error="true"]:before{opacity:.24}
     .routine-product[data-error="true"]:after{opacity:.16}
     .routine-product-canvas{position:relative;z-index:1;display:block;width:100%;height:100%;opacity:var(--routine-product-ready,0);transition:opacity .28s ease}
+    .routine-product-mobile-sprite{position:relative;z-index:1;display:none;width:100%;height:100%;background-image:url("/personalized_routine_icon-mobile.png");background-repeat:no-repeat;background-size:300% 100%;opacity:0;transition:opacity .28s ease;transform-origin:center center}
     .routine-product-cleanser,.routine-product-moisturizer,.routine-product-spf{width:104px;height:78px}
     .routine-product-serum{width:112px;height:90px}
     .routine-product-cleanser:before,.routine-product-moisturizer:before,.routine-product-spf:before{width:98px;height:66px}
@@ -426,6 +427,10 @@
     .routine-product-serum .routine-product-canvas{transform:translate3d(-2px,-5px,0) scale(.64);transform-origin:center center}
     .routine-product-moisturizer .routine-product-canvas{transform:translate3d(-1px,7px,0) scale(.72);transform-origin:center center}
     .routine-product-spf .routine-product-canvas{transform:translate3d(0,5px,0) scale(.72);transform-origin:center center}
+    .routine-product-mobile-sprite-cleanser{background-position:0 50%}
+    .routine-product-mobile-sprite-serum{background-position:50% 50%}
+    .routine-product-mobile-sprite-moisturizer{background-position:100% 50%}
+    .routine-product-mobile-sprite-spf{background-position:0 50%}
     .row-a,.row-b,.row-c,.row-d{min-height:74px;padding-bottom:2px}
     .row-a{--routine-label-accent:#9fdcff}
     .row-b{--routine-label-accent:#8ff4cb;min-height:92px;padding-bottom:4px}
@@ -3121,6 +3126,31 @@
 
       .routine-product-spf .routine-product-canvas {
         transform: translate3d(0,4px,0) scale(.58);
+      }
+
+      .routine-product-canvas {
+        display: none;
+      }
+
+      .routine-product-mobile-sprite {
+        display: block;
+        opacity: 1;
+      }
+
+      .routine-product-mobile-sprite-cleanser {
+        transform: translate3d(-2px,4px,0) scale(.74);
+      }
+
+      .routine-product-mobile-sprite-serum {
+        transform: translate3d(-2px,-1px,0) scale(.6);
+      }
+
+      .routine-product-mobile-sprite-moisturizer {
+        transform: translate3d(-1px,4px,0) scale(.68);
+      }
+
+      .routine-product-mobile-sprite-spf {
+        transform: translate3d(0,4px,0) scale(.7);
       }
 
       .row-a {

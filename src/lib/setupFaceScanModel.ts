@@ -22,6 +22,12 @@ type FaceScanResources = {
   materials: Set<Material>;
 };
 
+export type FaceScanModelController = {
+  destroy: () => void;
+  setHeroVisible: (visible: boolean) => void;
+  setSceneVisible: (visible: boolean) => void;
+};
+
 function markDisposableMesh(mesh: Mesh, resources: FaceScanResources) {
   resources.geometries.add(mesh.geometry);
 
@@ -54,26 +60,31 @@ function frameCamera(camera: PerspectiveCamera, object: Object3D, viewport: HTML
   viewport.style.setProperty("--face-model-ready", "1");
 }
 
-export function setupFaceScanModel() {
+export function createFaceScanModelController(): FaceScanModelController {
   const viewport = document.querySelector<HTMLElement>(".scene-scan .face-visual");
   const canvas = document.getElementById("faceModelCanvas") as HTMLCanvasElement | null;
 
   if (!viewport || !canvas) {
-    return () => undefined;
+    return {
+      destroy: () => undefined,
+      setHeroVisible: () => undefined,
+      setSceneVisible: () => undefined,
+    };
   }
 
   const resources: FaceScanResources = {
     geometries: new Set(),
     materials: new Set(),
   };
+  const antialias = !window.matchMedia("(hover: none), (pointer: coarse)").matches;
   const renderer = new WebGLRenderer({
     canvas,
     alpha: true,
-    antialias: true,
+    antialias,
     powerPreference: "high-performance",
   });
   const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
-  const maxPixelRatio = touchDevice ? 1 : 1.5;
+  const maxPixelRatio = touchDevice ? 0.85 : 1.5;
   const baseUrl = import.meta.env.BASE_URL;
   const modelUrl = touchDevice ? `${baseUrl}face-mobile.glb` : `${baseUrl}face.glb`;
   const containingScene = viewport.closest<HTMLElement>(".hero-scene");
@@ -104,7 +115,9 @@ export function setupFaceScanModel() {
   let baseY = 0;
   let baseRotationX = 0;
   let baseRotationY = 0;
-  let isVisible = true;
+  let heroVisible = true;
+  let sceneVisible = true;
+  let viewportVisible = true;
 
   scene.environment = environmentTarget.texture;
   keyLight.position.set(1.8, 1.3, 3.4);
@@ -138,8 +151,33 @@ export function setupFaceScanModel() {
     frameId = 0;
   };
 
+  const canRender = () => heroVisible && sceneVisible && viewportVisible;
+
+  const syncRenderState = () => {
+    if (!model || destroyed) {
+      stopAnimation();
+      return;
+    }
+
+    if (shouldAnimate) {
+      if (canRender()) {
+        startAnimation();
+      } else {
+        stopAnimation();
+      }
+
+      return;
+    }
+
+    stopAnimation();
+
+    if (canRender()) {
+      renderFrame();
+    }
+  };
+
   const startAnimation = () => {
-    if (!shouldAnimate || !model || frameId || !isVisible) {
+    if (!shouldAnimate || !model || frameId || !canRender()) {
       return;
     }
 
@@ -153,7 +191,7 @@ export function setupFaceScanModel() {
       return;
     }
 
-    if (model && shouldAnimate && isVisible && isSceneActive()) {
+    if (model && shouldAnimate && canRender() && isSceneActive()) {
       const drift = time * 0.001;
       model.position.y = baseY + Math.sin(drift * 1.15) * 0.028;
       model.rotation.x = baseRotationX + Math.sin(drift * 0.7) * 0.018;
@@ -161,7 +199,7 @@ export function setupFaceScanModel() {
       renderFrame();
     }
 
-    if (shouldAnimate && isVisible) {
+    if (shouldAnimate && canRender()) {
       startAnimation();
     }
   };
@@ -186,17 +224,8 @@ export function setupFaceScanModel() {
 
   const visibilityObserver = new IntersectionObserver(
     ([entry]) => {
-      isVisible = entry?.isIntersecting ?? false;
-
-      if (isVisible) {
-        if (shouldAnimate) {
-          startAnimation();
-        } else if (model) {
-          renderFrame();
-        }
-      } else {
-        stopAnimation();
-      }
+      viewportVisible = entry?.isIntersecting ?? false;
+      syncRenderState();
     },
     { threshold: 0.15 },
   );
@@ -249,12 +278,7 @@ export function setupFaceScanModel() {
       baseRotationX = model.rotation.x;
       baseRotationY = model.rotation.y;
       resize();
-
-      if (shouldAnimate) {
-        startAnimation();
-      } else {
-        renderFrame();
-      }
+      syncRenderState();
     })
     .catch((error: unknown) => {
       if (error instanceof DOMException && error.name === "AbortError") {
@@ -265,27 +289,42 @@ export function setupFaceScanModel() {
   window.addEventListener("resize", resize);
   resize();
 
-  return () => {
-    destroyed = true;
-    loadController.abort();
-    stopAnimation();
-    visibilityObserver.disconnect();
-    window.removeEventListener("resize", resize);
-    viewport.style.removeProperty("--face-model-ready");
-    if (model) {
-      scene.remove(model);
-      model = null;
-    }
-    scene.environment = null;
-    resources.geometries.forEach((geometry) => geometry.dispose());
-    resources.materials.forEach((material) => material.dispose());
-    environmentTarget.dispose();
-    pmremGenerator.dispose();
-    renderer.renderLists.dispose();
-    renderer.dispose();
-    renderer.forceContextLoss();
-    canvas.width = 1;
-    canvas.height = 1;
-    canvas.replaceWith(canvas.cloneNode(false));
+  return {
+    destroy: () => {
+      destroyed = true;
+      loadController.abort();
+      stopAnimation();
+      visibilityObserver.disconnect();
+      window.removeEventListener("resize", resize);
+      viewport.style.removeProperty("--face-model-ready");
+      if (model) {
+        scene.remove(model);
+        model = null;
+      }
+      scene.environment = null;
+      resources.geometries.forEach((geometry) => geometry.dispose());
+      resources.materials.forEach((material) => material.dispose());
+      environmentTarget.dispose();
+      pmremGenerator.dispose();
+      renderer.renderLists.dispose();
+      renderer.dispose();
+      renderer.forceContextLoss();
+      canvas.width = 1;
+      canvas.height = 1;
+      canvas.replaceWith(canvas.cloneNode(false));
+    },
+    setHeroVisible: (visible) => {
+      heroVisible = visible;
+      syncRenderState();
+    },
+    setSceneVisible: (visible) => {
+      sceneVisible = visible;
+      syncRenderState();
+    },
   };
+}
+
+export function setupFaceScanModel() {
+  const controller = createFaceScanModelController();
+  return () => controller.destroy();
 }
