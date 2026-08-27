@@ -451,11 +451,30 @@ function createSingleRoutineProductController(config: RoutineProductConfig): Rou
 
 export function createRoutineProductModelController(): RoutineProductModelController {
   const baseUrl = import.meta.env.BASE_URL;
-  return createSingleRoutineProductController({
-    viewportSelector: ".routine-product-serum",
-    canvasId: "serumProductCanvas",
-    modelUrl: `${baseUrl}serum-bottle-mobile.glb`,
-  });
+  const controllers = [
+    createSingleRoutineProductController({
+      viewportSelector: ".routine-product-serum",
+      canvasId: "serumProductCanvas",
+      modelUrl: `${baseUrl}serum-bottle-mobile.glb`,
+    }),
+    createSingleRoutineProductController({
+      viewportSelector: ".routine-product-moisturizer",
+      canvasId: "moisturizerProductCanvas",
+      modelUrl: `${baseUrl}skincare-cream-jar-mobile.glb`,
+    }),
+  ];
+
+  return {
+    destroy: () => {
+      controllers.forEach((controller) => controller.destroy());
+    },
+    setHeroVisible: (visible) => {
+      controllers.forEach((controller) => controller.setHeroVisible(visible));
+    },
+    setSceneVisible: (visible) => {
+      controllers.forEach((controller) => controller.setSceneVisible(visible));
+    },
+  };
 }
 
 export function setupRoutineProductModel() {

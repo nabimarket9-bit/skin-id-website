@@ -4631,10 +4631,6 @@ const landingHtmlMobileDiagnostic = landingHtml
     "",
   )
   .replace(
-    '<canvas class="routine-product-canvas" id="moisturizerProductCanvas" aria-hidden="true"></canvas>',
-    "",
-  )
-  .replace(
     '<canvas class="routine-product-canvas" id="spfProductCanvas" aria-hidden="true"></canvas>',
     "",
   );
