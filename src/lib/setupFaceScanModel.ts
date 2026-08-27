@@ -129,6 +129,7 @@ export function createFaceScanModelController(): FaceScanModelController {
   let lastWidth = 0;
   let lastHeight = 0;
   let lastPixelRatio = 0;
+  let modelFramed = false;
 
   scene.environment = environmentTarget.texture;
   keyLight.position.set(1.8, 1.3, 3.4);
@@ -142,6 +143,16 @@ export function createFaceScanModelController(): FaceScanModelController {
 
   const renderFrame = () => {
     renderer.render(scene, camera);
+  };
+
+  const frameLoadedModel = () => {
+    if (!model) {
+      return;
+    }
+
+    frameCamera(camera, model, viewport);
+    modelFramed = true;
+    renderFrame();
   };
 
   const isSceneActive = () => {
@@ -235,7 +246,7 @@ export function createFaceScanModelController(): FaceScanModelController {
     return pixelRatio;
   };
 
-  const resize = () => {
+  const resize = (forceFrame = false) => {
     const clientWidth = Math.max(1, Math.round(viewport.clientWidth));
     const clientHeight = Math.max(1, Math.round(viewport.clientHeight));
 
@@ -246,6 +257,7 @@ export function createFaceScanModelController(): FaceScanModelController {
     const pixelRatio = resolvePixelRatio(clientWidth, clientHeight);
 
     if (
+      !forceFrame &&
       clientWidth === lastWidth &&
       clientHeight === lastHeight &&
       Math.abs(pixelRatio - lastPixelRatio) < 0.001
@@ -261,10 +273,12 @@ export function createFaceScanModelController(): FaceScanModelController {
     renderer.setPixelRatio(pixelRatio);
     renderer.setSize(clientWidth, clientHeight, false);
 
-    if (model) {
-      frameCamera(camera, model, viewport);
-      renderFrame();
+    if (model && (forceFrame || !modelFramed)) {
+      frameLoadedModel();
     }
+  };
+  const resizeViewport = () => {
+    resize(false);
   };
 
   const visibilityObserver = new IntersectionObserver(
@@ -275,7 +289,9 @@ export function createFaceScanModelController(): FaceScanModelController {
     { threshold: 0.15 },
   );
   visibilityObserver.observe(viewport);
-  const resizeObserver = new ResizeObserver(resize);
+  const resizeObserver = new ResizeObserver(() => {
+    resizeViewport();
+  });
   resizeObserver.observe(viewport);
   const onVisibilityChange = () => {
     documentVisible = !document.hidden;
@@ -328,7 +344,7 @@ export function createFaceScanModelController(): FaceScanModelController {
       baseY = model.position.y;
       baseRotationX = model.rotation.x;
       baseRotationY = model.rotation.y;
-      resize();
+      resize(true);
       syncRenderState();
     })
     .catch((error: unknown) => {
@@ -337,9 +353,9 @@ export function createFaceScanModelController(): FaceScanModelController {
       }
   });
 
-  window.addEventListener("resize", resize);
+  window.addEventListener("resize", resizeViewport);
   document.addEventListener("visibilitychange", onVisibilityChange);
-  resize();
+  resizeViewport();
   syncCanvasVisibility();
 
   return {
@@ -349,7 +365,7 @@ export function createFaceScanModelController(): FaceScanModelController {
       stopAnimation();
       visibilityObserver.disconnect();
       resizeObserver.disconnect();
-      window.removeEventListener("resize", resize);
+      window.removeEventListener("resize", resizeViewport);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       viewport.style.removeProperty("--face-model-ready");
       canvas.style.removeProperty("visibility");
@@ -357,6 +373,7 @@ export function createFaceScanModelController(): FaceScanModelController {
         scene.remove(model);
         model = null;
       }
+      modelFramed = false;
       scene.environment = null;
       resources.geometries.forEach((geometry) => geometry.dispose());
       resources.materials.forEach((material) => material.dispose());
