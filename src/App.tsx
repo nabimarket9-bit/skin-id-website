@@ -316,6 +316,8 @@ function setupBrandStoryCarousel() {
     return () => undefined;
   }
 
+  const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+  const diagnosticMode = touchDevice && document.body.classList.contains("mobile-diagnostic");
   const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   const metricCounters: StoryMetricCounter[] = Array.from(
     root.querySelectorAll<HTMLElement>(".story-slide-scale .story-metric-value[data-target]"),
@@ -338,7 +340,7 @@ function setupBrandStoryCarousel() {
   let dragStartX = 0;
   let dragStartScrollLeft = 0;
   let hasInitialized = false;
-  let storyVisible = false;
+  let storyVisible = diagnosticMode;
   let storyAnimationFrame = 0;
 
   const resizeObserver = new ResizeObserver(() => {
@@ -374,20 +376,31 @@ function setupBrandStoryCarousel() {
   };
 
   const scheduleStoryAnimationSync = () => {
+    if (diagnosticMode) {
+      return;
+    }
+
     window.cancelAnimationFrame(storyAnimationFrame);
     storyAnimationFrame = window.requestAnimationFrame(syncStoryAnimations);
   };
 
-  const storyVisibilityObserver = new IntersectionObserver(
-    ([entry]) => {
-      storyVisible = entry?.isIntersecting ?? false;
-      scheduleStoryAnimationSync();
-    },
-    { threshold: 0.01 },
-  );
-  const storyRect = root.getBoundingClientRect();
-  storyVisible = storyRect.bottom > 0 && storyRect.top < window.innerHeight;
-  storyVisibilityObserver.observe(root);
+  const storyVisibilityObserver:
+    | IntersectionObserver
+    | { disconnect: () => void; observe: (target: Element) => void } = diagnosticMode
+    ? { disconnect: () => undefined, observe: () => undefined }
+    : new IntersectionObserver(
+        ([entry]) => {
+          storyVisible = entry?.isIntersecting ?? false;
+          scheduleStoryAnimationSync();
+        },
+        { threshold: 0.01 },
+      );
+
+  if (!diagnosticMode) {
+    const storyRect = root.getBoundingClientRect();
+    storyVisible = storyRect.bottom > 0 && storyRect.top < window.innerHeight;
+    storyVisibilityObserver.observe(root);
+  }
 
   const cancelMetricAnimation = () => {
     window.cancelAnimationFrame(metricFrame);
@@ -407,7 +420,7 @@ function setupBrandStoryCarousel() {
       return;
     }
 
-    if (reduceMotionQuery.matches) {
+    if (diagnosticMode || reduceMotionQuery.matches) {
       setMetricsToTarget();
       return;
     }
@@ -545,6 +558,11 @@ function setupBrandStoryCarousel() {
   };
 
   const onTrackScroll = () => {
+    if (diagnosticMode) {
+      updateActiveSlide(getNearestIndex(), false);
+      return;
+    }
+
     window.cancelAnimationFrame(scrollFrame);
     window.clearTimeout(settleTimeout);
 
@@ -852,6 +870,37 @@ function setupDecisionSummaryBoard() {
     !rows.confidence ||
     !rows.status
   ) {
+    return () => undefined;
+  }
+
+  if (
+    window.matchMedia("(hover: none), (pointer: coarse)").matches &&
+    document.body.classList.contains("mobile-diagnostic")
+  ) {
+    board.dataset.state = "complete";
+    badge.textContent = "\u2713 Analysis Complete";
+    status.textContent = "Routine ready";
+    scannedValue.textContent = "247";
+    compatibleValue.textContent = "81";
+    candidatesValue.textContent = "19";
+    selectedValue.textContent = "4";
+    confidenceValue.textContent = "96%";
+    confidenceFill.style.setProperty("transform", "scaleX(0.96)");
+    checkIcon.classList.add("is-done");
+    completionGlow.classList.add("is-visible");
+    successWave.classList.remove("is-visible");
+    timelineSteps.forEach((step) => {
+      step.classList.remove("is-active");
+      step.classList.add("is-complete");
+    });
+    rows.scanned?.classList.add("is-complete");
+    rows.compatible?.classList.add("is-complete");
+    rows.candidates?.classList.add("is-complete");
+    rows.selected?.classList.add("is-complete");
+    rows.confidence?.classList.add("is-complete");
+    rows.status?.classList.add("is-complete");
+    action.disabled = true;
+    action.dataset.mode = "replay";
     return () => undefined;
   }
 
@@ -1291,11 +1340,33 @@ function setupDecisionSummaryBoard() {
 
 function setupHeroSceneTransitions() {
   const cinema = document.getElementById("cinema");
-  const canvas = document.getElementById("heroCanvas") as HTMLCanvasElement | null;
   const heroSim = cinema?.querySelector<HTMLElement>(".hero-sim");
   const scenes = heroSim ? Array.from(heroSim.querySelectorAll<HTMLElement>(".hero-scene")) : [];
+  const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
 
-  if (!cinema || !canvas || !heroSim || scenes.length !== 5) {
+  if (!cinema || !heroSim || scenes.length !== 5) {
+    return () => undefined;
+  }
+
+  if (touchDevice && document.body.classList.contains("mobile-diagnostic")) {
+    scenes.forEach((scene, index) => {
+      scene.style.opacity = index === 0 ? "1" : "0";
+      scene.style.transform = "translate3d(0,0,0) scale(1)";
+      scene.style.filter = "none";
+    });
+
+    return () => {
+      scenes.forEach((scene, index) => {
+        scene.style.opacity = index === 0 ? "1" : "0";
+        scene.style.transform = "translate3d(0,0,0) scale(1)";
+        scene.style.filter = "none";
+      });
+    };
+  }
+
+  const canvas = document.getElementById("heroCanvas") as HTMLCanvasElement | null;
+
+  if (!canvas) {
     return () => undefined;
   }
 
@@ -1310,7 +1381,6 @@ function setupHeroSceneTransitions() {
   const heroCanvas = canvas;
   const heroContext = context;
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
   const maxPixelRatio = touchDevice ? 1 : 1.5;
   const palette = ["115,169,255", "244,221,176", "247,241,232"];
   const holdMs = 5000;
@@ -2648,6 +2718,7 @@ function setupHeroSceneTransitions() {
 
 function setupLandingInteractions() {
   const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+  const diagnosticMode = touchDevice && document.body.classList.contains("mobile-diagnostic");
   const cleanupHandlers: Array<() => void> = [];
 
   if (!touchDevice) {
@@ -2723,7 +2794,7 @@ function setupLandingInteractions() {
   }
 
   const cloud = document.getElementById("productCloud");
-  if (cloud) {
+  if (cloud && !diagnosticMode) {
     const productPositions = [
       [74, 420, -19],
       [240, 255, 15],
@@ -2807,49 +2878,64 @@ function setupLandingInteractions() {
       'The customer leaves with a complete <span class="highlight-word highlight-cyan">routine</span>, not <span class="highlight-word highlight-gold">confusion.</span>',
     ],
   ] as const;
-  let windowScrollFrame = 0;
-  let renderedStage = 0;
+  if (!diagnosticMode) {
+    let windowScrollFrame = 0;
+    let renderedStage = 0;
 
-  const renderWindowScroll = () => {
-    windowScrollFrame = 0;
+    const renderWindowScroll = () => {
+      windowScrollFrame = 0;
 
-    if (control && stage && kicker && title) {
-      const rect = control.getBoundingClientRect();
-      const total = Math.max(1, control.offsetHeight - window.innerHeight);
-      const progress = Math.min(1, Math.max(0, -rect.top / total));
-      const stageNumber = progress < 0.13 ? 1 : progress < 0.3 ? 2 : progress < 0.5 ? 3 : progress < 0.68 ? 4 : 5;
+      if (control && stage && kicker && title) {
+        const rect = control.getBoundingClientRect();
+        const total = Math.max(1, control.offsetHeight - window.innerHeight);
+        const progress = Math.min(1, Math.max(0, -rect.top / total));
+        const stageNumber =
+          progress < 0.13 ? 1 : progress < 0.3 ? 2 : progress < 0.5 ? 3 : progress < 0.68 ? 4 : 5;
 
-      if (stageNumber !== renderedStage) {
-        renderedStage = stageNumber;
-        stage.className = `control-stage s${stageNumber}`;
-        kicker.textContent = stageCopy[stageNumber - 1][0];
-        title.innerHTML = stageCopy[stageNumber - 1][1];
+        if (stageNumber !== renderedStage) {
+          renderedStage = stageNumber;
+          stage.className = `control-stage s${stageNumber}`;
+          kicker.textContent = stageCopy[stageNumber - 1][0];
+          title.innerHTML = stageCopy[stageNumber - 1][1];
+        }
       }
-    }
 
-    if (blackout && blackoutBackground) {
-      const rect = blackout.getBoundingClientRect();
-      const total = Math.max(1, blackout.offsetHeight - window.innerHeight);
-      const progress = Math.min(1, Math.max(0, -rect.top / total));
-      blackoutBackground.style.opacity = String(0.05 + progress * 0.78);
-      finalLines.forEach((line, index) => {
-        line?.classList.toggle("show", progress > 0.14 + index * 0.16);
-      });
-    }
-  };
+      if (blackout && blackoutBackground) {
+        const rect = blackout.getBoundingClientRect();
+        const total = Math.max(1, blackout.offsetHeight - window.innerHeight);
+        const progress = Math.min(1, Math.max(0, -rect.top / total));
+        blackoutBackground.style.opacity = String(0.05 + progress * 0.78);
+        finalLines.forEach((line, index) => {
+          line?.classList.toggle("show", progress > 0.14 + index * 0.16);
+        });
+      }
+    };
 
-  const onWindowScroll = () => {
-    if (!windowScrollFrame) {
-      windowScrollFrame = window.requestAnimationFrame(renderWindowScroll);
-    }
-  };
+    const onWindowScroll = () => {
+      if (!windowScrollFrame) {
+        windowScrollFrame = window.requestAnimationFrame(renderWindowScroll);
+      }
+    };
 
-  window.addEventListener("scroll", onWindowScroll, { passive: true });
-  renderWindowScroll();
-  cleanupHandlers.push(() => {
-    window.cancelAnimationFrame(windowScrollFrame);
-    window.removeEventListener("scroll", onWindowScroll);
-  });
+    window.addEventListener("scroll", onWindowScroll, { passive: true });
+    renderWindowScroll();
+    cleanupHandlers.push(() => {
+      window.cancelAnimationFrame(windowScrollFrame);
+      window.removeEventListener("scroll", onWindowScroll);
+    });
+  } else {
+    stage?.classList.add("s5");
+    if (kicker) {
+      kicker.textContent = stageCopy[4][0];
+    }
+    if (title) {
+      title.innerHTML = stageCopy[4][1];
+    }
+    if (blackoutBackground) {
+      blackoutBackground.style.opacity = "0.4";
+    }
+    finalLines.forEach((line) => line?.classList.add("show"));
+  }
 
   const resultData: Record<string, [string, string, string, string, string, string]> = {
     hydration: [
@@ -2928,7 +3014,9 @@ function setupLandingInteractions() {
     cleanupHandlers.push(() => range.removeEventListener("input", onInput));
   }
 
-  const finalCanvas = document.getElementById("finalCanvas") as HTMLCanvasElement | null;
+  const finalCanvas = diagnosticMode
+    ? null
+    : (document.getElementById("finalCanvas") as HTMLCanvasElement | null);
   const finalContext = finalCanvas?.getContext("2d");
   if (finalCanvas && finalContext) {
     type FinalParticle = {
@@ -3064,36 +3152,38 @@ function setupLandingInteractions() {
     });
   }
 
-  const visibilityBoundRoots = Array.from(
-    document.querySelectorAll<HTMLElement>(
-      ".section,.control-room,.deep-system,.belief-section,.blackout",
-    ),
-  );
-  const syncRootAnimations = (root: HTMLElement, shouldPlay: boolean) => {
-    root.getAnimations({ subtree: true }).forEach((animation) => {
-      if (shouldPlay && animation.playState === "paused") {
-        animation.play();
-      } else if (!shouldPlay && animation.playState === "running") {
-        animation.pause();
-      }
-    });
-  };
-  const sectionAnimationObserver = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        syncRootAnimations(entry.target as HTMLElement, entry.isIntersecting);
+  if (!diagnosticMode) {
+    const visibilityBoundRoots = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        ".section,.control-room,.deep-system,.belief-section,.blackout",
+      ),
+    );
+    const syncRootAnimations = (root: HTMLElement, shouldPlay: boolean) => {
+      root.getAnimations({ subtree: true }).forEach((animation) => {
+        if (shouldPlay && animation.playState === "paused") {
+          animation.play();
+        } else if (!shouldPlay && animation.playState === "running") {
+          animation.pause();
+        }
       });
-    },
-    { rootMargin: "0px" },
-  );
+    };
+    const sectionAnimationObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          syncRootAnimations(entry.target as HTMLElement, entry.isIntersecting);
+        });
+      },
+      { rootMargin: "0px" },
+    );
 
-  visibilityBoundRoots.forEach((root) => {
-    const rect = root.getBoundingClientRect();
-    const isNearViewport = rect.bottom >= 0 && rect.top <= window.innerHeight;
-    syncRootAnimations(root, isNearViewport);
-    sectionAnimationObserver.observe(root);
-  });
-  cleanupHandlers.push(() => sectionAnimationObserver.disconnect());
+    visibilityBoundRoots.forEach((root) => {
+      const rect = root.getBoundingClientRect();
+      const isNearViewport = rect.bottom >= 0 && rect.top <= window.innerHeight;
+      syncRootAnimations(root, isNearViewport);
+      sectionAnimationObserver.observe(root);
+    });
+    cleanupHandlers.push(() => sectionAnimationObserver.disconnect());
+  }
 
   return () => {
     cleanupHandlers.forEach((cleanup) => cleanup());
@@ -4420,6 +4510,40 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
     <div class="blackout-pin"><canvas class="final-canvas" id="finalCanvas"></canvas><div class="blackout-bg" id="blackoutBg"></div><div class="final-word"><h2><span class="final-line" id="f1">Your <span class="highlight-word highlight-gold">visitors</span> already have questions.</span><span class="final-line" id="f2">Your store needs to <span class="highlight-word highlight-blue">answer</span> them.</span></h2><p class="final-line" id="f3">Skin ID turns <span class="highlight-word highlight-gold">product confusion</span> into a <span class="highlight-word highlight-cyan">personalized buying path</span> configured around your catalog, UX and growth goals.</p><a class="cta magnetic final-line" id="f4" href="${calendlyUrl}" target="_blank" rel="noreferrer"><span class="btn-text">Discover Skin ID</span></a></div></div>
   </section>`;
 
+const landingHtmlMobileDiagnostic = landingHtml
+  .replace(
+    '<canvas id="loaderLogoCanvas" aria-hidden="true"></canvas>',
+    '<div class="mobile-static-logo" aria-hidden="true"></div>',
+  )
+  .replace(
+    '<canvas id="heroCanvas" aria-hidden="true"></canvas>',
+    '<div class="mobile-hero-static-backdrop" aria-hidden="true"></div>',
+  )
+  .replace(
+    '<canvas class="face-model-canvas" id="faceModelCanvas" aria-hidden="true"></canvas>',
+    '<img class="face-model-static" src="/skin_profile_exact-mobile.png" width="384" height="384" loading="eager" decoding="async" alt="" />',
+  )
+  .replace(
+    '<canvas class="routine-product-canvas" id="cleanserProductCanvas" aria-hidden="true"></canvas>',
+    "",
+  )
+  .replace(
+    '<canvas class="routine-product-canvas" id="serumProductCanvas" aria-hidden="true"></canvas>',
+    "",
+  )
+  .replace(
+    '<canvas class="routine-product-canvas" id="moisturizerProductCanvas" aria-hidden="true"></canvas>',
+    "",
+  )
+  .replace(
+    '<canvas class="routine-product-canvas" id="spfProductCanvas" aria-hidden="true"></canvas>',
+    "",
+  )
+  .replace(
+    '<canvas class="final-canvas" id="finalCanvas"></canvas>',
+    '<div class="final-canvas-placeholder" aria-hidden="true"></div>',
+  );
+
 
 export default function App() {
   useEffect(() => {
@@ -4448,6 +4572,29 @@ export default function App() {
     const heroCinema = document.getElementById("cinema");
     const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
     let requestedHeroModel: RequestedHeroModel = touchDevice ? "face" : "both";
+
+    if (touchDevice) {
+      document.body.classList.remove("intro-lock");
+      document.body.classList.add("intro-complete", "mobile-diagnostic");
+      document.getElementById("loader")?.classList.add("is-hidden");
+
+      const cleanupHeroSceneTransitions = setupHeroSceneTransitions();
+      const cleanupBrandStoryCarousel = setupBrandStoryCarousel();
+      const cleanupHeroPlatformToggle = setupHeroPlatformToggle();
+      const cleanupHeroValueEngine = setupHeroValueEngine();
+      const cleanupDecisionSummaryBoard = setupDecisionSummaryBoard();
+      const cleanupLandingInteractions = setupLandingInteractions();
+
+      return () => {
+        document.body.classList.remove("mobile-diagnostic");
+        cleanupBrandStoryCarousel();
+        cleanupHeroPlatformToggle();
+        cleanupHeroValueEngine();
+        cleanupHeroSceneTransitions();
+        cleanupDecisionSummaryBoard();
+        cleanupLandingInteractions();
+      };
+    }
 
     const syncFaceControllerState = () => {
       if (!faceScanController) {
@@ -4672,5 +4819,14 @@ export default function App() {
     };
   }, []);
 
-  return <div dangerouslySetInnerHTML={{ __html: landingHtml }} />;
+  const touchDevice =
+    typeof window !== "undefined" && window.matchMedia("(hover: none), (pointer: coarse)").matches;
+
+  return (
+    <div
+      dangerouslySetInnerHTML={{
+        __html: touchDevice ? landingHtmlMobileDiagnostic : landingHtml,
+      }}
+    />
+  );
 }

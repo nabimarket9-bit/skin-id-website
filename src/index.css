@@ -3655,6 +3655,105 @@
       .cta:hover:before {
         transform: translateX(-120%);
       }
+
+      body.mobile-diagnostic .loader {
+        display: none;
+      }
+
+      body.mobile-diagnostic .noise,
+      body.mobile-diagnostic .loader-grid,
+      body.mobile-diagnostic .loader-vignette,
+      body.mobile-diagnostic .cursor,
+      body.mobile-diagnostic .glow,
+      body.mobile-diagnostic .sim-glow,
+      body.mobile-diagnostic .face-depth,
+      body.mobile-diagnostic .face-ambient,
+      body.mobile-diagnostic .face-reflection,
+      body.mobile-diagnostic .face-core-glow,
+      body.mobile-diagnostic .profile-shell:before,
+      body.mobile-diagnostic .profile-shell:after,
+      body.mobile-diagnostic .result-panel:before,
+      body.mobile-diagnostic .routine-product:before,
+      body.mobile-diagnostic .routine-product:after,
+      body.mobile-diagnostic .final-canvas-placeholder {
+        display: none !important;
+      }
+
+      body.mobile-diagnostic *,
+      body.mobile-diagnostic *::before,
+      body.mobile-diagnostic *::after {
+        animation: none !important;
+        backdrop-filter: none !important;
+        filter: none !important;
+      }
+
+      body.mobile-diagnostic .nav,
+      body.mobile-diagnostic .scene-shell,
+      body.mobile-diagnostic .story-slide,
+      body.mobile-diagnostic .belief,
+      body.mobile-diagnostic .problem-card,
+      body.mobile-diagnostic .depth-card,
+      body.mobile-diagnostic .story-chaos-card,
+      body.mobile-diagnostic .story-intel-dashboard,
+      body.mobile-diagnostic .story-intel-widget,
+      body.mobile-diagnostic .story-engine-node,
+      body.mobile-diagnostic .story-engine-core-card,
+      body.mobile-diagnostic .story-engine-output,
+      body.mobile-diagnostic .result-panel,
+      body.mobile-diagnostic .hero-platform-toggle,
+      body.mobile-diagnostic .hero-platform-more {
+        box-shadow: none !important;
+        text-shadow: none !important;
+      }
+
+      body.mobile-diagnostic .mobile-static-logo {
+        width: 120px;
+        height: 120px;
+        border-radius: 28px;
+        background: url("/nabi-logo-cropped.png") center / contain no-repeat;
+        opacity: .92;
+      }
+
+      body.mobile-diagnostic .mobile-hero-static-backdrop {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background: rgba(255,255,255,.02);
+        pointer-events: none;
+      }
+
+      body.mobile-diagnostic .face-model-static {
+        position: absolute;
+        inset: 18px;
+        width: calc(100% - 36px);
+        height: calc(100% - 36px);
+        object-fit: contain;
+        opacity: .96;
+      }
+
+      body.mobile-diagnostic .face-visual {
+        background: rgba(255,255,255,.02);
+        box-shadow: none;
+      }
+
+      body.mobile-diagnostic .routine-product-mobile-sprite {
+        display: block;
+        opacity: 1;
+      }
+
+      body.mobile-diagnostic .hero-statement:before,
+      body.mobile-diagnostic .highlight-word,
+      body.mobile-diagnostic .gradient-text,
+      body.mobile-diagnostic .hero-platform-logo,
+      body.mobile-diagnostic .hero-platform-logo-image {
+        background-image: none !important;
+      }
+
+      body.mobile-diagnostic .highlight-word,
+      body.mobile-diagnostic .gradient-text {
+        color: inherit !important;
+        -webkit-text-fill-color: currentColor;
+      }
     }
 
     @media (prefers-reduced-motion: reduce) {
