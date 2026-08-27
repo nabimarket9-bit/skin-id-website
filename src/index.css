@@ -3787,6 +3787,14 @@
         display: none;
       }
 
+      body.mobile-diagnostic .routine-product-spf .routine-product-canvas {
+        display: block;
+      }
+
+      body.mobile-diagnostic .routine-product-spf .routine-product-mobile-sprite {
+        display: none;
+      }
+
       body.mobile-diagnostic .routine-product:before,
       body.mobile-diagnostic .routine-product:after {
         display: block;

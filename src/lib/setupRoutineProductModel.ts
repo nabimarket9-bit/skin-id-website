@@ -467,6 +467,11 @@ export function createRoutineProductModelController(): RoutineProductModelContro
       canvasId: "moisturizerProductCanvas",
       modelUrl: `${baseUrl}skincare-cream-jar-mobile.glb`,
     }),
+    createSingleRoutineProductController({
+      viewportSelector: ".routine-product-spf",
+      canvasId: "spfProductCanvas",
+      modelUrl: `${baseUrl}skincare-small-tube-pack-mobile.glb`,
+    }),
   ];
 
   return {

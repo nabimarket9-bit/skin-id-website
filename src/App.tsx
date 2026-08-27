@@ -4625,11 +4625,7 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
     <div class="blackout-pin"><canvas class="final-canvas" id="finalCanvas"></canvas><div class="blackout-bg" id="blackoutBg"></div><div class="final-word"><h2><span class="final-line" id="f1">Your <span class="highlight-word highlight-gold">visitors</span> already have questions.</span><span class="final-line" id="f2">Your store needs to <span class="highlight-word highlight-blue">answer</span> them.</span></h2><p class="final-line" id="f3">Skin ID turns <span class="highlight-word highlight-gold">product confusion</span> into a <span class="highlight-word highlight-cyan">personalized buying path</span> configured around your catalog, UX and growth goals.</p><a class="cta magnetic final-line" id="f4" href="${calendlyUrl}" target="_blank" rel="noreferrer"><span class="btn-text">Discover Skin ID</span></a></div></div>
   </section>`;
 
-const landingHtmlMobileDiagnostic = landingHtml
-  .replace(
-    '<canvas class="routine-product-canvas" id="spfProductCanvas" aria-hidden="true"></canvas>',
-    "",
-  );
+const landingHtmlMobileDiagnostic = landingHtml;
 
 
 export default function App() {
