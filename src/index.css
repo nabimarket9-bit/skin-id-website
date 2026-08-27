@@ -3665,17 +3665,7 @@
       body.mobile-diagnostic .loader-vignette,
       body.mobile-diagnostic .cursor,
       body.mobile-diagnostic .glow,
-      body.mobile-diagnostic .sim-glow,
-      body.mobile-diagnostic .face-depth,
-      body.mobile-diagnostic .face-ambient,
-      body.mobile-diagnostic .face-reflection,
-      body.mobile-diagnostic .face-core-glow,
-      body.mobile-diagnostic .profile-shell:before,
-      body.mobile-diagnostic .profile-shell:after,
-      body.mobile-diagnostic .result-panel:before,
-      body.mobile-diagnostic .routine-product:before,
-      body.mobile-diagnostic .routine-product:after,
-      body.mobile-diagnostic .final-canvas-placeholder {
+      body.mobile-diagnostic .sim-glow {
         display: none !important;
       }
 
@@ -3684,26 +3674,29 @@
       body.mobile-diagnostic *::after {
         animation: none !important;
         backdrop-filter: none !important;
-        filter: none !important;
       }
 
-      body.mobile-diagnostic .nav,
-      body.mobile-diagnostic .scene-shell,
-      body.mobile-diagnostic .story-slide,
-      body.mobile-diagnostic .belief,
-      body.mobile-diagnostic .problem-card,
-      body.mobile-diagnostic .depth-card,
-      body.mobile-diagnostic .story-chaos-card,
-      body.mobile-diagnostic .story-intel-dashboard,
-      body.mobile-diagnostic .story-intel-widget,
-      body.mobile-diagnostic .story-engine-node,
-      body.mobile-diagnostic .story-engine-core-card,
-      body.mobile-diagnostic .story-engine-output,
-      body.mobile-diagnostic .result-panel,
-      body.mobile-diagnostic .hero-platform-toggle,
-      body.mobile-diagnostic .hero-platform-more {
-        box-shadow: none !important;
-        text-shadow: none !important;
+      body.mobile-diagnostic .hero-statement:before,
+      body.mobile-diagnostic .hero-platform-more,
+      body.mobile-diagnostic .hero-platform-logo,
+      body.mobile-diagnostic .hero-platform-logo-image,
+      body.mobile-diagnostic .face-depth,
+      body.mobile-diagnostic .face-ambient,
+      body.mobile-diagnostic .face-reflection,
+      body.mobile-diagnostic .face-core-glow,
+      body.mobile-diagnostic .analysis-zone,
+      body.mobile-diagnostic .face-beam:before,
+      body.mobile-diagnostic .profile-shell:before,
+      body.mobile-diagnostic .profile-shell:after,
+      body.mobile-diagnostic .profile-pill,
+      body.mobile-diagnostic .profile-card-aura,
+      body.mobile-diagnostic .routine-product:before,
+      body.mobile-diagnostic .routine-product:after,
+      body.mobile-diagnostic .result-shell:after,
+      body.mobile-diagnostic .result-check-glow,
+      body.mobile-diagnostic .result-aura,
+      body.mobile-diagnostic .range-track-glow {
+        filter: none !important;
       }
 
       body.mobile-diagnostic .mobile-static-logo {
@@ -3731,9 +3724,37 @@
         opacity: .96;
       }
 
+      body.mobile-diagnostic .face-depth,
+      body.mobile-diagnostic .face-ambient,
+      body.mobile-diagnostic .face-reflection,
+      body.mobile-diagnostic .face-core-glow {
+        display: block;
+      }
+
+      body.mobile-diagnostic .face-depth {
+        opacity: .18;
+      }
+
+      body.mobile-diagnostic .face-ambient {
+        opacity: .2;
+      }
+
+      body.mobile-diagnostic .face-reflection {
+        opacity: .22;
+      }
+
+      body.mobile-diagnostic .face-core-glow {
+        opacity: .26;
+      }
+
       body.mobile-diagnostic .face-visual {
         background: rgba(255,255,255,.02);
-        box-shadow: none;
+      }
+
+      body.mobile-diagnostic .profile-shell:before,
+      body.mobile-diagnostic .profile-shell:after {
+        display: block;
+        opacity: .24;
       }
 
       body.mobile-diagnostic .routine-product-mobile-sprite {
@@ -3741,18 +3762,59 @@
         opacity: 1;
       }
 
-      body.mobile-diagnostic .hero-statement:before,
-      body.mobile-diagnostic .highlight-word,
-      body.mobile-diagnostic .gradient-text,
-      body.mobile-diagnostic .hero-platform-logo,
-      body.mobile-diagnostic .hero-platform-logo-image {
-        background-image: none !important;
+      body.mobile-diagnostic .routine-product:before,
+      body.mobile-diagnostic .routine-product:after {
+        display: block;
       }
 
-      body.mobile-diagnostic .highlight-word,
-      body.mobile-diagnostic .gradient-text {
-        color: inherit !important;
-        -webkit-text-fill-color: currentColor;
+      body.mobile-diagnostic .routine-product:before {
+        opacity: .4;
+      }
+
+      body.mobile-diagnostic .routine-product:after {
+        opacity: .26;
+      }
+
+      body.mobile-diagnostic .result-panel:before {
+        display: block;
+        opacity: .28;
+        transform: none;
+      }
+
+      body.mobile-diagnostic .final-canvas-placeholder {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background:
+          radial-gradient(circle at 22% 28%, rgba(115,169,255,.14), transparent 30%),
+          radial-gradient(circle at 78% 24%, rgba(244,221,176,.1), transparent 26%),
+          radial-gradient(circle at 62% 78%, rgba(157,245,217,.08), transparent 24%),
+          linear-gradient(180deg, rgba(5,7,10,.72), rgba(2,3,6,.92));
+        pointer-events: none;
+      }
+
+      body.mobile-diagnostic .story-slide-contrast.is-active .story-contrast-item {
+        animation: storyContrastReveal .78s cubic-bezier(.2,.88,.22,1) forwards !important;
+      }
+
+      body.mobile-diagnostic .story-contrast-bridge.is-active .story-contrast-bridge-line {
+        animation: storyContrastBridge .55s cubic-bezier(.24,.86,.24,1) forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .story-guided-step.step-scan {
+        animation: guidedStepReveal .45s ease 1s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .story-guided-step.step-profile {
+        animation: guidedStepReveal .45s ease 1.24s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .story-guided-step.step-routine {
+        animation: guidedStepReveal .45s ease 1.48s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .story-guided-step.step-checkout {
+        animation: guidedStepReveal .45s ease 1.72s forwards !important;
       }
     }
 

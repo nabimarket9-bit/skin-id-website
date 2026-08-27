@@ -1350,6 +1350,7 @@ function setupHeroSceneTransitions() {
 
   if (touchDevice && document.body.classList.contains("mobile-diagnostic")) {
     scenes.forEach((scene, index) => {
+      scene.style.display = index === 0 ? "grid" : "none";
       scene.style.opacity = index === 0 ? "1" : "0";
       scene.style.transform = "translate3d(0,0,0) scale(1)";
       scene.style.filter = "none";
@@ -1357,6 +1358,7 @@ function setupHeroSceneTransitions() {
 
     return () => {
       scenes.forEach((scene, index) => {
+        scene.style.display = index === 0 ? "grid" : "none";
         scene.style.opacity = index === 0 ? "1" : "0";
         scene.style.transform = "translate3d(0,0,0) scale(1)";
         scene.style.filter = "none";
