@@ -4783,8 +4783,76 @@ export default function App() {
       const cleanupHeroValueEngine = setupHeroValueEngine();
       const cleanupDecisionSummaryBoard = setupDecisionSummaryBoard();
       const cleanupLandingInteractions = setupLandingInteractions();
+      const syncMobileFaceControllerState = () => {
+        if (!faceScanController) {
+          return;
+        }
+
+        faceScanController.setHeroVisible(heroModelsVisible && introFinished && !introDisposed);
+        faceScanController.setSceneVisible(true);
+      };
+      const syncMobileFaceModel = () => {
+        if (introDisposed) {
+          faceScanController?.setHeroVisible(false);
+          return;
+        }
+
+        if (!introFinished || !heroModelsVisible) {
+          syncMobileFaceControllerState();
+          return;
+        }
+
+        if (!createFaceScanModelController && !faceModuleImportStarted) {
+          faceModuleImportStarted = true;
+          void import("./lib/setupFaceScanModel")
+            .then((module) => {
+              if (introDisposed) {
+                return;
+              }
+
+              createFaceScanModelController = module.createFaceScanModelController;
+              syncMobileFaceModel();
+            })
+            .catch(() => undefined);
+          return;
+        }
+
+        if (createFaceScanModelController && !faceScanController) {
+          faceScanController = createFaceScanModelController();
+          faceScanModelActive = true;
+        }
+
+        syncMobileFaceControllerState();
+      };
+      const introStateObserver = new MutationObserver(() => {
+        if (!document.body.classList.contains("intro-complete")) {
+          return;
+        }
+
+        introFinished = true;
+        introStateObserver.disconnect();
+        syncMobileFaceModel();
+      });
+      const heroModelObserver = new IntersectionObserver(
+        ([entry]) => {
+          heroModelsVisible = entry?.isIntersecting ?? false;
+          syncMobileFaceModel();
+        },
+        { rootMargin: "120px 0px" },
+      );
+
+      if (heroCinema) {
+        const heroRect = heroCinema.getBoundingClientRect();
+        heroModelsVisible = heroRect.bottom >= -120 && heroRect.top <= window.innerHeight + 120;
+        heroModelObserver.observe(heroCinema);
+      }
 
       if (!introFinished) {
+        introStateObserver.observe(document.body, {
+          attributes: true,
+          attributeFilter: ["class"],
+        });
+
         void import("./lib/setupLogoIntro")
           .then(({ setupLogoIntro }) => {
             if (introDisposed) {
@@ -4798,12 +4866,21 @@ export default function App() {
             document.body.classList.remove("intro-lock");
             document.body.classList.add("intro-complete");
             loader?.classList.add("is-hidden");
+            introStateObserver.disconnect();
+            syncMobileFaceModel();
           });
+      } else {
+        syncMobileFaceModel();
       }
 
       return () => {
         introDisposed = true;
         cleanupLogoIntro();
+        introStateObserver.disconnect();
+        heroModelObserver.disconnect();
+        faceScanController?.destroy();
+        faceScanController = null;
+        faceScanModelActive = false;
         document.body.classList.remove("mobile-diagnostic");
         cleanupBrandStoryCarousel();
         cleanupHeroPlatformToggle();

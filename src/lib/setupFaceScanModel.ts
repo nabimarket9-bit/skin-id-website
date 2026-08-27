@@ -11,6 +11,7 @@ import {
   PerspectiveCamera,
   Scene,
   SRGBColorSpace,
+  Texture,
   Vector3,
   WebGLRenderer,
 } from "three";
@@ -20,6 +21,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 type FaceScanResources = {
   geometries: Set<BufferGeometry>;
   materials: Set<Material>;
+  textures: Set<Texture>;
 };
 
 export type FaceScanModelController = {
@@ -31,14 +33,17 @@ export type FaceScanModelController = {
 function markDisposableMesh(mesh: Mesh, resources: FaceScanResources) {
   resources.geometries.add(mesh.geometry);
 
-  if (Array.isArray(mesh.material)) {
-    mesh.material.forEach((material) => resources.materials.add(material));
-    return;
-  }
+  const materials = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
 
-  if (mesh.material) {
-    resources.materials.add(mesh.material);
-  }
+  materials.forEach((material) => {
+    resources.materials.add(material);
+
+    Object.values(material).forEach((value) => {
+      if (value instanceof Texture) {
+        resources.textures.add(value);
+      }
+    });
+  });
 }
 
 function frameCamera(camera: PerspectiveCamera, object: Object3D, viewport: HTMLElement) {
@@ -75,16 +80,18 @@ export function createFaceScanModelController(): FaceScanModelController {
   const resources: FaceScanResources = {
     geometries: new Set(),
     materials: new Set(),
+    textures: new Set(),
   };
-  const antialias = !window.matchMedia("(hover: none), (pointer: coarse)").matches;
+  const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+  const antialias = !touchDevice;
   const renderer = new WebGLRenderer({
     canvas,
     alpha: true,
     antialias,
-    powerPreference: "high-performance",
+    powerPreference: touchDevice ? "low-power" : "high-performance",
   });
-  const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
-  const maxPixelRatio = touchDevice ? 0.85 : 1.5;
+  const maxPixelRatio = touchDevice ? 0.75 : 1.5;
+  const mobileFramebufferPixelBudget = 240_000;
   const baseUrl = import.meta.env.BASE_URL;
   const modelUrl = touchDevice ? `${baseUrl}face-mobile.glb` : `${baseUrl}face.glb`;
   const containingScene = viewport.closest<HTMLElement>(".hero-scene");
@@ -118,6 +125,10 @@ export function createFaceScanModelController(): FaceScanModelController {
   let heroVisible = true;
   let sceneVisible = true;
   let viewportVisible = true;
+  let documentVisible = !document.hidden;
+  let lastWidth = 0;
+  let lastHeight = 0;
+  let lastPixelRatio = 0;
 
   scene.environment = environmentTarget.texture;
   keyLight.position.set(1.8, 1.3, 3.4);
@@ -151,9 +162,15 @@ export function createFaceScanModelController(): FaceScanModelController {
     frameId = 0;
   };
 
-  const canRender = () => heroVisible && sceneVisible && viewportVisible;
+  const canRender = () => heroVisible && sceneVisible && viewportVisible && documentVisible;
+
+  const syncCanvasVisibility = () => {
+    canvas.style.visibility = canRender() ? "visible" : "hidden";
+  };
 
   const syncRenderState = () => {
+    syncCanvasVisibility();
+
     if (!model || destroyed) {
       stopAnimation();
       return;
@@ -191,7 +208,7 @@ export function createFaceScanModelController(): FaceScanModelController {
       return;
     }
 
-    if (model && shouldAnimate && canRender() && isSceneActive()) {
+    if (model && shouldAnimate && canRender() && (touchDevice || isSceneActive())) {
       const drift = time * 0.001;
       model.position.y = baseY + Math.sin(drift * 1.15) * 0.028;
       model.rotation.x = baseRotationX + Math.sin(drift * 0.7) * 0.018;
@@ -204,16 +221,44 @@ export function createFaceScanModelController(): FaceScanModelController {
     }
   };
 
+  const resolvePixelRatio = (width: number, height: number) => {
+    let pixelRatio = Math.min(window.devicePixelRatio || 1, maxPixelRatio);
+
+    if (touchDevice) {
+      const projectedPixels = width * height * pixelRatio * pixelRatio;
+
+      if (projectedPixels > mobileFramebufferPixelBudget) {
+        pixelRatio = Math.sqrt(mobileFramebufferPixelBudget / Math.max(1, width * height));
+      }
+    }
+
+    return pixelRatio;
+  };
+
   const resize = () => {
-    const { clientWidth, clientHeight } = viewport;
+    const clientWidth = Math.max(1, Math.round(viewport.clientWidth));
+    const clientHeight = Math.max(1, Math.round(viewport.clientHeight));
 
     if (!clientWidth || !clientHeight) {
       return;
     }
 
+    const pixelRatio = resolvePixelRatio(clientWidth, clientHeight);
+
+    if (
+      clientWidth === lastWidth &&
+      clientHeight === lastHeight &&
+      Math.abs(pixelRatio - lastPixelRatio) < 0.001
+    ) {
+      return;
+    }
+
+    lastWidth = clientWidth;
+    lastHeight = clientHeight;
+    lastPixelRatio = pixelRatio;
     camera.aspect = clientWidth / clientHeight;
     camera.updateProjectionMatrix();
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxPixelRatio));
+    renderer.setPixelRatio(pixelRatio);
     renderer.setSize(clientWidth, clientHeight, false);
 
     if (model) {
@@ -230,6 +275,12 @@ export function createFaceScanModelController(): FaceScanModelController {
     { threshold: 0.15 },
   );
   visibilityObserver.observe(viewport);
+  const resizeObserver = new ResizeObserver(resize);
+  resizeObserver.observe(viewport);
+  const onVisibilityChange = () => {
+    documentVisible = !document.hidden;
+    syncRenderState();
+  };
 
   void fetch(modelUrl, { signal: loadController.signal })
     .then((response) => {
@@ -284,10 +335,12 @@ export function createFaceScanModelController(): FaceScanModelController {
       if (error instanceof DOMException && error.name === "AbortError") {
         return;
       }
-    });
+  });
 
   window.addEventListener("resize", resize);
+  document.addEventListener("visibilitychange", onVisibilityChange);
   resize();
+  syncCanvasVisibility();
 
   return {
     destroy: () => {
@@ -295,8 +348,11 @@ export function createFaceScanModelController(): FaceScanModelController {
       loadController.abort();
       stopAnimation();
       visibilityObserver.disconnect();
+      resizeObserver.disconnect();
       window.removeEventListener("resize", resize);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       viewport.style.removeProperty("--face-model-ready");
+      canvas.style.removeProperty("visibility");
       if (model) {
         scene.remove(model);
         model = null;
@@ -304,6 +360,7 @@ export function createFaceScanModelController(): FaceScanModelController {
       scene.environment = null;
       resources.geometries.forEach((geometry) => geometry.dispose());
       resources.materials.forEach((material) => material.dispose());
+      resources.textures.forEach((texture) => texture.dispose());
       environmentTarget.dispose();
       pmremGenerator.dispose();
       renderer.renderLists.dispose();
