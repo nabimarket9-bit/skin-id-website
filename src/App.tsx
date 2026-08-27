@@ -4627,10 +4627,6 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
 
 const landingHtmlMobileDiagnostic = landingHtml
   .replace(
-    '<canvas class="routine-product-canvas" id="cleanserProductCanvas" aria-hidden="true"></canvas>',
-    "",
-  )
-  .replace(
     '<canvas class="routine-product-canvas" id="spfProductCanvas" aria-hidden="true"></canvas>',
     "",
   );

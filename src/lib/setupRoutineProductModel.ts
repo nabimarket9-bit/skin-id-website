@@ -453,6 +453,11 @@ export function createRoutineProductModelController(): RoutineProductModelContro
   const baseUrl = import.meta.env.BASE_URL;
   const controllers = [
     createSingleRoutineProductController({
+      viewportSelector: ".routine-product-cleanser",
+      canvasId: "cleanserProductCanvas",
+      modelUrl: `${baseUrl}minimalist-skincare-bottle-mobile.glb`,
+    }),
+    createSingleRoutineProductController({
       viewportSelector: ".routine-product-serum",
       canvasId: "serumProductCanvas",
       modelUrl: `${baseUrl}serum-bottle-mobile.glb`,

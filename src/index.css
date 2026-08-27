@@ -3771,6 +3771,14 @@
         display: none;
       }
 
+      body.mobile-diagnostic .routine-product-cleanser .routine-product-canvas {
+        display: block;
+      }
+
+      body.mobile-diagnostic .routine-product-cleanser .routine-product-mobile-sprite {
+        display: none;
+      }
+
       body.mobile-diagnostic .routine-product-moisturizer .routine-product-canvas {
         display: block;
       }
