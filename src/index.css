@@ -3717,6 +3717,43 @@
         animation: heroPhraseSlot 6s cubic-bezier(.72,0,.24,1) infinite !important;
       }
 
+      body.mobile-diagnostic .nav {
+        -webkit-backdrop-filter: blur(12px) !important;
+        backdrop-filter: blur(12px) !important;
+      }
+
+      body.mobile-diagnostic .eyebrow {
+        -webkit-backdrop-filter: blur(8px) !important;
+        backdrop-filter: blur(8px) !important;
+      }
+
+      body.mobile-diagnostic .hero-platform-toggle {
+        -webkit-backdrop-filter: blur(10px) !important;
+        backdrop-filter: blur(10px) !important;
+      }
+
+      body.mobile-diagnostic .profile-pill {
+        -webkit-backdrop-filter: blur(10px) !important;
+        backdrop-filter: blur(10px) !important;
+      }
+
+      body.mobile-diagnostic .result-status,
+      body.mobile-diagnostic .result-check-item {
+        -webkit-backdrop-filter: blur(8px) !important;
+        backdrop-filter: blur(8px) !important;
+      }
+
+      body.mobile-diagnostic .routine-board {
+        -webkit-backdrop-filter: blur(12px) !important;
+        backdrop-filter: blur(12px) !important;
+      }
+
+      body.mobile-diagnostic .story-contrast-card,
+      body.mobile-diagnostic .story-flow-card {
+        -webkit-backdrop-filter: blur(8px) !important;
+        backdrop-filter: blur(8px) !important;
+      }
+
       body.mobile-diagnostic .profile-shell:before {
         animation: profileShellGlow 8.4s ease-in-out infinite !important;
       }
