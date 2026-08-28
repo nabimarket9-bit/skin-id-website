@@ -3167,9 +3167,10 @@ function setupLandingInteractions() {
     let canvasWidth = 0;
     let canvasHeight = 0;
     const mobileFinalCanvas = diagnosticMode && touchDevice;
-    const mobileParticleCount = 42;
+    const mobileParticleCount = 72;
     const desktopParticleCount = 120;
-    const mobileCanvasMaxPixels = 360_000;
+    const mobileCanvasMaxDpr = 1.25;
+    const mobileCanvasMaxPixels = 720_000;
 
     const buildParticles = (width: number, height: number, count: number) =>
       Array.from({ length: count }, () => ({
@@ -3194,7 +3195,7 @@ function setupLandingInteractions() {
       let dpr = 1;
 
       if (mobileFinalCanvas) {
-        dpr = Math.min(window.devicePixelRatio || 1, 1);
+        dpr = Math.min(window.devicePixelRatio || 1, mobileCanvasMaxDpr);
         const projectedPixels = width * height * dpr * dpr;
 
         if (projectedPixels > mobileCanvasMaxPixels) {
