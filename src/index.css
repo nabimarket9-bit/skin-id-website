@@ -3677,6 +3677,46 @@
         backdrop-filter: none !important;
       }
 
+      body.mobile-diagnostic .noise {
+        display: block !important;
+        opacity: .038;
+      }
+
+      body.mobile-diagnostic .loader-grid {
+        display: block !important;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+        background-size: 48px 48px;
+        opacity: .14;
+        mask-image: radial-gradient(circle at 50% 45%, rgba(0,0,0,.88), transparent 82%);
+        pointer-events: none;
+      }
+
+      body.mobile-diagnostic .loader-vignette {
+        display: block !important;
+        opacity: .82;
+      }
+
+      body.mobile-diagnostic .sim-glow {
+        display: block !important;
+        filter: none !important;
+        opacity: .3;
+      }
+
+      body.mobile-diagnostic .sim-glow-a {
+        background: radial-gradient(circle, rgba(115,169,255,.18), rgba(115,169,255,0) 74%);
+      }
+
+      body.mobile-diagnostic .sim-glow-b {
+        background: radial-gradient(circle, rgba(244,221,176,.14), rgba(244,221,176,0) 76%);
+      }
+
+      body.mobile-diagnostic .hero-statement.is-enhanced .hero-slot-reel {
+        animation: heroPhraseSlot 6s cubic-bezier(.72,0,.24,1) infinite !important;
+      }
+
       body.mobile-diagnostic .hero-statement:before,
       body.mobile-diagnostic .hero-platform-more,
       body.mobile-diagnostic .hero-platform-logo,
@@ -3848,6 +3888,150 @@
 
       body.mobile-diagnostic .story-slide-scale.is-active .story-guided-step.step-checkout {
         animation: guidedStepReveal .45s ease 1.72s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-visual:before {
+        animation: storyEngineLinkIn .95s cubic-bezier(.22,.88,.2,1) .36s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-visual:after {
+        animation: storyEngineLinkOut .9s cubic-bezier(.22,.88,.2,1) 1.78s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(1) {
+        animation: storyEngineNodeReveal .72s cubic-bezier(.2,.88,.2,1) .12s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(2) {
+        animation: storyEngineNodeReveal .72s cubic-bezier(.2,.88,.2,1) .24s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(3) {
+        animation: storyEngineNodeReveal .72s cubic-bezier(.2,.88,.2,1) .36s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(4) {
+        animation: storyEngineNodeReveal .72s cubic-bezier(.2,.88,.2,1) .48s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(5) {
+        animation: storyEngineNodeReveal .72s cubic-bezier(.2,.88,.2,1) .6s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(6) {
+        animation: storyEngineNodeReveal .72s cubic-bezier(.2,.88,.2,1) .72s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(7) {
+        animation: storyEngineNodeReveal .72s cubic-bezier(.2,.88,.2,1) .84s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(1):before {
+        animation: storyEngineNodeSweep .82s ease .28s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(2):before {
+        animation: storyEngineNodeSweep .82s ease .4s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(3):before {
+        animation: storyEngineNodeSweep .82s ease .52s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(4):before {
+        animation: storyEngineNodeSweep .82s ease .64s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(5):before {
+        animation: storyEngineNodeSweep .82s ease .76s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(6):before {
+        animation: storyEngineNodeSweep .82s ease .88s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(7):before {
+        animation: storyEngineNodeSweep .82s ease 1s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(1):after {
+        animation: storyEngineSignal 1s cubic-bezier(.24,.88,.22,1) .46s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(2):after {
+        animation: storyEngineSignal 1s cubic-bezier(.24,.88,.22,1) .58s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(3):after {
+        animation: storyEngineSignal 1s cubic-bezier(.24,.88,.22,1) .7s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(4):after {
+        animation: storyEngineSignal 1s cubic-bezier(.24,.88,.22,1) .82s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(5):after {
+        animation: storyEngineSignal 1s cubic-bezier(.24,.88,.22,1) .94s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(6):after {
+        animation: storyEngineSignal 1s cubic-bezier(.24,.88,.22,1) 1.06s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-node:nth-child(7):after {
+        animation: storyEngineSignal 1s cubic-bezier(.24,.88,.22,1) 1.18s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-core-card {
+        animation: storyEngineCoreWake 1.05s cubic-bezier(.2,.88,.2,1) .88s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-core-card:before {
+        animation: storyEngineCoreSweep 1.1s cubic-bezier(.22,.88,.22,1) 1.26s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-output {
+        animation: storyEngineOutputReveal .98s cubic-bezier(.2,.88,.2,1) 1.9s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-output:before {
+        animation: storyEngineOutputSweep 1.1s cubic-bezier(.22,.88,.22,1) 2.12s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-insights.is-active .story-intel-widget {
+        animation: storyIntelWidgetWake .72s cubic-bezier(.2,.88,.2,1) var(--story-intel-delay) forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-insights.is-active .story-intel-widget-head {
+        animation: storyIntelItemReveal .72s cubic-bezier(.2,.88,.2,1) calc(var(--story-intel-delay) + .08s) forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-insights.is-active .story-intel-rank-row,
+      body.mobile-diagnostic .story-slide-insights.is-active .story-intel-feed-row,
+      body.mobile-diagnostic .story-slide-insights.is-active .story-intel-routine-bar,
+      body.mobile-diagnostic .story-slide-insights.is-active .story-intel-goal-row,
+      body.mobile-diagnostic .story-slide-insights.is-active .story-intel-environment-row,
+      body.mobile-diagnostic .story-slide-insights.is-active .story-intel-legend-row {
+        animation: storyIntelItemReveal .72s cubic-bezier(.2,.88,.2,1) var(--story-intel-item-delay) forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-insights.is-active .story-intel-profile-shell,
+      body.mobile-diagnostic .story-slide-insights.is-active .story-intel-environment-stack {
+        animation: storyIntelItemReveal .8s cubic-bezier(.2,.88,.2,1) calc(var(--story-intel-delay) + .34s) forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-insights.is-active .story-intel-rank-bar span,
+      body.mobile-diagnostic .story-slide-insights.is-active .story-intel-routine-bar i,
+      body.mobile-diagnostic .story-slide-insights.is-active .story-intel-environment-stack .segment {
+        animation: storyIntelBarGrow .9s cubic-bezier(.2,.88,.2,1) calc(var(--story-intel-item-delay) + .1s) forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-insights.is-active .story-intel-ring-segment {
+        animation: storyIntelRingReveal 1s cubic-bezier(.2,.88,.2,1) var(--story-intel-item-delay) forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-insights.is-active .story-intel-digit-track {
+        animation: storyIntelDigitRoll 1.1s steps(10,end) var(--story-intel-item-delay) forwards !important;
       }
     }
 

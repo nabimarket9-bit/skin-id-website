@@ -316,8 +316,6 @@ function setupBrandStoryCarousel() {
     return () => undefined;
   }
 
-  const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
-  const diagnosticMode = touchDevice && document.body.classList.contains("mobile-diagnostic");
   const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   const metricCounters: StoryMetricCounter[] = Array.from(
     root.querySelectorAll<HTMLElement>(".story-slide-scale .story-metric-value[data-target]"),
@@ -340,7 +338,7 @@ function setupBrandStoryCarousel() {
   let dragStartX = 0;
   let dragStartScrollLeft = 0;
   let hasInitialized = false;
-  let storyVisible = diagnosticMode;
+  let storyVisible = false;
   let storyAnimationFrame = 0;
 
   const resizeObserver = new ResizeObserver(() => {
@@ -376,31 +374,23 @@ function setupBrandStoryCarousel() {
   };
 
   const scheduleStoryAnimationSync = () => {
-    if (diagnosticMode) {
-      return;
-    }
-
     window.cancelAnimationFrame(storyAnimationFrame);
     storyAnimationFrame = window.requestAnimationFrame(syncStoryAnimations);
   };
 
   const storyVisibilityObserver:
     | IntersectionObserver
-    | { disconnect: () => void; observe: (target: Element) => void } = diagnosticMode
-    ? { disconnect: () => undefined, observe: () => undefined }
-    : new IntersectionObserver(
-        ([entry]) => {
-          storyVisible = entry?.isIntersecting ?? false;
-          scheduleStoryAnimationSync();
-        },
-        { threshold: 0.01 },
-      );
+    | { disconnect: () => void; observe: (target: Element) => void } = new IntersectionObserver(
+    ([entry]) => {
+      storyVisible = entry?.isIntersecting ?? false;
+      scheduleStoryAnimationSync();
+    },
+    { threshold: 0.01 },
+  );
 
-  if (!diagnosticMode) {
-    const storyRect = root.getBoundingClientRect();
-    storyVisible = storyRect.bottom > 0 && storyRect.top < window.innerHeight;
-    storyVisibilityObserver.observe(root);
-  }
+  const storyRect = root.getBoundingClientRect();
+  storyVisible = storyRect.bottom > 0 && storyRect.top < window.innerHeight;
+  storyVisibilityObserver.observe(root);
 
   const cancelMetricAnimation = () => {
     window.cancelAnimationFrame(metricFrame);
@@ -420,7 +410,7 @@ function setupBrandStoryCarousel() {
       return;
     }
 
-    if (diagnosticMode || reduceMotionQuery.matches) {
+    if (reduceMotionQuery.matches) {
       setMetricsToTarget();
       return;
     }
@@ -558,11 +548,6 @@ function setupBrandStoryCarousel() {
   };
 
   const onTrackScroll = () => {
-    if (diagnosticMode) {
-      updateActiveSlide(getNearestIndex(), false);
-      return;
-    }
-
     window.cancelAnimationFrame(scrollFrame);
     window.clearTimeout(settleTimeout);
 
@@ -811,9 +796,42 @@ function setupHeroValueEngine() {
     return () => undefined;
   }
 
+  const touchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+  const heroSection = statement.closest<HTMLElement>(".hero");
   statement.classList.add("is-enhanced");
 
+  if (!touchDevice || !heroSection) {
+    return () => {
+      statement.classList.remove("is-enhanced");
+    };
+  }
+
+  let heroVisible = false;
+  let documentVisible = !document.hidden;
+  const syncAnimationState = () => {
+    reel.style.animationPlayState = heroVisible && documentVisible ? "running" : "paused";
+  };
+  const onVisibilityChange = () => {
+    documentVisible = !document.hidden;
+    syncAnimationState();
+  };
+  const heroObserver = new IntersectionObserver(
+    ([entry]) => {
+      heroVisible = entry?.isIntersecting ?? false;
+      syncAnimationState();
+    },
+    { threshold: 0.01 },
+  );
+  const heroRect = heroSection.getBoundingClientRect();
+  heroVisible = heroRect.bottom > 0 && heroRect.top < window.innerHeight;
+  syncAnimationState();
+  heroObserver.observe(heroSection);
+  document.addEventListener("visibilitychange", onVisibilityChange);
+
   return () => {
+    heroObserver.disconnect();
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+    reel.style.removeProperty("animation-play-state");
     statement.classList.remove("is-enhanced");
   };
 }
@@ -2969,64 +2987,50 @@ function setupLandingInteractions() {
       'The customer leaves with a complete <span class="highlight-word highlight-cyan">routine</span>, not <span class="highlight-word highlight-gold">confusion.</span>',
     ],
   ] as const;
-  if (!diagnosticMode) {
-    let windowScrollFrame = 0;
-    let renderedStage = 0;
+  let windowScrollFrame = 0;
+  let renderedStage = 0;
 
-    const renderWindowScroll = () => {
-      windowScrollFrame = 0;
+  const renderWindowScroll = () => {
+    windowScrollFrame = 0;
 
-      if (control && stage && kicker && title) {
-        const rect = control.getBoundingClientRect();
-        const total = Math.max(1, control.offsetHeight - window.innerHeight);
-        const progress = Math.min(1, Math.max(0, -rect.top / total));
-        const stageNumber =
-          progress < 0.13 ? 1 : progress < 0.3 ? 2 : progress < 0.5 ? 3 : progress < 0.68 ? 4 : 5;
+    if (control && stage && kicker && title) {
+      const rect = control.getBoundingClientRect();
+      const total = Math.max(1, control.offsetHeight - window.innerHeight);
+      const progress = Math.min(1, Math.max(0, -rect.top / total));
+      const stageNumber =
+        progress < 0.13 ? 1 : progress < 0.3 ? 2 : progress < 0.5 ? 3 : progress < 0.68 ? 4 : 5;
 
-        if (stageNumber !== renderedStage) {
-          renderedStage = stageNumber;
-          stage.className = `control-stage s${stageNumber}`;
-          kicker.textContent = stageCopy[stageNumber - 1][0];
-          title.innerHTML = stageCopy[stageNumber - 1][1];
-        }
+      if (stageNumber !== renderedStage) {
+        renderedStage = stageNumber;
+        stage.className = `control-stage s${stageNumber}`;
+        kicker.textContent = stageCopy[stageNumber - 1][0];
+        title.innerHTML = stageCopy[stageNumber - 1][1];
       }
-
-      if (blackout && blackoutBackground) {
-        const rect = blackout.getBoundingClientRect();
-        const total = Math.max(1, blackout.offsetHeight - window.innerHeight);
-        const progress = Math.min(1, Math.max(0, -rect.top / total));
-        blackoutBackground.style.opacity = String(0.05 + progress * 0.78);
-        finalLines.forEach((line, index) => {
-          line?.classList.toggle("show", progress > 0.14 + index * 0.16);
-        });
-      }
-    };
-
-    const onWindowScroll = () => {
-      if (!windowScrollFrame) {
-        windowScrollFrame = window.requestAnimationFrame(renderWindowScroll);
-      }
-    };
-
-    window.addEventListener("scroll", onWindowScroll, { passive: true });
-    renderWindowScroll();
-    cleanupHandlers.push(() => {
-      window.cancelAnimationFrame(windowScrollFrame);
-      window.removeEventListener("scroll", onWindowScroll);
-    });
-  } else {
-    stage?.classList.add("s5");
-    if (kicker) {
-      kicker.textContent = stageCopy[4][0];
     }
-    if (title) {
-      title.innerHTML = stageCopy[4][1];
+
+    if (blackout && blackoutBackground) {
+      const rect = blackout.getBoundingClientRect();
+      const total = Math.max(1, blackout.offsetHeight - window.innerHeight);
+      const progress = Math.min(1, Math.max(0, -rect.top / total));
+      blackoutBackground.style.opacity = String(0.05 + progress * 0.78);
+      finalLines.forEach((line, index) => {
+        line?.classList.toggle("show", progress > 0.14 + index * 0.16);
+      });
     }
-    if (blackoutBackground) {
-      blackoutBackground.style.opacity = "0.4";
+  };
+
+  const onWindowScroll = () => {
+    if (!windowScrollFrame) {
+      windowScrollFrame = window.requestAnimationFrame(renderWindowScroll);
     }
-    finalLines.forEach((line) => line?.classList.add("show"));
-  }
+  };
+
+  window.addEventListener("scroll", onWindowScroll, { passive: true });
+  renderWindowScroll();
+  cleanupHandlers.push(() => {
+    window.cancelAnimationFrame(windowScrollFrame);
+    window.removeEventListener("scroll", onWindowScroll);
+  });
 
   const resultData: Record<string, [string, string, string, string, string, string]> = {
     hydration: [
