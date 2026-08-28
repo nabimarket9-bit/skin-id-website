@@ -3701,7 +3701,7 @@
 
       body.mobile-diagnostic .sim-glow {
         display: block !important;
-        filter: none !important;
+        filter: blur(22px) !important;
         opacity: .3;
       }
 
@@ -3755,10 +3755,12 @@
       }
 
       body.mobile-diagnostic .profile-shell:before {
+        filter: blur(16px) !important;
         animation: profileShellGlow 8.4s ease-in-out infinite !important;
       }
 
       body.mobile-diagnostic .profile-shell:after {
+        filter: blur(18px) !important;
         animation: profileShellGlow 9.4s ease-in-out -3.1s infinite reverse !important;
       }
 
@@ -3790,26 +3792,64 @@
         animation: resultGlow 3.8s ease-in-out infinite !important;
       }
 
-      body.mobile-diagnostic .hero-statement:before,
+      body.mobile-diagnostic .hero-statement:before {
+        filter: blur(12px) !important;
+        opacity: .72;
+      }
+
+      body.mobile-diagnostic .face-depth {
+        filter: blur(18px) !important;
+      }
+
+      body.mobile-diagnostic .face-ambient {
+        filter: blur(12px) !important;
+      }
+
+      body.mobile-diagnostic .face-reflection {
+        filter: blur(1px) !important;
+      }
+
+      body.mobile-diagnostic .face-core-glow {
+        filter: blur(10px) !important;
+      }
+
+      body.mobile-diagnostic .analysis-zone {
+        filter: blur(6px) !important;
+      }
+
+      body.mobile-diagnostic .face-beam:before {
+        filter: blur(8px) !important;
+      }
+
+      body.mobile-diagnostic .profile-card-aura {
+        filter: blur(12px) !important;
+        opacity: calc(.18 + var(--card-reveal)*.18 + var(--card-pulse)*.2);
+      }
+
+      body.mobile-diagnostic .range-track-glow {
+        filter: blur(8px) !important;
+        opacity: .3;
+      }
+
+      body.mobile-diagnostic .result-shell:after {
+        filter: blur(8px) !important;
+      }
+
+      body.mobile-diagnostic .result-check-glow {
+        filter: blur(6px) !important;
+        animation: resultCheckGlow 2.8s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .result-aura {
+        filter: blur(8px) !important;
+      }
+
       body.mobile-diagnostic .hero-platform-more,
       body.mobile-diagnostic .hero-platform-logo,
       body.mobile-diagnostic .hero-platform-logo-image,
-      body.mobile-diagnostic .face-depth,
-      body.mobile-diagnostic .face-ambient,
-      body.mobile-diagnostic .face-reflection,
-      body.mobile-diagnostic .face-core-glow,
-      body.mobile-diagnostic .analysis-zone,
-      body.mobile-diagnostic .face-beam:before,
-      body.mobile-diagnostic .profile-shell:before,
-      body.mobile-diagnostic .profile-shell:after,
       body.mobile-diagnostic .profile-pill,
-      body.mobile-diagnostic .profile-card-aura,
       body.mobile-diagnostic .routine-product:before,
-      body.mobile-diagnostic .routine-product:after,
-      body.mobile-diagnostic .result-shell:after,
-      body.mobile-diagnostic .result-check-glow,
-      body.mobile-diagnostic .result-aura,
-      body.mobile-diagnostic .range-track-glow {
+      body.mobile-diagnostic .routine-product:after {
         filter: none !important;
       }
 
@@ -3914,10 +3954,12 @@
       }
 
       body.mobile-diagnostic .routine-product:before {
+        filter: blur(10px) !important;
         opacity: .4;
       }
 
       body.mobile-diagnostic .routine-product:after {
+        filter: blur(6px) !important;
         opacity: .26;
       }
 
@@ -3941,6 +3983,20 @@
 
       body.mobile-diagnostic .story-slide-contrast.is-active .story-contrast-item {
         animation: storyContrastReveal .78s cubic-bezier(.2,.88,.22,1) forwards !important;
+      }
+
+      body.mobile-diagnostic .story-shell:before {
+        animation: sweep 5.5s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .story-contrast-card:after {
+        opacity: .18;
+        transform: scale(.9);
+      }
+
+      body.mobile-diagnostic .story-slide-contrast.is-active .story-contrast-card:after {
+        opacity: .28;
+        transform: scale(1);
       }
 
       body.mobile-diagnostic .story-contrast-bridge.is-active .story-contrast-bridge-line {
@@ -4069,6 +4125,21 @@
 
       body.mobile-diagnostic .story-slide-engine.is-active .story-engine-output:before {
         animation: storyEngineOutputSweep 1.1s cubic-bezier(.22,.88,.22,1) 2.12s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-engine-inputs:before {
+        filter: blur(6px) !important;
+        opacity: .64;
+      }
+
+      body.mobile-diagnostic .story-engine-core:after {
+        filter: blur(10px) !important;
+        opacity: .62;
+      }
+
+      body.mobile-diagnostic .story-engine-output:after {
+        filter: blur(6px) !important;
+        opacity: .6;
       }
 
       body.mobile-diagnostic .story-slide-engine.is-active .story-engine-orbit.orbit-a {
