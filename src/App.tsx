@@ -838,6 +838,7 @@ function setupHeroValueEngine() {
 
 function setupDecisionSummaryBoard() {
   const stage = document.getElementById("controlStage");
+  const boardModule = document.getElementById("decisionSummaryModule");
   const board = document.getElementById("decisionSummaryBoard");
   const action = document.getElementById("decisionSummaryAction") as HTMLButtonElement | null;
   const actionLabel = action?.querySelector<HTMLElement>(".decision-summary-action-label");
@@ -891,38 +892,8 @@ function setupDecisionSummaryBoard() {
     return () => undefined;
   }
 
-  if (
-    window.matchMedia("(hover: none), (pointer: coarse)").matches &&
-    document.body.classList.contains("mobile-diagnostic")
-  ) {
-    board.dataset.state = "complete";
-    badge.textContent = "\u2713 Analysis Complete";
-    status.textContent = "Routine ready";
-    scannedValue.textContent = "247";
-    compatibleValue.textContent = "81";
-    candidatesValue.textContent = "19";
-    selectedValue.textContent = "4";
-    confidenceValue.textContent = "96%";
-    confidenceFill.style.setProperty("transform", "scaleX(0.96)");
-    checkIcon.classList.add("is-done");
-    completionGlow.classList.add("is-visible");
-    successWave.classList.remove("is-visible");
-    timelineSteps.forEach((step) => {
-      step.classList.remove("is-active");
-      step.classList.add("is-complete");
-    });
-    rows.scanned?.classList.add("is-complete");
-    rows.compatible?.classList.add("is-complete");
-    rows.candidates?.classList.add("is-complete");
-    rows.selected?.classList.add("is-complete");
-    rows.confidence?.classList.add("is-complete");
-    rows.status?.classList.add("is-complete");
-    action.disabled = true;
-    action.dataset.mode = "replay";
-    return () => undefined;
-  }
-
   const stageNode = stage;
+  const boardVisibilityTarget = boardModule ?? board;
   const boardNode = board;
   const actionNode = action;
   const actionLabelNode = actionLabel;
@@ -1058,9 +1029,16 @@ function setupDecisionSummaryBoard() {
   let hasTriggered = false;
   let isRunning = false;
   let isComplete = false;
+  let boardVisible = false;
+  let documentVisible = !document.hidden;
   let replayRevealTimeout = 0;
   let stageLinkTimeout = 0;
   let activeRowKey: keyof typeof rows | null = null;
+
+  function cancelBoardAnimationFrame() {
+    window.cancelAnimationFrame(animationFrame);
+    animationFrame = 0;
+  }
 
   function setActionMode(mode: "run" | "running" | "replay") {
     actionNode.dataset.mode = mode;
@@ -1303,7 +1281,7 @@ function setupDecisionSummaryBoard() {
   }
 
   function runBoard() {
-    window.cancelAnimationFrame(animationFrame);
+    cancelBoardAnimationFrame();
     hasTriggered = true;
 
     if (reduceMotionQuery.matches) {
@@ -1319,8 +1297,22 @@ function setupDecisionSummaryBoard() {
     animationFrame = window.requestAnimationFrame(animateFrame);
   }
 
+  function canAutoRun() {
+    return boardVisible && documentVisible && stageNode.classList.contains("s5");
+  }
+
+  function resetBoardForVisibilityLoss() {
+    if (!isRunning) {
+      return;
+    }
+
+    cancelBoardAnimationFrame();
+    resetBoard();
+    hasTriggered = false;
+  }
+
   function maybeAutoRun() {
-    if (hasTriggered || !stageNode.classList.contains("s5")) {
+    if (hasTriggered || !canAutoRun()) {
       return;
     }
 
@@ -1341,18 +1333,48 @@ function setupDecisionSummaryBoard() {
   };
 
   const stageObserver = new MutationObserver(maybeAutoRun);
+  const boardVisibilityObserver = new IntersectionObserver(
+    ([entry]) => {
+      boardVisible = entry?.isIntersecting ?? false;
+
+      if (!boardVisible) {
+        resetBoardForVisibilityLoss();
+        return;
+      }
+
+      maybeAutoRun();
+    },
+    { threshold: 0.18 },
+  );
+  const onVisibilityChange = () => {
+    documentVisible = !document.hidden;
+
+    if (!documentVisible) {
+      resetBoardForVisibilityLoss();
+      return;
+    }
+
+    maybeAutoRun();
+  };
+
   stageObserver.observe(stageNode, { attributes: true, attributeFilter: ["class"] });
   actionNode.addEventListener("click", onActionClick);
+  const boardRect = boardVisibilityTarget.getBoundingClientRect();
+  boardVisible = boardRect.bottom > 0 && boardRect.top < window.innerHeight;
+  boardVisibilityObserver.observe(boardVisibilityTarget);
+  document.addEventListener("visibilitychange", onVisibilityChange);
   resetBoard();
   maybeAutoRun();
 
   return () => {
-    window.cancelAnimationFrame(animationFrame);
+    cancelBoardAnimationFrame();
     clearReplayRevealTimeout();
     clearStageLinkTimeout();
     clearRowPulseTimeouts();
     actionNode.removeEventListener("click", onActionClick);
     stageObserver.disconnect();
+    boardVisibilityObserver.disconnect();
+    document.removeEventListener("visibilitychange", onVisibilityChange);
   };
 }
 
@@ -2903,7 +2925,8 @@ function setupLandingInteractions() {
   }
 
   const cloud = document.getElementById("productCloud");
-  if (cloud && !diagnosticMode) {
+  if (cloud) {
+    const mobileCloud = diagnosticMode && touchDevice;
     const productPositions = [
       [74, 420, -19],
       [240, 255, 15],
@@ -2924,11 +2947,13 @@ function setupLandingInteractions() {
     ];
     const products = productPositions.map(([left, top, rotation], index) => {
       const product = document.createElement("div");
+      const durationSeconds = mobileCloud ? 8.6 + (index % 5) * 1.35 : 5 + (index % 5);
       product.className = "product";
       product.style.left = `${left}px`;
       product.style.top = `${top}px`;
       product.style.setProperty("--r", `${rotation}deg`);
-      product.style.animation = `float${index % 4} ${5 + (index % 5)}s ease-in-out infinite alternate`;
+      product.style.animation = `float${index % 4} ${durationSeconds}s ease-in-out infinite alternate`;
+      product.style.animationPlayState = "paused";
       cloud.appendChild(product);
       return product;
     });
@@ -2940,19 +2965,34 @@ function setupLandingInteractions() {
       "@keyframes float3{to{transform:translate(-14px,16px) rotate(-8deg)}}";
     document.head.appendChild(animationStyle);
 
+    let cloudVisible = false;
+    let cloudDocumentVisible = !document.hidden;
+    const syncCloudAnimationState = () => {
+      const playState = cloudVisible && cloudDocumentVisible ? "running" : "paused";
+      products.forEach((product) => {
+        product.style.animationPlayState = playState;
+      });
+    };
     const cloudObserver = new IntersectionObserver(
       ([entry]) => {
-        const playState = entry?.isIntersecting ? "running" : "paused";
-        products.forEach((product) => {
-          product.style.animationPlayState = playState;
-        });
+        cloudVisible = entry?.isIntersecting ?? false;
+        syncCloudAnimationState();
       },
       { rootMargin: "120px 0px" },
     );
+    const onCloudVisibilityChange = () => {
+      cloudDocumentVisible = !document.hidden;
+      syncCloudAnimationState();
+    };
+    const cloudRect = cloud.getBoundingClientRect();
+    cloudVisible = cloudRect.bottom >= -120 && cloudRect.top <= window.innerHeight + 120;
+    syncCloudAnimationState();
     cloudObserver.observe(cloud);
+    document.addEventListener("visibilitychange", onCloudVisibilityChange);
 
     cleanupHandlers.push(() => {
       cloudObserver.disconnect();
+      document.removeEventListener("visibilitychange", onCloudVisibilityChange);
       products.forEach((product) => product.remove());
       animationStyle.remove();
     });
@@ -3271,13 +3311,20 @@ function setupLandingInteractions() {
     });
   }
 
-  if (!diagnosticMode) {
+  {
     const visibilityBoundRoots = Array.from(
-      document.querySelectorAll<HTMLElement>(
-        ".section,.control-room,.deep-system,.belief-section,.blackout",
+      new Set(
+        Array.from(
+          document.querySelectorAll<HTMLElement>(
+            ".hero,.section,.control-room,.deep-system,.belief-section,.blackout",
+          ),
+        ),
       ),
     );
-    const syncRootAnimations = (root: HTMLElement, shouldPlay: boolean) => {
+    const rootVisibilityState = new Map<HTMLElement, boolean>();
+    let documentAnimationsVisible = !document.hidden;
+    const syncRootAnimations = (root: HTMLElement) => {
+      const shouldPlay = (rootVisibilityState.get(root) ?? false) && documentAnimationsVisible;
       root.getAnimations({ subtree: true }).forEach((animation) => {
         if (shouldPlay && animation.playState === "paused") {
           animation.play();
@@ -3289,19 +3336,30 @@ function setupLandingInteractions() {
     const sectionAnimationObserver = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          syncRootAnimations(entry.target as HTMLElement, entry.isIntersecting);
+          const root = entry.target as HTMLElement;
+          rootVisibilityState.set(root, entry.isIntersecting);
+          syncRootAnimations(root);
         });
       },
       { rootMargin: "0px" },
     );
+    const onDocumentAnimationVisibilityChange = () => {
+      documentAnimationsVisible = !document.hidden;
+      visibilityBoundRoots.forEach((root) => syncRootAnimations(root));
+    };
 
     visibilityBoundRoots.forEach((root) => {
       const rect = root.getBoundingClientRect();
       const isNearViewport = rect.bottom >= 0 && rect.top <= window.innerHeight;
-      syncRootAnimations(root, isNearViewport);
+      rootVisibilityState.set(root, isNearViewport);
+      syncRootAnimations(root);
       sectionAnimationObserver.observe(root);
     });
-    cleanupHandlers.push(() => sectionAnimationObserver.disconnect());
+    document.addEventListener("visibilitychange", onDocumentAnimationVisibilityChange);
+    cleanupHandlers.push(() => {
+      sectionAnimationObserver.disconnect();
+      document.removeEventListener("visibilitychange", onDocumentAnimationVisibilityChange);
+    });
   }
 
   return () => {

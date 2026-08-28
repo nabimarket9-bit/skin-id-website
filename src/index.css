@@ -3717,6 +3717,42 @@
         animation: heroPhraseSlot 6s cubic-bezier(.72,0,.24,1) infinite !important;
       }
 
+      body.mobile-diagnostic .profile-shell:before {
+        animation: profileShellGlow 8.4s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .profile-shell:after {
+        animation: profileShellGlow 9.4s ease-in-out -3.1s infinite reverse !important;
+      }
+
+      body.mobile-diagnostic .profile-phase-dot {
+        animation: profilePhaseDot 2.4s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .result-status-dot {
+        animation: profilePhaseDot 2.8s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .decision-summary-board[data-state="idle"] {
+        animation: decisionSummaryBreath 4.8s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .decision-summary-row.is-active {
+        animation: decisionRowFocus 1.2s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .decision-summary-timeline-step.is-active .decision-summary-timeline-dot {
+        animation: decisionTimelinePulse 1.15s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .belief:before {
+        animation: sweep 5.2s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .result-panel:before {
+        animation: resultGlow 3.8s ease-in-out infinite !important;
+      }
+
       body.mobile-diagnostic .hero-statement:before,
       body.mobile-diagnostic .hero-platform-more,
       body.mobile-diagnostic .hero-platform-logo,
@@ -3996,6 +4032,26 @@
 
       body.mobile-diagnostic .story-slide-engine.is-active .story-engine-output:before {
         animation: storyEngineOutputSweep 1.1s cubic-bezier(.22,.88,.22,1) 2.12s forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-orbit.orbit-a {
+        animation: storyOrbit 12s linear infinite !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-orbit.orbit-b {
+        animation: storyOrbit 18s linear infinite reverse !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-particle.particle-a {
+        animation: storyFloat 4.8s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-particle.particle-b {
+        animation: storyFloat 5.2s ease-in-out infinite .6s !important;
+      }
+
+      body.mobile-diagnostic .story-slide-engine.is-active .story-engine-particle.particle-c {
+        animation: storyFloat 5.6s ease-in-out infinite 1.1s !important;
       }
 
       body.mobile-diagnostic .story-slide-insights.is-active .story-intel-widget {
