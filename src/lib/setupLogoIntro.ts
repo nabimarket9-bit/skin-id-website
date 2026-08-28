@@ -58,7 +58,7 @@ function isTouchDevice() {
 }
 
 function getMaxPixelRatio(touchDevice: boolean) {
-  return touchDevice ? 1.25 : 1.5;
+  return touchDevice ? 1.5 : 1.5;
 }
 
 function getPowerPreference(touchDevice: boolean): WebGLPowerPreference {
@@ -66,7 +66,7 @@ function getPowerPreference(touchDevice: boolean): WebGLPowerPreference {
 }
 
 function getMobileFramebufferPixelBudget(touchDevice: boolean) {
-  return touchDevice ? 700_000 : Number.POSITIVE_INFINITY;
+  return touchDevice ? 1_050_000 : Number.POSITIVE_INFINITY;
 }
 
 function canResumeIntro(exitStarted: boolean, destroyed: boolean, logoLoaded: boolean) {
