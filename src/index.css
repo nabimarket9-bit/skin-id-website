@@ -3717,6 +3717,46 @@
         animation: heroPhraseSlot 6s cubic-bezier(.72,0,.24,1) infinite !important;
       }
 
+      body.mobile-diagnostic .highlight-word {
+        animation: shine 6s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .gradient-text {
+        animation: shine 5.5s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .dot {
+        animation: pulse 1.6s infinite !important;
+      }
+
+      body.mobile-diagnostic .hero-platform-toggle:before {
+        animation: heroPlatformToggleShine 10.8s cubic-bezier(.22,1,.36,1) infinite !important;
+      }
+
+      body.mobile-diagnostic .hero-platform-toggle-ring {
+        animation: heroPlatformPulse 5.8s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .hero-platforms[data-open="true"] .hero-platform-toggle-ring {
+        animation-play-state: paused !important;
+      }
+
+      body.mobile-diagnostic .hero-platform-list {
+        animation: heroPlatformOrbit 20s linear infinite paused !important;
+      }
+
+      body.mobile-diagnostic .hero-platforms[data-open="true"] .hero-platform-list {
+        animation-play-state: running !important;
+      }
+
+      body.mobile-diagnostic .hero-platform-logo-image {
+        animation: heroPlatformCounterOrbit 20s linear infinite paused !important;
+      }
+
+      body.mobile-diagnostic .hero-platforms[data-open="true"] .hero-platform-logo-image {
+        animation-play-state: running !important;
+      }
+
       body.mobile-diagnostic .profile-shell:before {
         filter: blur(16px) !important;
         animation: profileShellGlow 8.4s ease-in-out infinite !important;
@@ -3807,9 +3847,6 @@
         filter: blur(8px) !important;
       }
 
-      body.mobile-diagnostic .hero-platform-more,
-      body.mobile-diagnostic .hero-platform-logo,
-      body.mobile-diagnostic .hero-platform-logo-image,
       body.mobile-diagnostic .profile-pill,
       body.mobile-diagnostic .routine-product:before,
       body.mobile-diagnostic .routine-product:after {
@@ -3952,6 +3989,60 @@
         animation: sweep 5.5s ease-in-out infinite !important;
       }
 
+      body.mobile-diagnostic .story-flow-step.is-complete .story-flow-copy strong {
+        animation: storyFlowHeadlineShift 4.4s linear infinite !important;
+      }
+
+      body.mobile-diagnostic .story-flow-step.is-current .story-flow-node {
+        animation: storyFlowNodePulse 2.1s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .story-flow-step.is-current .story-flow-copy strong,
+      body.mobile-diagnostic .story-flow-step.is-complete:hover .story-flow-copy strong,
+      body.mobile-diagnostic .story-flow-step.is-complete.is-replaying .story-flow-copy strong {
+        animation: storyFlowHeadlineShift 2.2s linear infinite !important;
+      }
+
+      body.mobile-diagnostic .story-slide-flow.is-settled .story-flow-step .story-flow-copy strong {
+        animation: storyFlowHeadlineShift 3.2s linear infinite !important;
+      }
+
+      body.mobile-diagnostic .story-flow-step.is-current .story-flow-icon-discovery svg,
+      body.mobile-diagnostic .story-flow-step.is-complete:hover .story-flow-icon-discovery svg,
+      body.mobile-diagnostic .story-flow-step.is-complete.is-replaying .story-flow-icon-discovery svg {
+        animation: storyFlowDiscovery .9s ease !important;
+      }
+
+      body.mobile-diagnostic .story-flow-step.is-current .story-flow-icon-engine svg,
+      body.mobile-diagnostic .story-flow-step.is-complete:hover .story-flow-icon-engine svg,
+      body.mobile-diagnostic .story-flow-step.is-complete.is-replaying .story-flow-icon-engine svg {
+        animation: storyFlowEngine .92s ease !important;
+      }
+
+      body.mobile-diagnostic .story-flow-step.is-current .story-flow-icon-review svg,
+      body.mobile-diagnostic .story-flow-step.is-complete:hover .story-flow-icon-review svg,
+      body.mobile-diagnostic .story-flow-step.is-complete.is-replaying .story-flow-icon-review svg {
+        animation: storyFlowReview .88s ease !important;
+      }
+
+      body.mobile-diagnostic .story-flow-step.is-current .story-flow-icon-experience svg,
+      body.mobile-diagnostic .story-flow-step.is-complete:hover .story-flow-icon-experience svg,
+      body.mobile-diagnostic .story-flow-step.is-complete.is-replaying .story-flow-icon-experience svg {
+        animation: storyFlowExperience .92s ease !important;
+      }
+
+      body.mobile-diagnostic .story-flow-step.is-current .story-flow-icon-testing svg,
+      body.mobile-diagnostic .story-flow-step.is-complete:hover .story-flow-icon-testing svg,
+      body.mobile-diagnostic .story-flow-step.is-complete.is-replaying .story-flow-icon-testing svg {
+        animation: storyFlowTesting .92s ease !important;
+      }
+
+      body.mobile-diagnostic .story-flow-step.is-current .story-flow-icon-launch svg,
+      body.mobile-diagnostic .story-flow-step.is-complete:hover .story-flow-icon-launch svg,
+      body.mobile-diagnostic .story-flow-step.is-complete.is-replaying .story-flow-icon-launch svg {
+        animation: storyFlowLaunch .96s ease !important;
+      }
+
       body.mobile-diagnostic .story-contrast-card:after {
         opacity: .18;
         transform: scale(.9);
@@ -4075,7 +4166,7 @@
       }
 
       body.mobile-diagnostic .story-slide-engine.is-active .story-engine-core-card {
-        animation: storyEngineCoreWake 1.05s cubic-bezier(.2,.88,.2,1) .88s forwards !important;
+        animation: storyEngineCoreWake 1.05s cubic-bezier(.2,.88,.2,1) .88s forwards, storyEngineCorePulse 4.8s ease-in-out 2.1s infinite !important;
       }
 
       body.mobile-diagnostic .story-slide-engine.is-active .story-engine-core-card:before {
@@ -4083,7 +4174,7 @@
       }
 
       body.mobile-diagnostic .story-slide-engine.is-active .story-engine-output {
-        animation: storyEngineOutputReveal .98s cubic-bezier(.2,.88,.2,1) 1.9s forwards !important;
+        animation: storyEngineOutputReveal .98s cubic-bezier(.2,.88,.2,1) 1.9s forwards, storyEngineOutputPulse 5.2s ease-in-out 2.9s infinite !important;
       }
 
       body.mobile-diagnostic .story-slide-engine.is-active .story-engine-output:before {
@@ -4106,11 +4197,11 @@
       }
 
       body.mobile-diagnostic .story-slide-engine.is-active .story-engine-orbit.orbit-a {
-        animation: storyOrbit 12s linear infinite !important;
+        animation: storyOrbit 12s linear infinite, storyEngineOrbitPulse 3.8s ease-in-out 1.4s infinite !important;
       }
 
       body.mobile-diagnostic .story-slide-engine.is-active .story-engine-orbit.orbit-b {
-        animation: storyOrbit 18s linear infinite reverse !important;
+        animation: storyOrbit 18s linear infinite reverse, storyEngineOrbitPulse 4.6s ease-in-out 1.8s infinite !important;
       }
 
       body.mobile-diagnostic .story-slide-engine.is-active .story-engine-particle.particle-a {
@@ -4131,6 +4222,10 @@
 
       body.mobile-diagnostic .story-slide-insights.is-active .story-intel-widget-head {
         animation: storyIntelItemReveal .72s cubic-bezier(.2,.88,.2,1) calc(var(--story-intel-delay) + .08s) forwards !important;
+      }
+
+      body.mobile-diagnostic .story-slide-insights.is-active .story-intel-widget-signal {
+        animation: storyIntelSignalPulse 2.8s ease-in-out calc(var(--story-intel-delay) + .4s) infinite !important;
       }
 
       body.mobile-diagnostic .story-slide-insights.is-active .story-intel-rank-row,
@@ -4159,6 +4254,31 @@
 
       body.mobile-diagnostic .story-slide-insights.is-active .story-intel-digit-track {
         animation: storyIntelDigitRoll 1.1s steps(10,end) var(--story-intel-item-delay) forwards !important;
+      }
+
+      body.mobile-diagnostic .ci-profile circle:nth-child(2) {
+        animation: nodePulse2 1.7s infinite !important;
+      }
+
+      body.mobile-diagnostic .ci-ai path {
+        animation: drawIcon 2.4s ease infinite !important;
+      }
+
+      body.mobile-diagnostic .ci-catalog rect {
+        animation: flipCard 2.6s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .ci-routine path {
+        animation: drawIcon 2.8s ease infinite !important;
+      }
+
+      body.mobile-diagnostic .ci-cart circle {
+        animation: wheel 1.4s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .animated-icon:after,
+      body.mobile-diagnostic .card-icon:after {
+        animation: iconAura 2.8s ease-in-out infinite !important;
       }
     }
 
