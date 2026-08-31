@@ -3149,7 +3149,7 @@
       .routine-product-mobile-image-spf {
         --routine-mobile-scale: .82;
         --routine-mobile-offset-x: 0;
-        --routine-mobile-offset-y: 4px;
+        --routine-mobile-offset-y: 0;
       }
 
       .row-a {
