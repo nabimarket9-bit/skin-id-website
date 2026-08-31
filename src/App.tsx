@@ -1768,6 +1768,7 @@ function setupHeroSceneTransitions() {
     routineSceneRows.forEach((row) => {
       row.style.opacity = "0";
       row.style.transform = "translate3d(0,12px,0)";
+      row.style.setProperty("--routine-row-progress", "0");
     });
   }
 
@@ -2148,10 +2149,11 @@ function setupHeroSceneTransitions() {
         ? 1
         : easeInOut(
             clamp((segmentProgress - routineRevealStarts[index]) / routineRevealDurationMs),
-          );
+      );
 
       row.style.opacity = revealProgress.toFixed(4);
       row.style.transform = `translate3d(0,${((1 - revealProgress) * 12).toFixed(2)}px,0)`;
+      row.style.setProperty("--routine-row-progress", revealProgress.toFixed(4));
     });
   }
 
@@ -3648,28 +3650,28 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
                 <span class="routine-label">Cleanser</span>
                 <div class="routine-product routine-product-cleanser">
                   <canvas class="routine-product-canvas" id="cleanserProductCanvas" aria-hidden="true"></canvas>
-                  <span class="routine-product-mobile-sprite routine-product-mobile-sprite-cleanser" aria-hidden="true"></span>
+                  <img class="routine-product-mobile-image routine-product-mobile-image-cleanser" src="/routine-cleanser-mobile.png" alt="" width="1280" height="1280" decoding="async" aria-hidden="true" />
                 </div>
               </div>
               <div class="sheet-row row-b">
                 <span class="routine-label">Serum</span>
                 <div class="routine-product routine-product-serum">
                   <canvas class="routine-product-canvas" id="serumProductCanvas" aria-hidden="true"></canvas>
-                  <span class="routine-product-mobile-sprite routine-product-mobile-sprite-serum" aria-hidden="true"></span>
+                  <img class="routine-product-mobile-image routine-product-mobile-image-serum" src="/routine-serum-mobile.png" alt="" width="1280" height="1280" decoding="async" aria-hidden="true" />
                 </div>
               </div>
               <div class="sheet-row row-c">
                 <span class="routine-label">Moisturizer</span>
                 <div class="routine-product routine-product-moisturizer">
                   <canvas class="routine-product-canvas" id="moisturizerProductCanvas" aria-hidden="true"></canvas>
-                  <span class="routine-product-mobile-sprite routine-product-mobile-sprite-moisturizer" aria-hidden="true"></span>
+                  <img class="routine-product-mobile-image routine-product-mobile-image-moisturizer" src="/routine-moisturizer-mobile.png" alt="" width="1280" height="1280" decoding="async" aria-hidden="true" />
                 </div>
               </div>
               <div class="sheet-row row-d">
                 <span class="routine-label">SPF</span>
                 <div class="routine-product routine-product-spf">
                   <canvas class="routine-product-canvas" id="spfProductCanvas" aria-hidden="true"></canvas>
-                  <span class="routine-product-mobile-sprite routine-product-mobile-sprite-spf" aria-hidden="true"></span>
+                  <img class="routine-product-mobile-image routine-product-mobile-image-spf" src="/routine-spf-mobile.png" alt="" width="1280" height="1280" decoding="async" aria-hidden="true" />
                 </div>
               </div>
             </div>
@@ -4699,22 +4701,14 @@ export default function App() {
       setHeroVisible: (visible: boolean) => void;
       setSceneVisible: (visible: boolean) => void;
     };
-    type RoutineProductModelController = {
-      destroy: () => void;
-      setHeroVisible: (visible: boolean) => void;
-      setSceneVisible: (visible: boolean) => void;
-    };
-
     let introDisposed = false;
     let cleanupLogoIntro: () => void = () => undefined;
     let cleanupFaceScanModel: () => void = () => undefined;
     let cleanupRoutineProductModel: () => void = () => undefined;
     let createFaceScanModelController: (() => FaceScanModelController) | null = null;
-    let createRoutineProductModelController: (() => RoutineProductModelController) | null = null;
     let setupFaceScanModel: (() => () => void) | null = null;
     let setupRoutineProductModel: (() => () => void) | null = null;
     let faceScanController: FaceScanModelController | null = null;
-    let routineProductController: RoutineProductModelController | null = null;
     let faceModuleImportStarted = false;
     let routineModuleImportStarted = false;
     let faceScanModelActive = false;
@@ -4742,15 +4736,6 @@ export default function App() {
       const cleanupHeroValueEngine = setupHeroValueEngine();
       const cleanupDecisionSummaryBoard = setupDecisionSummaryBoard();
       const cleanupLandingInteractions = setupLandingInteractions();
-      const syncMobileRoutineControllerState = () => {
-        if (!routineProductController) {
-          return;
-        }
-
-        const routineSceneVisible = requestedHeroModel === "routine" || requestedHeroModel === "both";
-        routineProductController.setHeroVisible(heroModelsVisible && introFinished && !introDisposed);
-        routineProductController.setSceneVisible(routineSceneVisible);
-      };
       const syncMobileFaceControllerState = () => {
         if (!faceScanController) {
           return;
@@ -4759,46 +4744,6 @@ export default function App() {
         const faceSceneVisible = requestedHeroModel === "face" || requestedHeroModel === "both";
         faceScanController.setHeroVisible(heroModelsVisible && introFinished && !introDisposed);
         faceScanController.setSceneVisible(faceSceneVisible);
-      };
-      const syncMobileRoutineModel = () => {
-        if (introDisposed) {
-          routineProductController?.setHeroVisible(false);
-          return;
-        }
-
-        if (!introFinished || !heroModelsVisible) {
-          syncMobileRoutineControllerState();
-          return;
-        }
-
-        const routineSceneVisible = requestedHeroModel === "routine" || requestedHeroModel === "both";
-
-        if (!routineSceneVisible) {
-          syncMobileRoutineControllerState();
-          return;
-        }
-
-        if (!createRoutineProductModelController && !routineModuleImportStarted) {
-          routineModuleImportStarted = true;
-          void import("./lib/setupRoutineProductModel")
-            .then((module) => {
-              if (introDisposed) {
-                return;
-              }
-
-              createRoutineProductModelController = module.createRoutineProductModelController;
-              syncMobileRoutineModel();
-            })
-            .catch(() => undefined);
-          return;
-        }
-
-        if (createRoutineProductModelController && !routineProductController) {
-          routineProductController = createRoutineProductModelController();
-          routineProductModelActive = true;
-        }
-
-        syncMobileRoutineControllerState();
       };
       const syncMobileFaceModel = () => {
         if (introDisposed) {
@@ -4841,13 +4786,11 @@ export default function App() {
         introFinished = true;
         introStateObserver.disconnect();
         syncMobileFaceModel();
-        syncMobileRoutineModel();
       });
       const heroModelObserver = new IntersectionObserver(
         ([entry]) => {
           heroModelsVisible = entry?.isIntersecting ?? false;
           syncMobileFaceModel();
-          syncMobileRoutineModel();
         },
         { rootMargin: "120px 0px" },
       );
@@ -4855,7 +4798,6 @@ export default function App() {
         const { sceneIndex } = (event as CustomEvent<HeroModelSceneDetail>).detail;
         requestedHeroModel = sceneIndex === 0 ? "face" : sceneIndex === 3 ? "routine" : null;
         syncMobileFaceModel();
-        syncMobileRoutineModel();
       };
 
       if (heroCinema) {
@@ -4886,11 +4828,9 @@ export default function App() {
             loader?.classList.add("is-hidden");
             introStateObserver.disconnect();
             syncMobileFaceModel();
-            syncMobileRoutineModel();
           });
       } else {
         syncMobileFaceModel();
-        syncMobileRoutineModel();
       }
 
       return () => {
@@ -4900,11 +4840,8 @@ export default function App() {
         heroModelObserver.disconnect();
         heroCinema?.removeEventListener(heroModelSceneEvent, onMobileHeroModelScene);
         faceScanController?.destroy();
-        routineProductController?.destroy();
         faceScanController = null;
-        routineProductController = null;
         faceScanModelActive = false;
-        routineProductModelActive = false;
         document.body.classList.remove("mobile-diagnostic");
         cleanupBrandStoryCarousel();
         cleanupHeroPlatformToggle();

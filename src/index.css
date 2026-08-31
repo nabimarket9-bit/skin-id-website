@@ -418,7 +418,11 @@
     .routine-product[data-error="true"]:before{opacity:.24}
     .routine-product[data-error="true"]:after{opacity:.16}
     .routine-product-canvas{position:relative;z-index:1;display:block;width:100%;height:100%;opacity:var(--routine-product-ready,0);transition:opacity .28s ease}
-    .routine-product-mobile-sprite{position:relative;z-index:1;display:none;width:100%;height:100%;background-image:url("/personalized_routine_icon-mobile.png");background-repeat:no-repeat;background-size:300% 100%;opacity:0;transition:opacity .28s ease;transform-origin:center center}
+    .routine-product-mobile-image{position:absolute;left:50%;top:50%;z-index:1;display:none;width:100%;height:auto;max-width:none;border-radius:20px;opacity:calc(.14 + var(--routine-row-progress,0)*.86);transform-origin:center center;transform:translate3d(calc(-50% + var(--routine-mobile-offset-x,0px)),calc(-50% + var(--routine-mobile-offset-y,0px) + (1 - var(--routine-row-progress,0))*12px),0) rotate(calc(var(--routine-mobile-rotate,0deg) + (1 - var(--routine-row-progress,0))*var(--routine-mobile-intro-rotate,0deg))) scale(calc(var(--routine-mobile-scale,1) - (1 - var(--routine-row-progress,0))*.08));transition:opacity .28s ease;pointer-events:none;user-select:none;-webkit-user-drag:none}
+    .routine-product-mobile-image-cleanser{--routine-mobile-scale:1.02;--routine-mobile-offset-x:-2px;--routine-mobile-offset-y:6px;--routine-mobile-rotate:-5deg;--routine-mobile-intro-rotate:-7deg}
+    .routine-product-mobile-image-serum{--routine-mobile-scale:.94;--routine-mobile-offset-x:-2px;--routine-mobile-offset-y:-1px;--routine-mobile-rotate:3deg;--routine-mobile-intro-rotate:5deg}
+    .routine-product-mobile-image-moisturizer{--routine-mobile-scale:.96;--routine-mobile-offset-x:-1px;--routine-mobile-offset-y:5px;--routine-mobile-rotate:-2deg;--routine-mobile-intro-rotate:-4deg}
+    .routine-product-mobile-image-spf{--routine-mobile-scale:.98;--routine-mobile-offset-x:0px;--routine-mobile-offset-y:4px;--routine-mobile-rotate:4deg;--routine-mobile-intro-rotate:6deg}
     .routine-product-cleanser,.routine-product-moisturizer,.routine-product-spf{width:104px;height:78px}
     .routine-product-serum{width:112px;height:90px}
     .routine-product-cleanser:before,.routine-product-moisturizer:before,.routine-product-spf:before{width:98px;height:66px}
@@ -427,10 +431,6 @@
     .routine-product-serum .routine-product-canvas{transform:translate3d(-2px,-5px,0) scale(.64);transform-origin:center center}
     .routine-product-moisturizer .routine-product-canvas{transform:translate3d(-1px,7px,0) scale(.72);transform-origin:center center}
     .routine-product-spf .routine-product-canvas{transform:translate3d(0,5px,0) scale(.72);transform-origin:center center}
-    .routine-product-mobile-sprite-cleanser{background-position:0 50%}
-    .routine-product-mobile-sprite-serum{background-position:50% 50%}
-    .routine-product-mobile-sprite-moisturizer{background-position:100% 50%}
-    .routine-product-mobile-sprite-spf{background-position:0 50%}
     .row-a,.row-b,.row-c,.row-d{min-height:74px;padding-bottom:2px}
     .row-a{--routine-label-accent:#9fdcff}
     .row-b{--routine-label-accent:#8ff4cb;min-height:92px;padding-bottom:4px}
@@ -3128,29 +3128,28 @@
         transform: translate3d(0,4px,0) scale(.58);
       }
 
-      .routine-product-canvas {
-        display: none;
+      .routine-product-mobile-image-cleanser {
+        --routine-mobile-scale: .88;
+        --routine-mobile-offset-x: -2px;
+        --routine-mobile-offset-y: 5px;
       }
 
-      .routine-product-mobile-sprite {
-        display: block;
-        opacity: 1;
+      .routine-product-mobile-image-serum {
+        --routine-mobile-scale: .72;
+        --routine-mobile-offset-x: -2px;
+        --routine-mobile-offset-y: -1px;
       }
 
-      .routine-product-mobile-sprite-cleanser {
-        transform: translate3d(-2px,4px,0) scale(.74);
+      .routine-product-mobile-image-moisturizer {
+        --routine-mobile-scale: .8;
+        --routine-mobile-offset-x: -1px;
+        --routine-mobile-offset-y: 4px;
       }
 
-      .routine-product-mobile-sprite-serum {
-        transform: translate3d(-2px,-1px,0) scale(.6);
-      }
-
-      .routine-product-mobile-sprite-moisturizer {
-        transform: translate3d(-1px,4px,0) scale(.68);
-      }
-
-      .routine-product-mobile-sprite-spf {
-        transform: translate3d(0,4px,0) scale(.7);
+      .routine-product-mobile-image-spf {
+        --routine-mobile-scale: .82;
+        --routine-mobile-offset-x: 0;
+        --routine-mobile-offset-y: 4px;
       }
 
       .row-a {
@@ -3911,40 +3910,11 @@
         opacity: .24;
       }
 
-      body.mobile-diagnostic .routine-product-mobile-sprite {
-        display: block;
-        opacity: 1;
-      }
-
-      body.mobile-diagnostic .routine-product-serum .routine-product-canvas {
+      body.mobile-diagnostic .routine-product-mobile-image {
         display: block;
       }
 
-      body.mobile-diagnostic .routine-product-serum .routine-product-mobile-sprite {
-        display: none;
-      }
-
-      body.mobile-diagnostic .routine-product-cleanser .routine-product-canvas {
-        display: block;
-      }
-
-      body.mobile-diagnostic .routine-product-cleanser .routine-product-mobile-sprite {
-        display: none;
-      }
-
-      body.mobile-diagnostic .routine-product-moisturizer .routine-product-canvas {
-        display: block;
-      }
-
-      body.mobile-diagnostic .routine-product-moisturizer .routine-product-mobile-sprite {
-        display: none;
-      }
-
-      body.mobile-diagnostic .routine-product-spf .routine-product-canvas {
-        display: block;
-      }
-
-      body.mobile-diagnostic .routine-product-spf .routine-product-mobile-sprite {
+      body.mobile-diagnostic .routine-product-canvas {
         display: none;
       }
 
