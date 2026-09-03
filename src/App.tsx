@@ -772,6 +772,82 @@ function setupHeroPlatformToggle() {
   };
 }
 
+function setupMobileNavScrollBehavior() {
+  const nav = document.querySelector<HTMLElement>(".nav");
+
+  if (!nav) {
+    return () => undefined;
+  }
+
+  const topVisibleThreshold = 24;
+  const minimumHideScrollY = 72;
+  const hideDeltaThreshold = 10;
+  const showDeltaThreshold = 4;
+  const jitterThreshold = 1.5;
+  let lastScrollY = Math.max(0, window.scrollY);
+  let accumulatedDelta = 0;
+  let lastDirection: "up" | "down" | null = null;
+  let hidden = document.body.classList.contains("mobile-nav-hidden");
+
+  const setHidden = (nextHidden: boolean) => {
+    if (hidden === nextHidden) {
+      return;
+    }
+
+    hidden = nextHidden;
+    document.body.classList.toggle("mobile-nav-hidden", nextHidden);
+  };
+
+  const onScroll = () => {
+    const scrollY = Math.max(0, window.scrollY);
+    const delta = scrollY - lastScrollY;
+    lastScrollY = scrollY;
+
+    if (scrollY < topVisibleThreshold) {
+      accumulatedDelta = 0;
+      lastDirection = null;
+      setHidden(false);
+      return;
+    }
+
+    if (Math.abs(delta) < jitterThreshold) {
+      return;
+    }
+
+    const direction = delta > 0 ? "down" : "up";
+
+    if (direction !== lastDirection) {
+      accumulatedDelta = 0;
+      lastDirection = direction;
+    }
+
+    accumulatedDelta += Math.abs(delta);
+
+    if (direction === "up" && accumulatedDelta >= showDeltaThreshold) {
+      accumulatedDelta = 0;
+      setHidden(false);
+      return;
+    }
+
+    if (
+      direction === "down" &&
+      scrollY >= minimumHideScrollY &&
+      accumulatedDelta >= hideDeltaThreshold
+    ) {
+      accumulatedDelta = 0;
+      setHidden(true);
+    }
+  };
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+
+  return () => {
+    window.removeEventListener("scroll", onScroll);
+    document.body.classList.remove("mobile-nav-hidden");
+  };
+}
+
 type HeroPoint = { x: number; y: number };
 type HeroRect = { left: number; top: number; width: number; height: number };
 type HeroParticle = {
@@ -4738,6 +4814,7 @@ export default function App() {
       const cleanupHeroPlatformToggle = setupHeroPlatformToggle();
       const cleanupHeroValueEngine = setupHeroValueEngine();
       const cleanupDecisionSummaryBoard = setupDecisionSummaryBoard();
+      const cleanupMobileNavScrollBehavior = setupMobileNavScrollBehavior();
       const cleanupLandingInteractions = setupLandingInteractions();
       const syncMobileFaceControllerState = () => {
         if (!faceScanController) {
@@ -4849,6 +4926,7 @@ export default function App() {
         cleanupBrandStoryCarousel();
         cleanupHeroPlatformToggle();
         cleanupHeroValueEngine();
+        cleanupMobileNavScrollBehavior();
         cleanupHeroSceneTransitions();
         cleanupDecisionSummaryBoard();
         cleanupLandingInteractions();
