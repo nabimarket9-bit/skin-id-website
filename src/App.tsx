@@ -328,6 +328,7 @@ function setupBrandStoryCarousel() {
     .filter((counter) => Number.isFinite(counter.target));
   const mobileCompareToggleCleanups: Array<() => void> = [];
   const mobileCompareControllers: Array<{ slide: HTMLElement; reset: () => void }> = [];
+  const mobileContrastToggleCleanups: Array<() => void> = [];
   const contrastSlideControllers: ContrastSlideController[] = [];
   const flowSlideControllers: FlowSlideController[] = [];
 
@@ -538,6 +539,23 @@ function setupBrandStoryCarousel() {
       });
       scheduleStoryAnimationSync();
     }
+
+    if (nextIndex === 2) {
+      const contrastGrid = slides[nextIndex]?.querySelector<HTMLElement>(
+        ".story-contrast-grid[data-mobile-view]",
+      );
+      const selectedContrastCard = contrastGrid?.querySelector<HTMLElement>(
+        contrastGrid.dataset.mobileView === "skinid"
+          ? ".story-contrast-card-accent"
+          : ".story-contrast-card-muted",
+      );
+
+      selectedContrastCard?.getAnimations({ subtree: true }).forEach((animation) => {
+        animation.cancel();
+        animation.play();
+      });
+      scheduleStoryAnimationSync();
+    }
   };
 
   const getNearestIndex = () => {
@@ -724,6 +742,66 @@ function setupBrandStoryCarousel() {
     setMobileView("chaos");
   });
 
+  const mobileContrastSlides = Array.from(root.querySelectorAll<HTMLElement>(".story-slide-contrast"));
+
+  mobileContrastSlides.forEach((slide) => {
+    const grid = slide.querySelector<HTMLElement>(".story-contrast-grid[data-mobile-view]");
+    const toggle = slide.querySelector<HTMLElement>(".story-contrast-mobile-toggle");
+
+    if (!grid || !toggle) {
+      return;
+    }
+
+    const buttons = Array.from(toggle.querySelectorAll<HTMLButtonElement>("[data-mobile-view-option]"));
+
+    if (!buttons.length) {
+      return;
+    }
+
+    const getContrastCard = (view: string) =>
+      grid.querySelector<HTMLElement>(
+        view === "skinid" ? ".story-contrast-card-accent" : ".story-contrast-card-muted",
+      );
+
+    const resetContrastAnimations = (view: string) => {
+      const selectedCard = getContrastCard(view);
+      const hiddenCard = getContrastCard(view === "skinid" ? "quiz" : "skinid");
+
+      hiddenCard?.getAnimations({ subtree: true }).forEach((animation) => {
+        animation.cancel();
+      });
+
+      selectedCard?.getAnimations({ subtree: true }).forEach((animation) => {
+        animation.cancel();
+        animation.play();
+      });
+    };
+
+    const setMobileContrastView = (nextView: string) => {
+      const view = nextView === "skinid" ? "skinid" : "quiz";
+      grid.dataset.mobileView = view;
+      toggle.dataset.mobileView = view;
+
+      buttons.forEach((button) => {
+        const isActive = button.dataset.mobileViewOption === view;
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-pressed", String(isActive));
+      });
+
+      if (slide.classList.contains("is-active")) {
+        resetContrastAnimations(view);
+      }
+    };
+
+    buttons.forEach((button) => {
+      const handler = () => setMobileContrastView(button.dataset.mobileViewOption ?? "quiz");
+      button.addEventListener("click", handler);
+      mobileContrastToggleCleanups.push(() => button.removeEventListener("click", handler));
+    });
+
+    setMobileContrastView(grid.dataset.mobileView ?? "quiz");
+  });
+
   contrastSlideControllers.push(...setupContrastSlides(root));
   flowSlideControllers.push(...setupFlowSlides(root));
 
@@ -761,6 +839,7 @@ function setupBrandStoryCarousel() {
     document.removeEventListener("visibilitychange", onDocumentVisibilityChange);
     dotListeners.forEach(({ button, handler }) => button.removeEventListener("click", handler));
     mobileCompareToggleCleanups.forEach((cleanup) => cleanup());
+    mobileContrastToggleCleanups.forEach((cleanup) => cleanup());
     contrastSlideControllers.forEach((controller) => controller.destroy());
     flowSlideControllers.forEach((controller) => controller.destroy());
   };
@@ -4305,7 +4384,15 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
               <h3>Not another skincare quiz.</h3>
               <p>A quiz collects answers. Skin ID turns customer context and catalog logic into a decision.</p>
             </div>
-            <div class="story-contrast-grid">
+            <div class="story-commerce-toggle story-contrast-mobile-toggle" data-mobile-view="quiz" role="group" aria-label="Choose contrast view">
+              <button class="story-commerce-toggle-button is-active" type="button" data-mobile-view-option="quiz" aria-pressed="true">
+                Most Quiz Tools
+              </button>
+              <button class="story-commerce-toggle-button" type="button" data-mobile-view-option="skinid" aria-pressed="false">
+                Skin ID
+              </button>
+            </div>
+            <div class="story-contrast-grid" data-mobile-view="quiz">
               <div class="story-contrast-bridge" aria-hidden="true">
                 <span class="story-contrast-bridge-line"></span>
               </div>
