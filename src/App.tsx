@@ -327,6 +327,7 @@ function setupBrandStoryCarousel() {
     }))
     .filter((counter) => Number.isFinite(counter.target));
   const mobileCompareToggleCleanups: Array<() => void> = [];
+  const mobileCompareControllers: Array<{ slide: HTMLElement; reset: () => void }> = [];
   const contrastSlideControllers: ContrastSlideController[] = [];
   const flowSlideControllers: FlowSlideController[] = [];
 
@@ -522,6 +523,11 @@ function setupBrandStoryCarousel() {
     updateProgress(nextIndex);
 
     if (nextIndex === 0) {
+      mobileCompareControllers.forEach((controller) => {
+        if (controller.slide.classList.contains("is-active")) {
+          controller.reset();
+        }
+      });
       animateMetrics();
     }
   };
@@ -668,6 +674,7 @@ function setupBrandStoryCarousel() {
     const setMobileView = (nextView: string) => {
       const view = nextView === "chaos" ? "chaos" : "guided";
       compare.dataset.mobileView = view;
+      toggle.dataset.mobileView = view;
 
       buttons.forEach((button) => {
         const isActive = button.dataset.mobileViewOption === view;
@@ -682,7 +689,8 @@ function setupBrandStoryCarousel() {
       mobileCompareToggleCleanups.push(() => button.removeEventListener("click", handler));
     });
 
-    setMobileView(compare.dataset.mobileView ?? buttons[0]?.dataset.mobileViewOption ?? "guided");
+    mobileCompareControllers.push({ slide, reset: () => setMobileView("chaos") });
+    setMobileView("chaos");
   });
 
   contrastSlideControllers.push(...setupContrastSlides(root));
@@ -3976,15 +3984,15 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
               </h3>
               <p>Customers don&rsquo;t need more products. They need a clear path to the right one.</p>
             </div>
-            <div class="story-commerce-toggle" role="group" aria-label="Choose comparison view">
-              <button class="story-commerce-toggle-button" type="button" data-mobile-view-option="chaos" aria-pressed="false">
+            <div class="story-commerce-toggle" data-mobile-view="chaos" role="group" aria-label="Choose comparison view">
+              <button class="story-commerce-toggle-button is-active" type="button" data-mobile-view-option="chaos" aria-pressed="true">
                 Traditional Store
               </button>
-              <button class="story-commerce-toggle-button is-active" type="button" data-mobile-view-option="guided" aria-pressed="true">
+              <button class="story-commerce-toggle-button" type="button" data-mobile-view-option="guided" aria-pressed="false">
                 With Skin ID
               </button>
             </div>
-            <div class="story-commerce-compare" data-mobile-view="guided" aria-label="Comparison between a traditional store and a guided Skin ID journey">
+            <div class="story-commerce-compare" data-mobile-view="chaos" aria-label="Comparison between a traditional store and a guided Skin ID journey">
               <div class="story-commerce-column story-commerce-chaos">
                 <div class="story-commerce-head">
                   <span class="story-commerce-label">Traditional Store</span>
