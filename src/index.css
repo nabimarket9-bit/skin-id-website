@@ -3429,6 +3429,9 @@
       }
 
       .control-stage.s5 .decision-summary-board {
+        left: auto;
+        right: auto;
+        width: 100%;
         padding: 14px;
         border-radius: 20px;
       }
