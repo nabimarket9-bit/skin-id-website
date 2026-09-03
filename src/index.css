@@ -4063,19 +4063,89 @@
         animation: impactDecideStrikeSecondary 10.2s cubic-bezier(.22,.78,.2,1) .45s infinite !important;
       }
 
-      body.mobile-diagnostic .story-slide-scale.is-active .story-guided-step.step-scan {
+      body.mobile-diagnostic .story-slide-scale.is-active .story-commerce-compare[data-mobile-view="chaos"] .story-chaos-card.card-cleanser {
+        animation: chaosDriftA 8.4s ease-in-out infinite !important;
+        animation-play-state: running !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .story-commerce-compare[data-mobile-view="chaos"] .story-chaos-card.card-serum {
+        animation: chaosDriftB 9.4s ease-in-out infinite .3s !important;
+        animation-play-state: running !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .story-commerce-compare[data-mobile-view="chaos"] .story-chaos-card.card-moisturizer {
+        animation: chaosDriftC 8.9s ease-in-out infinite .5s !important;
+        animation-play-state: running !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .story-commerce-compare[data-mobile-view="chaos"] .story-chaos-card.card-spf {
+        animation: chaosDriftD 9.2s ease-in-out infinite .7s !important;
+        animation-play-state: running !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .story-commerce-compare[data-mobile-view="chaos"] .story-chaos-card.card-eye {
+        animation: chaosDriftA 10.1s ease-in-out infinite .4s !important;
+        animation-play-state: running !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .story-commerce-compare[data-mobile-view="chaos"] .story-chaos-card.card-mask {
+        animation: chaosDriftC 8.7s ease-in-out infinite .9s !important;
+        animation-play-state: running !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .story-commerce-compare[data-mobile-view="chaos"] .story-chaos-card.card-toner {
+        animation: chaosDriftB 9.7s ease-in-out infinite .8s !important;
+        animation-play-state: running !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .story-commerce-compare[data-mobile-view="chaos"] .story-chaos-card.card-mist {
+        animation: chaosDriftD 8.8s ease-in-out infinite .2s !important;
+        animation-play-state: running !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .story-commerce-compare[data-mobile-view="chaos"] .story-chaos-wanderer {
+        animation: chaosWander 9.5s ease-in-out infinite !important;
+        animation-play-state: running !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .story-commerce-compare[data-mobile-view="guided"] .story-guided-card {
+        animation: guidedCardPulse 6.7s ease-in-out infinite !important;
+        animation-play-state: running !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .story-commerce-compare[data-mobile-view="guided"] .step-scan .story-guided-card {
+        animation-delay: 1.12s !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .story-commerce-compare[data-mobile-view="guided"] .step-profile .story-guided-card {
+        animation-delay: 1.62s !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .story-commerce-compare[data-mobile-view="guided"] .step-routine .story-guided-card {
+        animation-delay: 2.12s !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .story-commerce-compare[data-mobile-view="guided"] .step-checkout .story-guided-card {
+        animation-delay: 2.62s !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .story-commerce-compare[data-mobile-view="guided"] .story-guided-card-label {
+        animation: guidedLabelShift 8s linear infinite, guidedLabelGlow 4.8s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .story-commerce-compare[data-mobile-view="guided"] .story-guided-step.step-scan {
         animation: guidedStepReveal .45s ease 1s forwards !important;
       }
 
-      body.mobile-diagnostic .story-slide-scale.is-active .story-guided-step.step-profile {
+      body.mobile-diagnostic .story-slide-scale.is-active .story-commerce-compare[data-mobile-view="guided"] .story-guided-step.step-profile {
         animation: guidedStepReveal .45s ease 1.24s forwards !important;
       }
 
-      body.mobile-diagnostic .story-slide-scale.is-active .story-guided-step.step-routine {
+      body.mobile-diagnostic .story-slide-scale.is-active .story-commerce-compare[data-mobile-view="guided"] .story-guided-step.step-routine {
         animation: guidedStepReveal .45s ease 1.48s forwards !important;
       }
 
-      body.mobile-diagnostic .story-slide-scale.is-active .story-guided-step.step-checkout {
+      body.mobile-diagnostic .story-slide-scale.is-active .story-commerce-compare[data-mobile-view="guided"] .story-guided-step.step-checkout {
         animation: guidedStepReveal .45s ease 1.72s forwards !important;
       }
 

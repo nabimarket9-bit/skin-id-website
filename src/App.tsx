@@ -671,6 +671,25 @@ function setupBrandStoryCarousel() {
       return;
     }
 
+    const getCompareColumn = (view: string) =>
+      compare.querySelector<HTMLElement>(
+        view === "chaos" ? ".story-commerce-chaos" : ".story-commerce-guided",
+      );
+
+    const resetCompareAnimations = (view: string) => {
+      const selectedColumn = getCompareColumn(view);
+      const hiddenColumn = getCompareColumn(view === "chaos" ? "guided" : "chaos");
+
+      hiddenColumn?.getAnimations({ subtree: true }).forEach((animation) => {
+        animation.cancel();
+      });
+
+      selectedColumn?.getAnimations({ subtree: true }).forEach((animation) => {
+        animation.cancel();
+        animation.play();
+      });
+    };
+
     const setMobileView = (nextView: string) => {
       const view = nextView === "chaos" ? "chaos" : "guided";
       compare.dataset.mobileView = view;
@@ -681,6 +700,10 @@ function setupBrandStoryCarousel() {
         button.classList.toggle("is-active", isActive);
         button.setAttribute("aria-pressed", String(isActive));
       });
+
+      if (slide.classList.contains("is-active")) {
+        resetCompareAnimations(view);
+      }
     };
 
     buttons.forEach((button) => {
