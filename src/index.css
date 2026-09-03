@@ -3207,7 +3207,7 @@
       }
 
       .control-stage.s5 {
-        height: min(860px, 94vh);
+        height: min(920px, 100vh);
       }
 
       .control-copy {
@@ -3418,7 +3418,7 @@
         right: 0;
         width: min(344px, calc(100% - 24px));
         margin-inline: auto;
-        top: 110px;
+        top: 150px;
         bottom: auto;
         gap: 8px;
       }
