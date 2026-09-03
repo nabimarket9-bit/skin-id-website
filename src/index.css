@@ -3418,7 +3418,7 @@
         right: 0;
         width: min(344px, calc(100% - 24px));
         margin-inline: auto;
-        top: 190px;
+        top: 110px;
         bottom: auto;
         gap: 8px;
       }
