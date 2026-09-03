@@ -4149,6 +4149,79 @@
         animation: guidedStepReveal .45s ease 1.72s forwards !important;
       }
 
+      body.mobile-diagnostic .story-slide-impact.is-active .impact-convert-text {
+        animation: impactConvertTextLoop 4.9s cubic-bezier(.22,.78,.2,1) .45s infinite !important;
+      }
+
+      body.mobile-diagnostic .story-slide-impact.is-active .impact-convert-dollar {
+        animation: impactConvertDollarLoop 4.9s cubic-bezier(.22,.78,.2,1) .45s infinite !important;
+      }
+
+      body.mobile-diagnostic .story-slide-impact.is-active .impact-dollar-a {
+        animation: impactDollarPulse 2.05s ease-out infinite !important;
+      }
+
+      body.mobile-diagnostic .story-slide-impact.is-active .impact-dollar-b {
+        animation: impactDollarPulse 2.05s ease-out infinite .34s !important;
+      }
+
+      body.mobile-diagnostic .story-slide-impact.is-active .impact-dollar-c {
+        animation: impactDollarPulse 2.05s ease-out infinite .68s !important;
+      }
+
+      body.mobile-diagnostic .story-slide-impact.is-active .impact-dollar-d {
+        animation: impactDollarPulse 2.05s ease-out infinite 1.02s !important;
+      }
+
+      body.mobile-diagnostic .story-slide-impact.is-active .impact-cart-word {
+        animation: impactCartWordShift 4.4s linear infinite, impactCartWordInflate 2.6s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .story-slide-impact.is-active .impact-hesitation-letter {
+        animation: impactHesitationLetter 5.4s ease-in-out infinite !important;
+        animation-delay: calc(var(--impact-letter-index) * .085s) !important;
+      }
+
+      body.mobile-diagnostic .story-slide-impact.is-active .impact-discovery-word {
+        animation: impactDiscoveryWordShift 4.2s linear infinite, impactDiscoveryWordPulse 2.7s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .story-slide-impact.is-active .impact-discovery-burst-a {
+        animation: impactDiscoveryBurstA 2.15s ease-out infinite !important;
+      }
+
+      body.mobile-diagnostic .story-slide-impact.is-active .impact-discovery-burst-b {
+        animation: impactDiscoveryBurstB 2.15s ease-out infinite .32s !important;
+      }
+
+      body.mobile-diagnostic .story-slide-impact.is-active .impact-discovery-burst-c {
+        animation: impactDiscoveryBurstC 2.15s ease-out infinite .64s !important;
+      }
+
+      body.mobile-diagnostic .story-slide-impact.is-active .impact-discovery-burst-d {
+        animation: impactDiscoveryBurstD 2.15s ease-out infinite .96s !important;
+      }
+
+      body.mobile-diagnostic .story-slide-impact.is-active .impact-confidence-word {
+        animation: impactConfidenceShift 4s linear infinite, impactConfidencePulse 2.8s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .story-slide-impact.is-active .impact-confidence-burst-a {
+        animation: impactConfidenceBurst 1.9s ease-out infinite !important;
+      }
+
+      body.mobile-diagnostic .story-slide-impact.is-active .impact-confidence-burst-b {
+        animation: impactConfidenceBurst 1.9s ease-out infinite .28s !important;
+      }
+
+      body.mobile-diagnostic .story-slide-impact.is-active .impact-confidence-burst-c {
+        animation: impactConfidenceBurst 1.9s ease-out infinite .56s !important;
+      }
+
+      body.mobile-diagnostic .story-slide-impact.is-active .impact-confidence-burst-d {
+        animation: impactConfidenceBurst 1.9s ease-out infinite .84s !important;
+      }
+
       body.mobile-diagnostic .story-slide-engine.is-active .story-engine-visual:before {
         animation: storyEngineLinkIn .95s cubic-bezier(.22,.88,.2,1) .36s forwards !important;
       }

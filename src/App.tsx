@@ -530,6 +530,14 @@ function setupBrandStoryCarousel() {
       });
       animateMetrics();
     }
+
+    if (nextIndex === 1) {
+      slides[nextIndex]?.getAnimations({ subtree: true }).forEach((animation) => {
+        animation.cancel();
+        animation.play();
+      });
+      scheduleStoryAnimationSync();
+    }
   };
 
   const getNearestIndex = () => {
