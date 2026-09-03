@@ -340,6 +340,7 @@ function setupBrandStoryCarousel() {
   let hasInitialized = false;
   let storyVisible = false;
   let storyAnimationFrame = 0;
+  let storyDocumentVisible = !document.hidden;
 
   const resizeObserver = new ResizeObserver(() => {
     const nearestIndex = getNearestIndex();
@@ -363,7 +364,7 @@ function setupBrandStoryCarousel() {
       const target = (animation.effect as KeyframeEffect | null)?.target;
       const slide = target instanceof Element ? target.closest(".story-slide") : null;
       const shouldPlay =
-        storyVisible && (!slide || slide.classList.contains("is-active"));
+        storyVisible && storyDocumentVisible && (!slide || slide.classList.contains("is-active"));
 
       if (shouldPlay && animation.playState === "paused") {
         animation.play();
@@ -391,6 +392,11 @@ function setupBrandStoryCarousel() {
   const storyRect = root.getBoundingClientRect();
   storyVisible = storyRect.bottom > 0 && storyRect.top < window.innerHeight;
   storyVisibilityObserver.observe(root);
+
+  const onDocumentVisibilityChange = () => {
+    storyDocumentVisible = !document.hidden;
+    scheduleStoryAnimationSync();
+  };
 
   const cancelMetricAnimation = () => {
     window.cancelAnimationFrame(metricFrame);
@@ -691,6 +697,7 @@ function setupBrandStoryCarousel() {
   track.addEventListener("pointercancel", onPointerUp);
   track.addEventListener("lostpointercapture", onLostPointerCapture);
   root.addEventListener("keydown", onKeyDown);
+  document.addEventListener("visibilitychange", onDocumentVisibilityChange);
   resizeObserver.observe(track);
 
   updateActiveSlide(0, true);
@@ -712,6 +719,7 @@ function setupBrandStoryCarousel() {
     track.removeEventListener("pointercancel", onPointerUp);
     track.removeEventListener("lostpointercapture", onLostPointerCapture);
     root.removeEventListener("keydown", onKeyDown);
+    document.removeEventListener("visibilitychange", onDocumentVisibilityChange);
     dotListeners.forEach(({ button, handler }) => button.removeEventListener("click", handler));
     mobileCompareToggleCleanups.forEach((cleanup) => cleanup());
     contrastSlideControllers.forEach((controller) => controller.destroy());

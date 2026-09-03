@@ -4043,6 +4043,22 @@
         animation: storyContrastBridge .55s cubic-bezier(.24,.86,.24,1) forwards !important;
       }
 
+      body.mobile-diagnostic .story-slide-scale.is-active .impact-browse-text {
+        animation: impactBrowseTextLoop 7.2s cubic-bezier(.22,.78,.2,1) .45s infinite !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .impact-browse-glass {
+        animation: impactBrowseGlassLoop 7.2s cubic-bezier(.22,.78,.2,1) .45s infinite !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .impact-decide-word:before {
+        animation: impactDecideStrikePrimary 10.2s cubic-bezier(.22,.78,.2,1) .45s infinite !important;
+      }
+
+      body.mobile-diagnostic .story-slide-scale.is-active .impact-decide-word:after {
+        animation: impactDecideStrikeSecondary 10.2s cubic-bezier(.22,.78,.2,1) .45s infinite !important;
+      }
+
       body.mobile-diagnostic .story-slide-scale.is-active .story-guided-step.step-scan {
         animation: guidedStepReveal .45s ease 1s forwards !important;
       }
