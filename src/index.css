@@ -422,7 +422,7 @@
     .routine-product-mobile-image-cleanser{--routine-mobile-scale:1.02;--routine-mobile-offset-x:-2px;--routine-mobile-offset-y:6px;--routine-mobile-rotate:-5deg;--routine-mobile-intro-rotate:-7deg}
     .routine-product-mobile-image-serum{--routine-mobile-scale:.94;--routine-mobile-offset-x:-2px;--routine-mobile-offset-y:-1px;--routine-mobile-rotate:3deg;--routine-mobile-intro-rotate:5deg}
     .routine-product-mobile-image-moisturizer{--routine-mobile-scale:.96;--routine-mobile-offset-x:-1px;--routine-mobile-offset-y:5px;--routine-mobile-rotate:-2deg;--routine-mobile-intro-rotate:-4deg}
-    .routine-product-mobile-image-spf{--routine-mobile-scale:.98;--routine-mobile-offset-x:-1px;--routine-mobile-offset-y:4px;--routine-mobile-rotate:4deg;--routine-mobile-intro-rotate:6deg}
+    .scene-routine .row-d > .routine-product-moisturizer{display:none}
     .routine-product-cleanser,.routine-product-moisturizer,.routine-product-spf{width:104px;height:78px}
     .routine-product-serum{width:112px;height:90px}
     .routine-product-cleanser:before,.routine-product-moisturizer:before,.routine-product-spf:before{width:98px;height:66px}
@@ -3146,12 +3146,6 @@
         --routine-mobile-offset-y: 4px;
       }
 
-      .routine-product-mobile-image-spf {
-        --routine-mobile-scale: .8;
-        --routine-mobile-offset-x: -1px;
-        --routine-mobile-offset-y: 0;
-      }
-
       .row-a {
         min-height: 58px;
         padding-bottom: 2px;
@@ -3911,6 +3905,14 @@
       }
 
       body.mobile-diagnostic .routine-product-mobile-image {
+        display: block;
+      }
+
+      body.mobile-diagnostic .scene-routine .row-d > .routine-product-spf {
+        display: none;
+      }
+
+      body.mobile-diagnostic .scene-routine .row-d > .routine-product-moisturizer {
         display: block;
       }
 

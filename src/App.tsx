@@ -3671,7 +3671,10 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
                 <span class="routine-label">SPF</span>
                 <div class="routine-product routine-product-spf">
                   <canvas class="routine-product-canvas" id="spfProductCanvas" aria-hidden="true"></canvas>
-                  <img class="routine-product-mobile-image routine-product-mobile-image-spf" src="/routine-spf-mobile.png" alt="" width="1280" height="1280" decoding="async" aria-hidden="true" />
+                </div>
+                <div class="routine-product routine-product-moisturizer">
+                  <canvas class="routine-product-canvas" aria-hidden="true"></canvas>
+                  <img class="routine-product-mobile-image routine-product-mobile-image-moisturizer" src="/routine-spf-mobile.png" alt="" width="1280" height="1280" decoding="async" aria-hidden="true" />
                 </div>
               </div>
             </div>
