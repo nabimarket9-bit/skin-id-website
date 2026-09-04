@@ -4955,7 +4955,7 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
     <div class="business-impact-shell">
       <div class="impact-header">
         <div class="eyebrow"><span class="dot"></span>Expected business impact</div>
-        <h2 id="businessImpactTitle">PERSONALIZATION, MEASURED.</h2>
+        <h2 id="businessImpactTitle">MEASURED IMPACT.</h2>
         <p class="lead">Conservative impact ranges based on personalization and beauty-commerce benchmarks.</p>
       </div>
 
