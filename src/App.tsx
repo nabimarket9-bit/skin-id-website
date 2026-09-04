@@ -898,6 +898,75 @@ function setupHeroPlatformToggle() {
   };
 }
 
+function setupBusinessImpactSection() {
+  const section = document.querySelector<HTMLElement>(".business-impact");
+
+  if (!section) {
+    return () => undefined;
+  }
+
+  const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let activeTimeouts: number[] = [];
+  let sectionVisible = false;
+
+  const clearSequence = () => {
+    activeTimeouts.forEach((timeout) => window.clearTimeout(timeout));
+    activeTimeouts = [];
+  };
+
+  const resetSequence = () => {
+    clearSequence();
+    section.classList.remove("is-active", "act-activation", "act-impact", "is-complete");
+  };
+
+  const runSequence = () => {
+    resetSequence();
+    void section.offsetWidth;
+
+    if (reduceMotionQuery.matches) {
+      section.classList.add("is-active", "act-activation", "act-impact", "is-complete");
+      return;
+    }
+
+    section.classList.add("is-active");
+    activeTimeouts = [
+      window.setTimeout(() => section.classList.add("act-activation"), 760),
+      window.setTimeout(() => section.classList.add("act-impact"), 1540),
+      window.setTimeout(() => section.classList.add("is-complete"), 3900),
+    ];
+  };
+
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      sectionVisible = entry?.isIntersecting ?? false;
+
+      if (sectionVisible && !document.hidden) {
+        runSequence();
+      } else {
+        resetSequence();
+      }
+    },
+    { threshold: 0.28, rootMargin: "0px 0px -10% 0px" },
+  );
+
+  const onVisibilityChange = () => {
+    if (document.hidden) {
+      resetSequence();
+    } else if (sectionVisible) {
+      runSequence();
+    }
+  };
+
+  observer.observe(section);
+  document.addEventListener("visibilitychange", onVisibilityChange);
+
+  return () => {
+    resetSequence();
+    observer.disconnect();
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+  };
+}
+
 function setupMobileNavScrollBehavior() {
   const nav = document.querySelector<HTMLElement>(".nav");
 
@@ -4882,6 +4951,62 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
     </div>
   </section>
 
+  <section class="section business-impact" aria-labelledby="businessImpactTitle">
+    <div class="business-impact-shell">
+      <div class="impact-header">
+        <div class="eyebrow"><span class="dot"></span>Expected business impact</div>
+        <h2 id="businessImpactTitle">PERSONALIZATION, MEASURED.</h2>
+        <p class="lead">Conservative impact ranges based on personalization and beauty-commerce benchmarks.</p>
+      </div>
+
+      <div class="impact-system" aria-label="Baseline to Skin ID impact measurement sequence">
+        <div class="impact-system-rail" aria-hidden="true">
+          <span class="impact-rail-base"></span>
+          <span class="impact-rail-fill"></span>
+          <span class="impact-signal-track"><span class="impact-signal"></span></span>
+          <span class="impact-node impact-node-left"></span>
+          <span class="impact-node impact-node-center"></span>
+          <span class="impact-node impact-node-right"></span>
+        </div>
+
+        <div class="impact-state-row">
+          <span class="impact-state impact-state-before">WITHOUT SKIN ID</span>
+          <div class="impact-core">
+            <span class="impact-core-ring"></span>
+            <strong>SKIN ID</strong>
+            <small>activated</small>
+          </div>
+          <span class="impact-state impact-state-after">WITH SKIN ID</span>
+        </div>
+
+        <div class="impact-metrics">
+          <article class="impact-measure impact-measure-conversion" style="--impact-delay:0ms;--impact-start:46%;--impact-end:70%">
+            <div class="impact-measure-top"><span>Baseline</span><strong>100</strong></div>
+            <div class="impact-measure-track"><span class="impact-baseline-bar"></span><span class="impact-lift-bar"></span></div>
+            <div class="impact-measure-result"><strong>+8&ndash;15%</strong><span>CONVERSION</span></div>
+          </article>
+          <article class="impact-measure impact-measure-aov" style="--impact-delay:260ms;--impact-start:44%;--impact-end:74%">
+            <div class="impact-measure-top"><span>Baseline</span><strong>100</strong></div>
+            <div class="impact-measure-track"><span class="impact-baseline-bar"></span><span class="impact-lift-bar"></span></div>
+            <div class="impact-measure-result"><strong>+10&ndash;20%</strong><span>AVERAGE ORDER VALUE</span></div>
+          </article>
+          <article class="impact-measure impact-measure-returns" style="--impact-delay:520ms;--impact-start:56%;--impact-end:39%">
+            <div class="impact-measure-top"><span>Baseline</span><strong>100</strong></div>
+            <div class="impact-measure-track"><span class="impact-baseline-bar"></span><span class="impact-lift-bar"></span></div>
+            <div class="impact-measure-result"><strong>&minus;5&ndash;10%</strong><span>PRODUCT-RELATED RETURNS</span></div>
+          </article>
+          <article class="impact-measure impact-measure-benchmark" style="--impact-delay:780ms">
+            <div class="impact-benchmark-label">Market signal</div>
+            <div class="impact-benchmark-orbit" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="impact-measure-result"><strong>71%</strong><span>EXPECT PERSONALIZATION</span></div>
+          </article>
+        </div>
+
+        <p class="impact-disclaimer">Target impact range &middot; Results vary by store</p>
+      </div>
+    </div>
+  </section>
+
   <section class="deep-system">
     <div class="container">
       <div class="eyebrow"><span class="dot"></span>What gets installed</div><h2>A <span class="highlight-word highlight-cyan">conversion layer</span> built around the brand.</h2><p class="lead">The site should not expose the real product. It should make the <span class="highlight-word highlight-blue">system</span> feel deeper than a quiz widget.</p>
@@ -4949,6 +5074,7 @@ export default function App() {
       const cleanupHeroValueEngine = setupHeroValueEngine();
       const cleanupDecisionSummaryBoard = setupDecisionSummaryBoard();
       const cleanupMobileNavScrollBehavior = setupMobileNavScrollBehavior();
+      const cleanupBusinessImpactSection = setupBusinessImpactSection();
       const cleanupLandingInteractions = setupLandingInteractions();
       const syncMobileFaceControllerState = () => {
         if (!faceScanController) {
@@ -5061,6 +5187,7 @@ export default function App() {
         cleanupHeroPlatformToggle();
         cleanupHeroValueEngine();
         cleanupMobileNavScrollBehavior();
+        cleanupBusinessImpactSection();
         cleanupHeroSceneTransitions();
         cleanupDecisionSummaryBoard();
         cleanupLandingInteractions();
@@ -5268,6 +5395,7 @@ export default function App() {
     const cleanupHeroPlatformToggle = setupHeroPlatformToggle();
     const cleanupHeroValueEngine = setupHeroValueEngine();
     const cleanupDecisionSummaryBoard = setupDecisionSummaryBoard();
+    const cleanupBusinessImpactSection = setupBusinessImpactSection();
     const cleanupLandingInteractions = setupLandingInteractions();
 
     return () => {
@@ -5286,6 +5414,7 @@ export default function App() {
       cleanupHeroValueEngine();
       cleanupHeroSceneTransitions();
       cleanupDecisionSummaryBoard();
+      cleanupBusinessImpactSection();
       cleanupLandingInteractions();
     };
   }, []);
