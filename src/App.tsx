@@ -5294,17 +5294,17 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
           <div class="nabi-assistant-id">
             <div class="nabi-assistant-avatar" aria-hidden="true"><img src="/nabi-logo-cropped.png" alt="" /></div>
             <div>
-              <span>Nabi assistant</span>
-              <strong>Business guidance mode</strong>
+              <span>Nabi</span>
+              <strong>Skin ID Assistant</strong>
             </div>
           </div>
-          <span class="nabi-chat-status">Predefined answers</span>
+          <span class="nabi-chat-status"><span class="nabi-status-dot" aria-hidden="true"></span>Ready</span>
         </div>
 
         <div class="nabi-chat-thread" aria-live="polite">
-          <div class="nabi-message nabi-message-nabi nabi-message-seed is-visible">
-            <div class="nabi-message-avatar" aria-hidden="true"><img src="/nabi-logo-cropped.png" alt="" /></div>
-            <div class="nabi-message-bubble">Choose a question below and I&apos;ll walk through the business logic behind Skin ID.</div>
+          <div class="nabi-empty-state is-visible">
+            <div class="nabi-empty-avatar" aria-hidden="true"><img src="/nabi-logo-cropped.png" alt="" /></div>
+            <p>What would you like to know about Skin ID?</p>
           </div>
         </div>
 
