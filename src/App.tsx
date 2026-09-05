@@ -29,7 +29,7 @@ type NabiQuestionItem = {
   id: string;
   question: string;
   answer: string;
-  followUps: string[];
+  followUps: NabiQuestionItem[];
 };
 
 const nabiQuestionItems: NabiQuestionItem[] = [
@@ -39,9 +39,58 @@ const nabiQuestionItems: NabiQuestionItem[] = [
     answer:
       "Skin ID turns open-ended browsing into a guided routine decision. It helps visitors understand what fits their skin, why each product belongs in the routine, and what to add next, so the purchase feels clearer and less risky.",
     followUps: [
-      "Where does the conversion lift usually happen?",
-      "How quickly can we test this?",
-      "Can this support paid landing pages?",
+      {
+        id: "conversion-lift",
+        question: "Where does the conversion lift usually happen?",
+        answer:
+          "The lift usually comes from reducing hesitation before the product detail page and making the routine feel complete at add-to-cart. Customers get a clearer reason to choose, a clearer next step, and fewer abandoned comparisons.",
+        followUps: [
+          {
+            id: "conversion-lift-measure",
+            question: "How would we measure that?",
+            answer:
+              "We would compare guided-flow visitors against your current product discovery path, then watch recommendation engagement, add-to-cart rate, routine attachment, conversion rate, and average order value.",
+            followUps: [],
+          },
+          {
+            id: "conversion-lift-funnel",
+            question: "Where should the flow sit in the funnel?",
+            answer:
+              "The best first placement is usually a high-intent landing page, a routine finder entry point, or a product category path where visitors already need help narrowing options.",
+            followUps: [],
+          },
+        ],
+      },
+      {
+        id: "conversion-test",
+        question: "How quickly can we test this?",
+        answer:
+          "A focused test can start with a limited catalog slice, a small set of product rules, and one primary conversion goal. That keeps the first experiment tight enough to learn quickly without rebuilding the storefront.",
+        followUps: [
+          {
+            id: "conversion-test-scope",
+            question: "What should the first test include?",
+            answer:
+              "A practical first test includes the hero entry point, the guided Skin ID experience, a curated routine output, and tracking for clicks, add-to-cart, conversion, and routine completion.",
+            followUps: [],
+          },
+        ],
+      },
+      {
+        id: "conversion-paid",
+        question: "Can this support paid landing pages?",
+        answer:
+          "Yes. Skin ID can act as the decision layer after an ad click, turning broad paid traffic into a guided routine path that matches the promise of the campaign.",
+        followUps: [
+          {
+            id: "conversion-paid-creative",
+            question: "Can the questions match the campaign angle?",
+            answer:
+              "Yes. The flow can be configured around the audience, claim, or skin concern used in the campaign so the recommendation path feels continuous from ad to store.",
+            followUps: [],
+          },
+        ],
+      },
     ],
   },
   {
@@ -50,9 +99,51 @@ const nabiQuestionItems: NabiQuestionItem[] = [
     answer:
       "Yes. Skin ID is designed to sit on top of an existing commerce stack, including Shopify storefronts. The experience can be configured around your catalog, brand flow, and conversion goals without rebuilding the entire store.",
     followUps: [
-      "What does implementation require?",
-      "Can it match our current theme?",
-      "Does it connect to product pages?",
+      {
+        id: "shopify-implementation",
+        question: "What does implementation require?",
+        answer:
+          "Implementation starts with catalog structure, product rules, the desired entry points, and the customer data you want to collect. From there, Skin ID can be configured as an experience layer around your existing store.",
+        followUps: [
+          {
+            id: "shopify-implementation-team",
+            question: "Who needs to be involved?",
+            answer:
+              "Usually the ecommerce lead, brand or creative owner, and whoever manages the storefront theme or app stack. The first pass does not need a large technical team.",
+            followUps: [],
+          },
+        ],
+      },
+      {
+        id: "shopify-theme",
+        question: "Can it match our current theme?",
+        answer:
+          "Yes. The interface can use your typography, palette, spacing, and product presentation style so the experience feels native to the store instead of bolted on.",
+        followUps: [
+          {
+            id: "shopify-theme-assets",
+            question: "What assets would you need?",
+            answer:
+              "Useful assets include your product imagery, logo, brand colors, typography rules, product benefit language, and any current quiz or routine logic you already trust.",
+            followUps: [],
+          },
+        ],
+      },
+      {
+        id: "shopify-pdp",
+        question: "Does it connect to product pages?",
+        answer:
+          "Yes. Recommendations can link into product pages, routine bundles, or add-to-cart actions depending on how your store is structured.",
+        followUps: [
+          {
+            id: "shopify-pdp-bundles",
+            question: "Can it recommend a full routine?",
+            answer:
+              "Yes. Skin ID is designed for routine logic, so it can recommend a cleanser, serum, moisturizer, SPF, or any product sequence your catalog supports.",
+            followUps: [],
+          },
+        ],
+      },
     ],
   },
   {
@@ -61,9 +152,51 @@ const nabiQuestionItems: NabiQuestionItem[] = [
     answer:
       "Skin ID combines visitor inputs, skin goals, face-driven context, and catalog rules into a recommendation logic layer. The goal is not to surface random bestsellers, but to build a coherent routine that makes sense for the customer and the brand.",
     followUps: [
-      "Can the brand control recommendations?",
-      "How are routines ranked?",
-      "Can inventory priorities be included?",
+      {
+        id: "products-control",
+        question: "Can the brand control recommendations?",
+        answer:
+          "Yes. Brand rules can define which products are eligible, when products should be excluded, and how routines should be assembled for different customer needs.",
+        followUps: [
+          {
+            id: "products-control-rules",
+            question: "Can we lock certain rules?",
+            answer:
+              "Yes. Rules such as ingredient exclusions, routine order, concern fit, availability, and brand-priority products can be treated as hard constraints.",
+            followUps: [],
+          },
+        ],
+      },
+      {
+        id: "products-ranking",
+        question: "How are routines ranked?",
+        answer:
+          "Routines are ranked around fit, completeness, and business rules. The best recommendation is the one that feels credible to the customer and useful for the brand.",
+        followUps: [
+          {
+            id: "products-ranking-aov",
+            question: "Can ranking support AOV goals?",
+            answer:
+              "Yes. AOV can be included as a ranking signal as long as it does not weaken customer trust or recommend products that do not fit the stated need.",
+            followUps: [],
+          },
+        ],
+      },
+      {
+        id: "products-inventory",
+        question: "Can inventory priorities be included?",
+        answer:
+          "Yes. Inventory, margin, seasonal launches, and hero products can inform the rules, while still keeping the customer-facing recommendation grounded in fit.",
+        followUps: [
+          {
+            id: "products-inventory-out-of-stock",
+            question: "What happens when something is out of stock?",
+            answer:
+              "The routine can route around unavailable products and choose the next best eligible option, so customers do not land on a dead recommendation.",
+            followUps: [],
+          },
+        ],
+      },
     ],
   },
   {
@@ -72,9 +205,120 @@ const nabiQuestionItems: NabiQuestionItem[] = [
     answer:
       "It can, but it does not have to. Skin ID can replace a static quiz when the brand wants a richer decision experience, or it can work alongside an existing quiz as the premium personalization layer for higher-intent traffic.",
     followUps: [
-      "When should we replace the quiz?",
-      "Can we compare both flows?",
-      "What changes for returning customers?",
+      {
+        id: "quiz-replace",
+        question: "When should we replace the quiz?",
+        answer:
+          "Replacing the quiz makes sense when the current flow feels flat, collects data without improving decisions, or fails to explain why a recommendation is right.",
+        followUps: [
+          {
+            id: "quiz-replace-signals",
+            question: "What signals show the quiz is underperforming?",
+            answer:
+              "Common signals include quiz starts without completions, low product click-through from results, weak add-to-cart from recommendations, and customers still needing support to choose.",
+            followUps: [],
+          },
+        ],
+      },
+      {
+        id: "quiz-compare",
+        question: "Can we compare both flows?",
+        answer:
+          "Yes. A comparison can run the existing quiz beside Skin ID and measure completion, recommendation engagement, add-to-cart, conversion, and routine value.",
+        followUps: [
+          {
+            id: "quiz-compare-duration",
+            question: "How long should the comparison run?",
+            answer:
+              "The right window depends on traffic, but the goal is to reach enough guided sessions to compare behavior with confidence instead of relying on a few anecdotes.",
+            followUps: [],
+          },
+        ],
+      },
+      {
+        id: "quiz-returning",
+        question: "What changes for returning customers?",
+        answer:
+          "Returning customers can move through a shorter path, using prior answers or past routine context where available so the experience feels smarter over time.",
+        followUps: [
+          {
+            id: "quiz-returning-retention",
+            question: "Can it support replenishment?",
+            answer:
+              "Yes. The same logic can help returning customers replenish, adjust a routine, or discover the next product instead of starting from scratch.",
+            followUps: [],
+          },
+        ],
+      },
+    ],
+  },
+];
+
+type QualificationData = {
+  storeName: string;
+  businessType: string;
+  platform: string;
+  catalogSize: string;
+  primaryGoal: string;
+};
+
+type QualificationField = keyof QualificationData;
+
+type QualificationQuestion = {
+  field: QualificationField;
+  prompt: string;
+  inputType: "text" | "options";
+  options?: string[];
+};
+
+type LeadBookingState = {
+  leadId: string | null;
+  bookingStatus: "not_started" | "ready_to_book";
+  calendlyEventUri: string | null;
+};
+
+const createEmptyQualificationData = (): QualificationData => ({
+  storeName: "",
+  businessType: "",
+  platform: "",
+  catalogSize: "",
+  primaryGoal: "",
+});
+
+const qualificationQuestions: QualificationQuestion[] = [
+  {
+    field: "storeName",
+    prompt: "What's your brand or store name?",
+    inputType: "text",
+  },
+  {
+    field: "businessType",
+    prompt: "What best describes your business?",
+    inputType: "options",
+    options: ["Multi-brand retailer", "Skincare brand", "Beauty marketplace", "Other"],
+  },
+  {
+    field: "platform",
+    prompt: "What platform is your store running on?",
+    inputType: "options",
+    options: ["Shopify", "Shopify Plus", "WooCommerce", "Magento", "Other"],
+  },
+  {
+    field: "catalogSize",
+    prompt: "Roughly how many skincare products do you sell?",
+    inputType: "options",
+    options: ["Under 25", "25–100", "100–500", "500+"],
+  },
+  {
+    field: "primaryGoal",
+    prompt: "What are you primarily trying to improve?",
+    inputType: "options",
+    options: [
+      "Conversion",
+      "Average order value",
+      "Product discovery",
+      "Customer confidence",
+      "Reduce bad product choices",
     ],
   },
 ];
@@ -1099,6 +1343,18 @@ function setupNabiQuestionSection() {
   const questionMap = new Map(nabiQuestionItems.map((item) => [item.id, item]));
   let activeTimers: number[] = [];
   let isResponding = false;
+  let qualificationData = createEmptyQualificationData();
+  let leadBookingState: LeadBookingState = {
+    leadId: null,
+    bookingStatus: "not_started",
+    calendlyEventUri: null,
+  };
+
+  const syncLeadBookingState = () => {
+    section.dataset.leadBookingStatus = leadBookingState.bookingStatus;
+    delete section.dataset.leadId;
+    delete section.dataset.calendlyEventUri;
+  };
 
   const clearTimers = () => {
     activeTimers.forEach((timer) => window.clearTimeout(timer));
@@ -1110,21 +1366,39 @@ function setupNabiQuestionSection() {
     promptButtons.forEach((button) => {
       button.disabled = busy;
     });
+    thread
+      .querySelectorAll<HTMLButtonElement>(".nabi-follow-up-pill, .nabi-qualification-option, .nabi-qualification-submit")
+      .forEach((button) => {
+        button.disabled = busy;
+      });
     section.dataset.responding = String(busy);
   };
 
   const removeGeneratedConversation = () => {
-    thread.querySelectorAll<HTMLElement>(".nabi-message, .nabi-follow-ups").forEach((node) => {
-      node.remove();
-    });
+    thread
+      .querySelectorAll<HTMLElement>(
+        ".nabi-message, .nabi-follow-ups, .nabi-qualification-controls, .nabi-qualification-cta, .nabi-calendly-card",
+      )
+      .forEach((node) => {
+        node.remove();
+      });
   };
 
   const resetConversation = () => {
     clearTimers();
     removeGeneratedConversation();
+    qualificationData = createEmptyQualificationData();
+    leadBookingState = {
+      leadId: null,
+      bookingStatus: "not_started",
+      calendlyEventUri: null,
+    };
+    syncLeadBookingState();
+    delete section.dataset.nabiMode;
     section.classList.remove("has-conversation");
     promptList.hidden = false;
     resetButton.hidden = true;
+    resetButton.textContent = "Back to topics";
     setBusy(false);
   };
 
@@ -1175,23 +1449,6 @@ function setupNabiQuestionSection() {
     return typing;
   };
 
-  const buildFollowUps = (followUps: string[]) => {
-    const wrap = document.createElement("div");
-    wrap.className = "nabi-follow-ups";
-    wrap.setAttribute("aria-label", "Suggested follow-up questions");
-
-    followUps.forEach((followUp) => {
-      const pill = document.createElement("button");
-      pill.className = "nabi-follow-up-pill";
-      pill.type = "button";
-      pill.textContent = followUp;
-      pill.setAttribute("aria-disabled", "true");
-      wrap.appendChild(pill);
-    });
-
-    return wrap;
-  };
-
   const revealNode = (node: HTMLElement) => {
     thread.appendChild(node);
     const revealTimer = window.setTimeout(() => {
@@ -1200,7 +1457,238 @@ function setupNabiQuestionSection() {
     activeTimers.push(revealTimer);
   };
 
-  const askQuestion = (item: NabiQuestionItem) => {
+  const clearActiveControls = () => {
+    thread
+      .querySelectorAll<HTMLElement>(".nabi-follow-ups, .nabi-qualification-controls, .nabi-qualification-cta")
+      .forEach((node) => {
+        node.remove();
+      });
+  };
+
+  const revealWithTyping = (text: string, afterReveal?: () => void) => {
+    const typing = buildTyping();
+    revealNode(typing);
+
+    const answerTimer = window.setTimeout(() => {
+      typing.remove();
+      revealNode(buildMessage("nabi", text));
+
+      if (afterReveal) {
+        const nextTimer = window.setTimeout(afterReveal, 180);
+        activeTimers.push(nextTimer);
+      } else {
+        setBusy(false);
+      }
+    }, 760);
+
+    activeTimers.push(answerTimer);
+  };
+
+  const buildCalendlyCard = () => {
+    const card = document.createElement("div");
+    card.className = "nabi-calendly-card";
+    card.setAttribute("aria-label", "Schedule a Skin ID demo");
+
+    const title = document.createElement("strong");
+    title.textContent = "Book the next conversation";
+
+    const copy = document.createElement("p");
+    copy.textContent = "Choose a time and we can look at your store, catalog, and first personalization path together.";
+
+    const frame = document.createElement("iframe");
+    frame.className = "nabi-calendly-frame";
+    frame.title = "Schedule with Nabi";
+    frame.src = calendlyUrl;
+    frame.loading = "lazy";
+
+    card.append(title, copy, frame);
+    return card;
+  };
+
+  const completeQualification = () => {
+    const isComplete = qualificationQuestions.every((question) => qualificationData[question.field].trim().length > 0);
+
+    if (!isComplete) {
+      setBusy(false);
+      return;
+    }
+
+    leadBookingState = {
+      ...leadBookingState,
+      bookingStatus: "ready_to_book",
+    };
+    syncLeadBookingState();
+
+    const catalogPhrase =
+      qualificationData.catalogSize === "500+"
+        ? "a large skincare catalog"
+        : qualificationData.catalogSize === "100–500"
+          ? "a broad skincare catalog"
+          : "a focused skincare catalog";
+    const conclusion = `${qualificationData.storeName} looks like a sensible fit to evaluate. For ${qualificationData.businessType.toLowerCase()} teams on ${qualificationData.platform}, ${catalogPhrase} can benefit from a guided Skin ID path focused on ${qualificationData.primaryGoal.toLowerCase()}.`;
+
+    revealWithTyping(conclusion, () => {
+      revealNode(buildCalendlyCard());
+      setBusy(false);
+    });
+
+    // Future Supabase Edge Function boundary: submit qualificationData with
+    // leadBookingState.leadId, leadBookingState.bookingStatus, and
+    // leadBookingState.calendlyEventUri once credentials and table schema exist.
+  };
+
+  const renderQualificationQuestion = (index: number) => {
+    const question = qualificationQuestions[index];
+
+    if (!question) {
+      completeQualification();
+      return;
+    }
+
+    revealWithTyping(question.prompt, () => {
+      const controls = document.createElement("div");
+      controls.className = "nabi-qualification-controls";
+
+      if (question.inputType === "text") {
+        const form = document.createElement("form");
+        form.className = "nabi-qualification-form";
+
+        const input = document.createElement("input");
+        input.className = "nabi-qualification-input";
+        input.type = "text";
+        input.name = question.field;
+        input.autocomplete = "organization";
+        input.placeholder = "Enter brand or store name";
+        input.setAttribute("aria-label", question.prompt);
+
+        const submit = document.createElement("button");
+        submit.className = "nabi-qualification-submit";
+        submit.type = "submit";
+        submit.textContent = "Continue";
+
+        const error = document.createElement("p");
+        error.className = "nabi-qualification-error";
+        error.hidden = true;
+        error.textContent = "Please enter a store or brand name.";
+
+        form.append(input, submit, error);
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const value = input.value.trim();
+
+          if (!value) {
+            error.hidden = false;
+            return;
+          }
+
+          setBusy(true);
+          qualificationData = {
+            ...qualificationData,
+            [question.field]: value,
+          };
+          controls.remove();
+          revealNode(buildMessage("user", value));
+          renderQualificationQuestion(index + 1);
+        });
+
+        controls.appendChild(form);
+      } else {
+        const optionList = document.createElement("div");
+        optionList.className = "nabi-qualification-options";
+
+        question.options?.forEach((option) => {
+          const button = document.createElement("button");
+          button.className = "nabi-qualification-option";
+          button.type = "button";
+          button.textContent = option;
+          button.addEventListener("click", () => {
+            setBusy(true);
+            qualificationData = {
+              ...qualificationData,
+              [question.field]: option,
+            };
+            controls.remove();
+            revealNode(buildMessage("user", option));
+            renderQualificationQuestion(index + 1);
+          });
+          optionList.appendChild(button);
+        });
+
+        controls.appendChild(optionList);
+      }
+
+      revealNode(controls);
+      setBusy(false);
+    });
+  };
+
+  function startQualification() {
+    if (isResponding) {
+      return;
+    }
+
+    clearTimers();
+    clearActiveControls();
+    setBusy(true);
+    section!.dataset.nabiMode = "qualification";
+    promptList!.hidden = true;
+    resetButton!.hidden = false;
+    resetButton!.textContent = "Back to topics";
+    qualificationData = createEmptyQualificationData();
+    leadBookingState = {
+      leadId: null,
+      bookingStatus: "not_started",
+      calendlyEventUri: null,
+    };
+    syncLeadBookingState();
+
+    revealNode(buildMessage("user", "See if Skin ID fits your store"));
+
+    const startTimer = window.setTimeout(() => {
+      revealWithTyping("Let's see if Skin ID makes sense for your store.", () => {
+        renderQualificationQuestion(0);
+      });
+    }, 220);
+
+    activeTimers.push(startTimer);
+  }
+
+  const buildQualificationCta = () => {
+    const wrap = document.createElement("div");
+    wrap.className = "nabi-qualification-cta";
+    wrap.setAttribute("aria-label", "Qualification next step");
+
+    const note = document.createElement("p");
+    note.textContent = "Want to see if the same logic fits your catalog?";
+
+    const button = document.createElement("button");
+    button.className = "nabi-qualification-start";
+    button.type = "button";
+    button.textContent = "See if Skin ID fits your store";
+    button.addEventListener("click", startQualification);
+
+    wrap.append(note, button);
+    return wrap;
+  };
+
+  const buildFollowUps = (followUps: NabiQuestionItem[], depth: number) => {
+    const wrap = document.createElement("div");
+    wrap.className = "nabi-follow-ups";
+    wrap.setAttribute("aria-label", "Suggested follow-up questions");
+
+    followUps.forEach((followUp) => {
+      const pill = document.createElement("button");
+      pill.className = "nabi-follow-up-pill";
+      pill.type = "button";
+      pill.textContent = followUp.question;
+      pill.addEventListener("click", () => askQuestion(followUp, depth));
+      wrap.appendChild(pill);
+    });
+
+    return wrap;
+  };
+
+  const askQuestion = (item: NabiQuestionItem, depth = 1) => {
     if (isResponding) {
       return;
     }
@@ -1208,33 +1696,25 @@ function setupNabiQuestionSection() {
     clearTimers();
     setBusy(true);
     section.classList.add("has-conversation");
+    section.dataset.nabiMode = "qa";
     promptList.hidden = true;
     resetButton.hidden = false;
-
-    const previousFollowUps = Array.from(thread.querySelectorAll<HTMLElement>(".nabi-follow-ups"));
-    previousFollowUps.forEach((followUp) => followUp.remove());
+    resetButton.textContent = "Back to topics";
+    clearActiveControls();
 
     revealNode(buildMessage("user", item.question));
 
     const typingTimer = window.setTimeout(() => {
-      const typing = buildTyping();
-      revealNode(typing);
-
-      const answerTimer = window.setTimeout(() => {
-        typing.remove();
-        revealNode(buildMessage("nabi", item.answer));
-
-        const followUpTimer = window.setTimeout(() => {
-          const followUps = buildFollowUps(item.followUps);
+      revealWithTyping(item.answer, () => {
+        if (item.followUps.length > 0 && depth < 3) {
+          const followUps = buildFollowUps(item.followUps, depth + 1);
           followUps.classList.add("is-latest");
           revealNode(followUps);
-          setBusy(false);
-        }, 180);
-
-        activeTimers.push(followUpTimer);
-      }, 760);
-
-      activeTimers.push(answerTimer);
+        } else {
+          revealNode(buildQualificationCta());
+        }
+        setBusy(false);
+      });
     }, 220);
 
     activeTimers.push(typingTimer);
