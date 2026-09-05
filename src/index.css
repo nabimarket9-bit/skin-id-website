@@ -1399,6 +1399,8 @@
       .story-slide,
       .story-header-copy h2,
       .impact-header h2,
+      .nabi-qa-header h2,
+      .nabi-typing-dot,
       .story-nav,
       .story-dot,
       .story-engine-orbit,
@@ -1492,6 +1494,43 @@
     .impact-benchmark-orbit span:nth-child(1){left:24%;top:48%;transition-delay:calc(var(--impact-delay) + 100ms)}.impact-benchmark-orbit span:nth-child(2){left:52%;top:30%;transition-delay:calc(var(--impact-delay) + 220ms)}.impact-benchmark-orbit span:nth-child(3){right:20%;top:58%;transition-delay:calc(var(--impact-delay) + 340ms)}
     .business-impact.act-impact .impact-benchmark-orbit span{opacity:1;transform:scale(1)}
     .impact-disclaimer{position:relative;z-index:1;margin:22px 0 0;color:rgba(247,241,232,.48);font-size:12px;letter-spacing:.14em;text-transform:uppercase;text-align:right}
+
+    .nabi-qa{padding:132px 20px}
+    .nabi-qa-shell{width:min(1180px,100%);margin:0 auto;display:grid;grid-template-columns:minmax(280px,.82fr) minmax(0,1.18fr);gap:clamp(28px,4vw,58px);align-items:start}
+    .nabi-qa-header{position:sticky;top:124px;min-width:0}
+    .nabi-qa-header h2{margin:0 0 18px;font-size:clamp(42px,6.2vw,88px);line-height:.86;letter-spacing:-.085em;text-wrap:balance;background:linear-gradient(135deg,#fff5d4 0%,#9fcaff 28%,#7cf0da 58%,#fff1aa 100%);background-size:220% 220%;background-position:0% 50%;-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 18px rgba(255,255,255,.08);animation:brandStoryTitleShift 9s linear infinite,brandStoryTitleGlow 5.2s ease-in-out infinite}
+    .nabi-qa-header .lead{max-width:520px;color:rgba(247,241,232,.78)}
+    .nabi-chat-panel{position:relative;min-width:0;border:1px solid rgba(255,255,255,.12);border-radius:42px;padding:clamp(20px,3vw,30px);background:radial-gradient(ellipse at 18% 8%,rgba(35,72,130,.14),transparent 34%),radial-gradient(ellipse at 88% 86%,rgba(212,175,55,.10),transparent 34%),linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.018));box-shadow:0 36px 130px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.06);overflow:hidden}
+    .nabi-chat-panel:before{content:"";position:absolute;left:24px;right:24px;top:82px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,231,163,.18),rgba(184,242,255,.12),transparent);opacity:.7;pointer-events:none}
+    .nabi-chat-top{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:30px}
+    .nabi-assistant-id{display:flex;align-items:center;gap:14px;min-width:0}
+    .nabi-assistant-avatar,.nabi-message-avatar{display:grid;place-items:center;flex:0 0 auto;border:1px solid rgba(255,231,163,.2);background:radial-gradient(circle at 36% 28%,rgba(255,255,255,.12),transparent 28%),linear-gradient(145deg,rgba(255,231,163,.12),rgba(115,169,255,.06));box-shadow:0 12px 34px rgba(0,0,0,.22),0 0 24px rgba(255,231,163,.08);overflow:hidden}
+    .nabi-assistant-avatar{width:50px;height:50px;border-radius:18px}
+    .nabi-assistant-avatar img{width:88%;height:auto;display:block}
+    .nabi-assistant-id span,.nabi-chat-status{display:block;color:rgba(247,241,232,.5);font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+    .nabi-assistant-id strong{display:block;margin-top:5px;color:rgba(247,241,232,.9);font-size:16px;letter-spacing:-.02em}
+    .nabi-chat-status{padding:8px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.035);white-space:nowrap}
+    .nabi-chat-thread{position:relative;z-index:1;display:grid;gap:16px;min-height:156px;margin-bottom:24px}
+    .nabi-message{display:flex;gap:12px;max-width:82%;opacity:0;transform:translateY(12px);transition:opacity .34s ease,transform .34s cubic-bezier(.22,1,.36,1)}
+    .nabi-message.is-visible,.nabi-follow-ups.is-visible{opacity:1;transform:translateY(0)}
+    .nabi-message-nabi{justify-self:start;align-items:flex-start}
+    .nabi-message-user{justify-self:end;justify-content:flex-end}
+    .nabi-message-avatar{width:42px;height:42px;border-radius:15px;margin-top:2px}
+    .nabi-message-avatar img{width:88%;height:auto;display:block}
+    .nabi-message-bubble{min-width:0;border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:15px 17px;color:rgba(247,241,232,.84);font-size:15px;line-height:1.58;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.025));box-shadow:0 16px 42px rgba(0,0,0,.18)}
+    .nabi-message-user .nabi-message-bubble{border-color:rgba(255,231,163,.18);background:linear-gradient(135deg,rgba(255,231,163,.18),rgba(255,255,255,.05));color:#fff6dc;border-bottom-right-radius:10px}
+    .nabi-message-nabi .nabi-message-bubble{border-bottom-left-radius:10px}
+    .nabi-message-seed .nabi-message-bubble{color:rgba(247,241,232,.68)}
+    .nabi-typing-bubble{display:inline-flex;align-items:center;gap:6px;min-width:78px;min-height:48px}
+    .nabi-typing-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,231,163,.78);animation:nabiTypingDot 1s ease-in-out infinite}
+    .nabi-typing-dot:nth-child(2){animation-delay:.14s}.nabi-typing-dot:nth-child(3){animation-delay:.28s}
+    @keyframes nabiTypingDot{0%,100%{opacity:.32;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
+    .nabi-prompt-list,.nabi-follow-ups{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:10px}
+    .nabi-prompt,.nabi-follow-up-pill{appearance:none;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:linear-gradient(135deg,rgba(255,255,255,.065),rgba(255,255,255,.025));color:rgba(247,241,232,.82);font:inherit;font-size:13px;font-weight:760;line-height:1.25;padding:12px 15px;cursor:pointer;transition:transform .22s ease,border-color .22s ease,background .22s ease,color .22s ease,opacity .22s ease;min-width:0}
+    .nabi-prompt:hover:not(:disabled),.nabi-follow-up-pill:hover{transform:translateY(-2px);border-color:rgba(255,231,163,.26);background:linear-gradient(135deg,rgba(255,231,163,.11),rgba(115,169,255,.055));color:#fff7df}
+    .nabi-prompt:disabled{opacity:.48;cursor:wait}
+    .nabi-follow-ups{justify-self:start;max-width:82%;opacity:0;transform:translateY(10px);transition:opacity .34s ease,transform .34s cubic-bezier(.22,1,.36,1)}
+    .nabi-follow-up-pill{font-size:12px;color:rgba(184,242,255,.78);border-color:rgba(184,242,255,.14);cursor:default}
 
     .deep-system{padding:132px 20px}.depth-grid{display:grid;grid-template-columns:repeat(5,minmax(220px,1fr));gap:16px;overflow-x:auto;padding:44px 0 18px;scrollbar-width:none}.depth-grid::-webkit-scrollbar{display:none}
     .depth-card{min-height:360px;border:1px solid var(--line);border-radius:34px;padding:24px;background:rgba(255,255,255,.043);position:relative;overflow:hidden;transform-style:preserve-3d;transition:.45s ease}
@@ -3709,6 +3748,9 @@
       .business-impact-shell{border-radius:40px;padding:32px}
       .impact-system{padding:22px}
       .impact-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .nabi-qa-shell{grid-template-columns:1fr;gap:28px}
+      .nabi-qa-header{position:relative;top:auto}
+      .nabi-chat-panel{border-radius:36px}
     }
 
     @media (max-width: 768px) {
@@ -3727,6 +3769,21 @@
       .impact-measure-track{height:52px;margin-bottom:14px}
       .impact-measure-result strong{font-size:36px}
       .impact-disclaimer{text-align:left;font-size:10px;line-height:1.45}
+      .nabi-qa{padding:96px 16px}
+      .nabi-qa-shell{width:100%;gap:24px}
+      .nabi-qa-header h2{font-size:clamp(40px,13vw,58px)}
+      .nabi-qa-header .lead{font-size:16px}
+      .nabi-chat-panel{width:100%;padding:18px;border-radius:30px}
+      .nabi-chat-panel:before{left:18px;right:18px;top:76px}
+      .nabi-chat-top{align-items:flex-start;margin-bottom:26px}
+      .nabi-chat-status{display:none}
+      .nabi-chat-thread{gap:14px;min-height:132px;margin-bottom:20px}
+      .nabi-message{max-width:94%;gap:10px}
+      .nabi-message-bubble{font-size:14px;line-height:1.56;padding:14px 15px;border-radius:22px}
+      .nabi-message-avatar{width:38px;height:38px;border-radius:14px}
+      .nabi-prompt-list{display:grid;grid-template-columns:1fr;gap:9px}
+      .nabi-prompt,.nabi-follow-up-pill{width:100%;text-align:left;justify-content:flex-start;font-size:13px;padding:12px 14px}
+      .nabi-follow-ups{max-width:94%;display:grid;grid-template-columns:1fr;width:100%}
     }
 
     @media (max-width: 480px) {
@@ -3737,6 +3794,12 @@
       .impact-measure-top{margin-bottom:14px}
       .impact-benchmark-orbit{height:58px}
       .impact-measure-result span{font-size:10px;letter-spacing:.12em}
+      .nabi-chat-panel{padding:16px;border-radius:26px}
+      .nabi-assistant-avatar{width:44px;height:44px;border-radius:16px}
+      .nabi-assistant-id strong{font-size:15px}
+      .nabi-message{max-width:100%}
+      .nabi-message-user{max-width:88%}
+      .nabi-message-bubble{font-size:14px}
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -3860,6 +3923,14 @@
 
       body.mobile-diagnostic .impact-header h2 {
         animation: brandStoryTitleShift 9s linear infinite, brandStoryTitleGlow 5.2s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .nabi-qa-header h2 {
+        animation: brandStoryTitleShift 9s linear infinite, brandStoryTitleGlow 5.2s ease-in-out infinite !important;
+      }
+
+      body.mobile-diagnostic .nabi-typing-dot {
+        animation: nabiTypingDot 1s ease-in-out infinite !important;
       }
 
       body.mobile-diagnostic .dot {

@@ -25,6 +25,60 @@ type FlowSlideController = {
   destroy: () => void;
 };
 
+type NabiQuestionItem = {
+  id: string;
+  question: string;
+  answer: string;
+  followUps: string[];
+};
+
+const nabiQuestionItems: NabiQuestionItem[] = [
+  {
+    id: "conversion",
+    question: "How does Skin ID increase conversion?",
+    answer:
+      "Skin ID turns open-ended browsing into a guided routine decision. It helps visitors understand what fits their skin, why each product belongs in the routine, and what to add next, so the purchase feels clearer and less risky.",
+    followUps: [
+      "Where does the conversion lift usually happen?",
+      "How quickly can we test this?",
+      "Can this support paid landing pages?",
+    ],
+  },
+  {
+    id: "shopify",
+    question: "Will this work with my existing Shopify store?",
+    answer:
+      "Yes. Skin ID is designed to sit on top of an existing commerce stack, including Shopify storefronts. The experience can be configured around your catalog, brand flow, and conversion goals without rebuilding the entire store.",
+    followUps: [
+      "What does implementation require?",
+      "Can it match our current theme?",
+      "Does it connect to product pages?",
+    ],
+  },
+  {
+    id: "products",
+    question: "How does Skin ID choose products?",
+    answer:
+      "Skin ID combines visitor inputs, skin goals, face-driven context, and catalog rules into a recommendation logic layer. The goal is not to surface random bestsellers, but to build a coherent routine that makes sense for the customer and the brand.",
+    followUps: [
+      "Can the brand control recommendations?",
+      "How are routines ranked?",
+      "Can inventory priorities be included?",
+    ],
+  },
+  {
+    id: "quiz",
+    question: "Does this replace my current quiz?",
+    answer:
+      "It can, but it does not have to. Skin ID can replace a static quiz when the brand wants a richer decision experience, or it can work alongside an existing quiz as the premium personalization layer for higher-intent traffic.",
+    followUps: [
+      "When should we replace the quiz?",
+      "Can we compare both flows?",
+      "What changes for returning customers?",
+    ],
+  },
+];
+
 function setupContrastSlides(root: HTMLElement): ContrastSlideController[] {
   const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -1025,6 +1079,165 @@ function setupBusinessImpactSection() {
     resetSequence();
     observer.disconnect();
     document.removeEventListener("visibilitychange", onVisibilityChange);
+  };
+}
+
+function setupNabiQuestionSection() {
+  const section = document.querySelector<HTMLElement>(".nabi-qa");
+  const thread = section?.querySelector<HTMLElement>(".nabi-chat-thread");
+  const promptList = section?.querySelector<HTMLElement>(".nabi-prompt-list");
+  const promptButtons = section
+    ? Array.from(section.querySelectorAll<HTMLButtonElement>("[data-nabi-question]"))
+    : [];
+
+  if (!section || !thread || !promptList || !promptButtons.length) {
+    return () => undefined;
+  }
+
+  const questionMap = new Map(nabiQuestionItems.map((item) => [item.id, item]));
+  let activeTimers: number[] = [];
+  let isResponding = false;
+
+  const clearTimers = () => {
+    activeTimers.forEach((timer) => window.clearTimeout(timer));
+    activeTimers = [];
+  };
+
+  const setBusy = (busy: boolean) => {
+    isResponding = busy;
+    promptButtons.forEach((button) => {
+      button.disabled = busy;
+    });
+    section.dataset.responding = String(busy);
+  };
+
+  const buildMessage = (role: "user" | "nabi", text: string) => {
+    const message = document.createElement("div");
+    message.className = `nabi-message nabi-message-${role}`;
+
+    if (role === "nabi") {
+      const avatar = document.createElement("div");
+      avatar.className = "nabi-message-avatar";
+      avatar.setAttribute("aria-hidden", "true");
+
+      const logo = document.createElement("img");
+      logo.src = "/nabi-logo-cropped.png";
+      logo.alt = "";
+      avatar.appendChild(logo);
+      message.appendChild(avatar);
+    }
+
+    const bubble = document.createElement("div");
+    bubble.className = "nabi-message-bubble";
+    bubble.textContent = text;
+    message.appendChild(bubble);
+
+    return message;
+  };
+
+  const buildTyping = () => {
+    const typing = document.createElement("div");
+    typing.className = "nabi-message nabi-message-nabi nabi-message-typing";
+    typing.setAttribute("aria-label", "Nabi is preparing an answer");
+
+    const avatar = document.createElement("div");
+    avatar.className = "nabi-message-avatar";
+    avatar.setAttribute("aria-hidden", "true");
+
+    const logo = document.createElement("img");
+    logo.src = "/nabi-logo-cropped.png";
+    logo.alt = "";
+    avatar.appendChild(logo);
+
+    const bubble = document.createElement("div");
+    bubble.className = "nabi-message-bubble nabi-typing-bubble";
+    bubble.innerHTML =
+      '<span class="nabi-typing-dot"></span><span class="nabi-typing-dot"></span><span class="nabi-typing-dot"></span>';
+
+    typing.append(avatar, bubble);
+    return typing;
+  };
+
+  const buildFollowUps = (followUps: string[]) => {
+    const wrap = document.createElement("div");
+    wrap.className = "nabi-follow-ups";
+    wrap.setAttribute("aria-label", "Suggested follow-up questions");
+
+    followUps.forEach((followUp) => {
+      const pill = document.createElement("button");
+      pill.className = "nabi-follow-up-pill";
+      pill.type = "button";
+      pill.textContent = followUp;
+      pill.setAttribute("aria-disabled", "true");
+      wrap.appendChild(pill);
+    });
+
+    return wrap;
+  };
+
+  const revealNode = (node: HTMLElement) => {
+    thread.appendChild(node);
+    const revealTimer = window.setTimeout(() => {
+      node.classList.add("is-visible");
+    }, 20);
+    activeTimers.push(revealTimer);
+  };
+
+  const askQuestion = (item: NabiQuestionItem) => {
+    if (isResponding) {
+      return;
+    }
+
+    clearTimers();
+    setBusy(true);
+    section.classList.add("has-conversation");
+
+    const previousFollowUps = Array.from(thread.querySelectorAll<HTMLElement>(".nabi-follow-ups"));
+    previousFollowUps.forEach((followUp) => followUp.classList.remove("is-latest"));
+
+    revealNode(buildMessage("user", item.question));
+
+    const typingTimer = window.setTimeout(() => {
+      const typing = buildTyping();
+      revealNode(typing);
+
+      const answerTimer = window.setTimeout(() => {
+        typing.remove();
+        revealNode(buildMessage("nabi", item.answer));
+
+        const followUpTimer = window.setTimeout(() => {
+          const followUps = buildFollowUps(item.followUps);
+          followUps.classList.add("is-latest");
+          revealNode(followUps);
+          setBusy(false);
+        }, 180);
+
+        activeTimers.push(followUpTimer);
+      }, 760);
+
+      activeTimers.push(answerTimer);
+    }, 220);
+
+    activeTimers.push(typingTimer);
+  };
+
+  const promptCleanups = promptButtons.map((button) => {
+    const onClick = () => {
+      const item = questionMap.get(button.dataset.nabiQuestion ?? "");
+
+      if (item) {
+        askQuestion(item);
+      }
+    };
+
+    button.addEventListener("click", onClick);
+    return () => button.removeEventListener("click", onClick);
+  });
+
+  return () => {
+    clearTimers();
+    setBusy(false);
+    promptCleanups.forEach((cleanup) => cleanup());
   };
 }
 
@@ -5068,6 +5281,43 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
     </div>
   </section>
 
+  <section class="section nabi-qa" aria-labelledby="nabiQaTitle">
+    <div class="nabi-qa-shell">
+      <div class="nabi-qa-header">
+        <div class="eyebrow"><span class="dot"></span>Questions, answered</div>
+        <h2 id="nabiQaTitle">ASK NABI.</h2>
+        <p class="lead">Explore the questions brands usually ask before adding Skin ID.</p>
+      </div>
+
+      <div class="nabi-chat-panel" aria-label="Guided Nabi questions">
+        <div class="nabi-chat-top">
+          <div class="nabi-assistant-id">
+            <div class="nabi-assistant-avatar" aria-hidden="true"><img src="/nabi-logo-cropped.png" alt="" /></div>
+            <div>
+              <span>Nabi assistant</span>
+              <strong>Business guidance mode</strong>
+            </div>
+          </div>
+          <span class="nabi-chat-status">Predefined answers</span>
+        </div>
+
+        <div class="nabi-chat-thread" aria-live="polite">
+          <div class="nabi-message nabi-message-nabi nabi-message-seed is-visible">
+            <div class="nabi-message-avatar" aria-hidden="true"><img src="/nabi-logo-cropped.png" alt="" /></div>
+            <div class="nabi-message-bubble">Choose a question below and I&apos;ll walk through the business logic behind Skin ID.</div>
+          </div>
+        </div>
+
+        <div class="nabi-prompt-list" aria-label="Initial questions">
+          <button class="nabi-prompt" type="button" data-nabi-question="conversion">How does Skin ID increase conversion?</button>
+          <button class="nabi-prompt" type="button" data-nabi-question="shopify">Will this work with my existing Shopify store?</button>
+          <button class="nabi-prompt" type="button" data-nabi-question="products">How does Skin ID choose products?</button>
+          <button class="nabi-prompt" type="button" data-nabi-question="quiz">Does this replace my current quiz?</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="deep-system">
     <div class="container">
       <div class="eyebrow"><span class="dot"></span>What gets installed</div><h2>A <span class="highlight-word highlight-cyan">conversion layer</span> built around the brand.</h2><p class="lead">The site should not expose the real product. It should make the <span class="highlight-word highlight-blue">system</span> feel deeper than a quiz widget.</p>
@@ -5136,6 +5386,7 @@ export default function App() {
       const cleanupDecisionSummaryBoard = setupDecisionSummaryBoard();
       const cleanupMobileNavScrollBehavior = setupMobileNavScrollBehavior();
       const cleanupBusinessImpactSection = setupBusinessImpactSection();
+      const cleanupNabiQuestionSection = setupNabiQuestionSection();
       const cleanupLandingInteractions = setupLandingInteractions();
       const syncMobileFaceControllerState = () => {
         if (!faceScanController) {
@@ -5249,6 +5500,7 @@ export default function App() {
         cleanupHeroValueEngine();
         cleanupMobileNavScrollBehavior();
         cleanupBusinessImpactSection();
+        cleanupNabiQuestionSection();
         cleanupHeroSceneTransitions();
         cleanupDecisionSummaryBoard();
         cleanupLandingInteractions();
@@ -5457,6 +5709,7 @@ export default function App() {
     const cleanupHeroValueEngine = setupHeroValueEngine();
     const cleanupDecisionSummaryBoard = setupDecisionSummaryBoard();
     const cleanupBusinessImpactSection = setupBusinessImpactSection();
+    const cleanupNabiQuestionSection = setupNabiQuestionSection();
     const cleanupLandingInteractions = setupLandingInteractions();
 
     return () => {
@@ -5476,6 +5729,7 @@ export default function App() {
       cleanupHeroSceneTransitions();
       cleanupDecisionSummaryBoard();
       cleanupBusinessImpactSection();
+      cleanupNabiQuestionSection();
       cleanupLandingInteractions();
     };
   }, []);
