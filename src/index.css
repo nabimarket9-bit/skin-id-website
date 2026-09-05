@@ -1285,7 +1285,8 @@
       .story-header{gap:22px}
       .story-header-copy h2{font-size:clamp(32px,10vw,48px)}
       .story-header-copy .lead{font-size:15px}
-      .brand-story-track{grid-auto-columns:100%;gap:14px;padding:8px 0 14px;scroll-padding-inline:0;align-items:start}
+      .story-frame{height:var(--story-active-slide-height,auto);transition:height .36s cubic-bezier(.22,1,.36,1)}
+      .brand-story-track{grid-auto-columns:100%;gap:14px;padding:8px 0 14px;scroll-padding-inline:0;align-items:start;touch-action:pan-x pan-y pinch-zoom}
       .story-slide{padding:22px 18px;border-radius:30px;align-self:start}
       .story-slide p{font-size:15px}
       .story-commerce-toggle{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;width:100%;margin-left:0;margin-right:0;overflow:hidden;isolation:isolate}

@@ -293,6 +293,7 @@ function setupFlowSlides(root: HTMLElement): FlowSlideController[] {
 function setupBrandStoryCarousel() {
   const root = document.querySelector<HTMLElement>(".brand-story");
   const track = root?.querySelector<HTMLElement>(".brand-story-track");
+  const frame = root?.querySelector<HTMLElement>(".story-frame");
   const prevButton = root?.querySelector<HTMLButtonElement>('[data-story-nav="prev"]');
   const nextButton = root?.querySelector<HTMLButtonElement>('[data-story-nav="next"]');
   const currentNode = document.getElementById("brandStoryCurrent");
@@ -306,6 +307,7 @@ function setupBrandStoryCarousel() {
   if (
     !root ||
     !track ||
+    !frame ||
     !prevButton ||
     !nextButton ||
     !currentNode ||
@@ -317,6 +319,7 @@ function setupBrandStoryCarousel() {
   }
 
   const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const mobileStoryHeightQuery = window.matchMedia("(max-width: 768px)");
   const metricCounters: StoryMetricCounter[] = Array.from(
     root.querySelectorAll<HTMLElement>(".story-slide-scale .story-metric-value[data-target]"),
   )
@@ -343,6 +346,53 @@ function setupBrandStoryCarousel() {
   let storyVisible = false;
   let storyAnimationFrame = 0;
   let storyDocumentVisible = !document.hidden;
+  let observedHeightSlide: HTMLElement | null = null;
+
+  const measureActiveSlideHeight = () => {
+    if (!mobileStoryHeightQuery.matches) {
+      frame.style.removeProperty("--story-active-slide-height");
+      return;
+    }
+
+    const activeSlide = slides[activeIndex];
+
+    if (!activeSlide) {
+      return;
+    }
+
+    const trackStyle = window.getComputedStyle(track);
+    const trackPadding =
+      (Number.parseFloat(trackStyle.paddingTop) || 0) +
+      (Number.parseFloat(trackStyle.paddingBottom) || 0);
+    const activeHeight = Math.ceil(activeSlide.getBoundingClientRect().height + trackPadding);
+    frame.style.setProperty("--story-active-slide-height", `${activeHeight}px`);
+  };
+
+  const activeSlideHeightObserver = new ResizeObserver(() => {
+    measureActiveSlideHeight();
+  });
+
+  const syncActiveSlideHeightObserver = () => {
+    if (observedHeightSlide) {
+      activeSlideHeightObserver.unobserve(observedHeightSlide);
+      observedHeightSlide = null;
+    }
+
+    if (!mobileStoryHeightQuery.matches) {
+      frame.style.removeProperty("--story-active-slide-height");
+      return;
+    }
+
+    const activeSlide = slides[activeIndex];
+
+    if (!activeSlide) {
+      return;
+    }
+
+    observedHeightSlide = activeSlide;
+    activeSlideHeightObserver.observe(activeSlide);
+    measureActiveSlideHeight();
+  };
 
   const resizeObserver = new ResizeObserver(() => {
     const nearestIndex = getNearestIndex();
@@ -355,6 +405,7 @@ function setupBrandStoryCarousel() {
     flowSlideControllers.forEach((controller) => {
       controller.setActive(controller.slide.classList.contains("is-active"));
     });
+    measureActiveSlideHeight();
   });
 
   const formatMetric = (value: number, suffix: string) => `${Math.round(value)}${suffix}`;
@@ -397,7 +448,12 @@ function setupBrandStoryCarousel() {
 
   const onDocumentVisibilityChange = () => {
     storyDocumentVisible = !document.hidden;
+    measureActiveSlideHeight();
     scheduleStoryAnimationSync();
+  };
+
+  const onMobileStoryHeightQueryChange = () => {
+    syncActiveSlideHeightObserver();
   };
 
   const cancelMetricAnimation = () => {
@@ -505,6 +561,7 @@ function setupBrandStoryCarousel() {
 
     prevButton.disabled = index === 0;
     nextButton.disabled = index === slides.length - 1;
+    syncActiveSlideHeightObserver();
     scheduleStoryAnimationSync();
   };
 
@@ -815,6 +872,7 @@ function setupBrandStoryCarousel() {
   track.addEventListener("lostpointercapture", onLostPointerCapture);
   root.addEventListener("keydown", onKeyDown);
   document.addEventListener("visibilitychange", onDocumentVisibilityChange);
+  mobileStoryHeightQuery.addEventListener("change", onMobileStoryHeightQueryChange);
   resizeObserver.observe(track);
 
   updateActiveSlide(0, true);
@@ -826,7 +884,9 @@ function setupBrandStoryCarousel() {
     window.clearTimeout(settleTimeout);
     releasePointer();
     resizeObserver.disconnect();
+    activeSlideHeightObserver.disconnect();
     storyVisibilityObserver.disconnect();
+    frame.style.removeProperty("--story-active-slide-height");
     prevButton.removeEventListener("click", onPrevClick);
     nextButton.removeEventListener("click", onNextClick);
     track.removeEventListener("scroll", onTrackScroll);
@@ -837,6 +897,7 @@ function setupBrandStoryCarousel() {
     track.removeEventListener("lostpointercapture", onLostPointerCapture);
     root.removeEventListener("keydown", onKeyDown);
     document.removeEventListener("visibilitychange", onDocumentVisibilityChange);
+    mobileStoryHeightQuery.removeEventListener("change", onMobileStoryHeightQueryChange);
     dotListeners.forEach(({ button, handler }) => button.removeEventListener("click", handler));
     mobileCompareToggleCleanups.forEach((cleanup) => cleanup());
     mobileContrastToggleCleanups.forEach((cleanup) => cleanup());
