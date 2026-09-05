@@ -1086,11 +1086,13 @@ function setupNabiQuestionSection() {
   const section = document.querySelector<HTMLElement>(".nabi-qa");
   const thread = section?.querySelector<HTMLElement>(".nabi-chat-thread");
   const promptList = section?.querySelector<HTMLElement>(".nabi-prompt-list");
+  const emptyState = section?.querySelector<HTMLElement>(".nabi-empty-state");
+  const resetButton = section?.querySelector<HTMLButtonElement>(".nabi-chat-reset");
   const promptButtons = section
     ? Array.from(section.querySelectorAll<HTMLButtonElement>("[data-nabi-question]"))
     : [];
 
-  if (!section || !thread || !promptList || !promptButtons.length) {
+  if (!section || !thread || !promptList || !emptyState || !resetButton || !promptButtons.length) {
     return () => undefined;
   }
 
@@ -1109,6 +1111,21 @@ function setupNabiQuestionSection() {
       button.disabled = busy;
     });
     section.dataset.responding = String(busy);
+  };
+
+  const removeGeneratedConversation = () => {
+    thread.querySelectorAll<HTMLElement>(".nabi-message, .nabi-follow-ups").forEach((node) => {
+      node.remove();
+    });
+  };
+
+  const resetConversation = () => {
+    clearTimers();
+    removeGeneratedConversation();
+    section.classList.remove("has-conversation");
+    promptList.hidden = false;
+    resetButton.hidden = true;
+    setBusy(false);
   };
 
   const buildMessage = (role: "user" | "nabi", text: string) => {
@@ -1191,9 +1208,11 @@ function setupNabiQuestionSection() {
     clearTimers();
     setBusy(true);
     section.classList.add("has-conversation");
+    promptList.hidden = true;
+    resetButton.hidden = false;
 
     const previousFollowUps = Array.from(thread.querySelectorAll<HTMLElement>(".nabi-follow-ups"));
-    previousFollowUps.forEach((followUp) => followUp.classList.remove("is-latest"));
+    previousFollowUps.forEach((followUp) => followUp.remove());
 
     revealNode(buildMessage("user", item.question));
 
@@ -1234,9 +1253,13 @@ function setupNabiQuestionSection() {
     return () => button.removeEventListener("click", onClick);
   });
 
+  resetButton.addEventListener("click", resetConversation);
+  resetConversation();
+
   return () => {
     clearTimers();
     setBusy(false);
+    resetButton.removeEventListener("click", resetConversation);
     promptCleanups.forEach((cleanup) => cleanup());
   };
 }
@@ -5314,6 +5337,7 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
           <button class="nabi-prompt" type="button" data-nabi-question="products">How does Skin ID choose products?</button>
           <button class="nabi-prompt" type="button" data-nabi-question="quiz">Does this replace my current quiz?</button>
         </div>
+        <button class="nabi-chat-reset" type="button" hidden>Back to topics</button>
       </div>
     </div>
   </section>

@@ -1502,7 +1502,7 @@
     .nabi-qa-header .lead{max-width:520px;color:rgba(247,241,232,.86)}
     .nabi-chat-panel{position:relative;min-width:0;border:1px solid rgba(255,255,255,.18);border-radius:42px;padding:clamp(20px,3vw,30px);background:linear-gradient(180deg,#07080b 0%,#030406 100%);box-shadow:0 42px 120px rgba(0,0,0,.48),inset 0 1px 0 rgba(255,255,255,.08),inset 0 0 0 1px rgba(255,231,163,.035);overflow:hidden}
     .nabi-chat-panel:before{content:"";position:absolute;left:24px;right:24px;top:82px;height:1px;background:linear-gradient(90deg,rgba(255,231,163,0),rgba(255,231,163,.32),rgba(184,242,255,.16),rgba(255,231,163,0));opacity:.9;pointer-events:none}
-    .nabi-chat-top{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:18px;margin:-2px -2px 30px;padding:6px 2px 20px;border-bottom:1px solid rgba(255,255,255,.08)}
+    .nabi-chat-top{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:18px;margin:-2px -2px 30px;padding:6px 2px 20px}
     .nabi-assistant-id{display:flex;align-items:center;gap:14px;min-width:0}
     .nabi-assistant-avatar,.nabi-message-avatar{display:grid;place-items:center;flex:0 0 auto;border:1px solid rgba(255,231,163,.32);background:linear-gradient(145deg,#111317,#050608);box-shadow:0 12px 34px rgba(0,0,0,.28),0 0 24px rgba(255,231,163,.12);overflow:hidden}
     .nabi-assistant-avatar{width:50px;height:50px;border-radius:18px}
@@ -1526,7 +1526,7 @@
     .nabi-message-avatar img{width:88%;height:auto;display:block}
     .nabi-message-bubble{min-width:0;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:15px 17px;color:#f7f1e8;font-size:15px;line-height:1.62;background:#0a0c10;box-shadow:0 16px 42px rgba(0,0,0,.18)}
     .nabi-message-user .nabi-message-bubble{border-color:rgba(184,242,255,.2);background:linear-gradient(180deg,#141821,#0d1017);color:#f7fbff;border-bottom-right-radius:8px}
-    .nabi-message-nabi .nabi-message-bubble{border-color:transparent;background:transparent;box-shadow:none;padding:3px 0 0;color:rgba(247,241,232,.9);border-radius:0}
+    .nabi-message-nabi .nabi-message-bubble{border-color:rgba(255,231,163,.18);background:linear-gradient(180deg,#11100d,#0a0908);box-shadow:0 16px 42px rgba(0,0,0,.2),inset 3px 0 0 rgba(255,231,163,.42);padding:15px 17px;color:#fffaf0;border-radius:20px;border-bottom-left-radius:8px}
     .nabi-typing-bubble{display:inline-flex;align-items:center;gap:6px;min-width:78px;min-height:48px}
     .nabi-typing-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,231,163,.78);animation:nabiTypingDot 1s ease-in-out infinite}
     .nabi-typing-dot:nth-child(2){animation-delay:.14s}.nabi-typing-dot:nth-child(3){animation-delay:.28s}
@@ -1535,8 +1535,11 @@
     .nabi-prompt,.nabi-follow-up-pill{appearance:none;border:1px solid rgba(255,255,255,.16);border-radius:18px;background:#0b0d11;color:#f9f4ea;font:inherit;font-size:13px;font-weight:760;line-height:1.32;padding:13px 15px;cursor:pointer;transition:transform .22s ease,border-color .22s ease,background .22s ease,color .22s ease,opacity .22s ease,box-shadow .22s ease;min-width:0}
     .nabi-prompt:hover:not(:disabled),.nabi-follow-up-pill:hover{transform:translateY(-2px);border-color:rgba(255,231,163,.42);background:#111319;color:#fff7df;box-shadow:0 12px 28px rgba(0,0,0,.22),inset 3px 0 0 rgba(255,231,163,.72)}
     .nabi-prompt:disabled{opacity:.48;cursor:wait}
+    .nabi-prompt-list[hidden],.nabi-chat-reset[hidden]{display:none}
     .nabi-follow-ups{justify-self:start;max-width:82%;opacity:0;transform:translateY(10px);transition:opacity .34s ease,transform .34s cubic-bezier(.22,1,.36,1)}
     .nabi-follow-up-pill{font-size:12px;color:#dff4ff;border-color:rgba(184,242,255,.22);cursor:default;background:#090d12}
+    .nabi-chat-reset{appearance:none;position:relative;z-index:1;margin-top:14px;border:1px solid rgba(255,231,163,.2);border-radius:999px;background:#090a0d;color:rgba(244,221,176,.86);font:inherit;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:10px 13px;cursor:pointer;transition:transform .22s ease,border-color .22s ease,color .22s ease,background .22s ease}
+    .nabi-chat-reset:hover{transform:translateY(-1px);border-color:rgba(255,231,163,.42);color:#fff2bf;background:#101114}
 
     .deep-system{padding:132px 20px}.depth-grid{display:grid;grid-template-columns:repeat(5,minmax(220px,1fr));gap:16px;overflow-x:auto;padding:44px 0 18px;scrollbar-width:none}.depth-grid::-webkit-scrollbar{display:none}
     .depth-card{min-height:360px;border:1px solid var(--line);border-radius:34px;padding:24px;background:rgba(255,255,255,.043);position:relative;overflow:hidden;transform-style:preserve-3d;transition:.45s ease}
@@ -3786,10 +3789,12 @@
       .nabi-chat-thread{gap:14px;min-height:132px;margin-bottom:20px}
       .nabi-message{max-width:94%;gap:10px}
       .nabi-message-bubble{font-size:14px;line-height:1.56;padding:14px 15px;border-radius:22px}
+      .nabi-message-nabi .nabi-message-bubble{border-radius:22px;border-bottom-left-radius:8px}
       .nabi-message-avatar{width:38px;height:38px;border-radius:14px}
       .nabi-prompt-list{display:grid;grid-template-columns:1fr;gap:9px}
       .nabi-prompt,.nabi-follow-up-pill{width:100%;text-align:left;justify-content:flex-start;font-size:13px;padding:12px 14px}
       .nabi-follow-ups{max-width:94%;display:grid;grid-template-columns:1fr;width:100%}
+      .nabi-chat-reset{width:100%;min-height:44px}
     }
 
     @media (max-width: 480px) {
