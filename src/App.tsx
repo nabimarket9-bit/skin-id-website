@@ -1,4 +1,14 @@
 import { useEffect } from "react";
+import {
+  createEmptyBookingState,
+  detectVisitorTimezone,
+  schedulingConfig,
+  schedulingIntegration,
+  schedulingService,
+  type AvailabilityDate,
+  type SchedulingBookingState,
+  type SchedulingLeadData,
+} from "./schedulingService";
 
 const calendlyUrl = "https://calendly.com/nabi_";
 const heroModelSceneEvent = "nabi:hero-model-scene";
@@ -260,6 +270,9 @@ type QualificationData = {
   platform: string;
   catalogSize: string;
   primaryGoal: string;
+  firstName: string;
+  lastName: string;
+  email: string;
 };
 
 type QualificationField = keyof QualificationData;
@@ -267,14 +280,8 @@ type QualificationField = keyof QualificationData;
 type QualificationQuestion = {
   field: QualificationField;
   prompt: string;
-  inputType: "text" | "options";
+  inputType: "text" | "email" | "options";
   options?: string[];
-};
-
-type LeadBookingState = {
-  leadId: string | null;
-  bookingStatus: "not_started" | "ready_to_book";
-  calendlyEventUri: string | null;
 };
 
 const createEmptyQualificationData = (): QualificationData => ({
@@ -283,6 +290,9 @@ const createEmptyQualificationData = (): QualificationData => ({
   platform: "",
   catalogSize: "",
   primaryGoal: "",
+  firstName: "",
+  lastName: "",
+  email: "",
 });
 
 const qualificationQuestions: QualificationQuestion[] = [
@@ -320,6 +330,21 @@ const qualificationQuestions: QualificationQuestion[] = [
       "Customer confidence",
       "Reduce bad product choices",
     ],
+  },
+  {
+    field: "firstName",
+    prompt: "What's your first name?",
+    inputType: "text",
+  },
+  {
+    field: "lastName",
+    prompt: "And your last name?",
+    inputType: "text",
+  },
+  {
+    field: "email",
+    prompt: "What's the best work email to send the invite to?",
+    inputType: "email",
   },
 ];
 
@@ -1344,16 +1369,16 @@ function setupNabiQuestionSection() {
   let activeTimers: number[] = [];
   let isResponding = false;
   let qualificationData = createEmptyQualificationData();
-  let leadBookingState: LeadBookingState = {
-    leadId: null,
-    bookingStatus: "not_started",
-    calendlyEventUri: null,
-  };
+  let bookingState: SchedulingBookingState = createEmptyBookingState();
+  let availableDates: AvailabilityDate[] = [];
+  let flowVersion = 0;
 
   const syncLeadBookingState = () => {
-    section.dataset.leadBookingStatus = leadBookingState.bookingStatus;
+    section.dataset.leadBookingStatus = bookingState.bookingStatus;
+    section.dataset.schedulingMode = schedulingIntegration.mode;
     delete section.dataset.leadId;
-    delete section.dataset.calendlyEventUri;
+    delete section.dataset.googleEventId;
+    delete section.dataset.googleMeetUrl;
   };
 
   const clearTimers = () => {
@@ -1367,7 +1392,9 @@ function setupNabiQuestionSection() {
       button.disabled = busy;
     });
     thread
-      .querySelectorAll<HTMLButtonElement>(".nabi-follow-up-pill, .nabi-qualification-option, .nabi-qualification-submit")
+      .querySelectorAll<HTMLButtonElement>(
+        ".nabi-follow-up-pill, .nabi-qualification-option, .nabi-qualification-submit, .nabi-scheduler-day, .nabi-scheduler-slot, .nabi-scheduler-confirm",
+      )
       .forEach((button) => {
         button.disabled = busy;
       });
@@ -1377,7 +1404,7 @@ function setupNabiQuestionSection() {
   const removeGeneratedConversation = () => {
     thread
       .querySelectorAll<HTMLElement>(
-        ".nabi-message, .nabi-follow-ups, .nabi-qualification-controls, .nabi-qualification-cta, .nabi-calendly-card",
+        ".nabi-message, .nabi-follow-ups, .nabi-qualification-controls, .nabi-qualification-cta, .nabi-scheduler, .nabi-booking-confirmation",
       )
       .forEach((node) => {
         node.remove();
@@ -1385,14 +1412,12 @@ function setupNabiQuestionSection() {
   };
 
   const resetConversation = () => {
+    flowVersion += 1;
     clearTimers();
     removeGeneratedConversation();
     qualificationData = createEmptyQualificationData();
-    leadBookingState = {
-      leadId: null,
-      bookingStatus: "not_started",
-      calendlyEventUri: null,
-    };
+    bookingState = createEmptyBookingState();
+    availableDates = [];
     syncLeadBookingState();
     delete section.dataset.nabiMode;
     section.classList.remove("has-conversation");
@@ -1459,7 +1484,9 @@ function setupNabiQuestionSection() {
 
   const clearActiveControls = () => {
     thread
-      .querySelectorAll<HTMLElement>(".nabi-follow-ups, .nabi-qualification-controls, .nabi-qualification-cta")
+      .querySelectorAll<HTMLElement>(
+        ".nabi-follow-ups, .nabi-qualification-controls, .nabi-qualification-cta, .nabi-scheduler, .nabi-booking-confirmation",
+      )
       .forEach((node) => {
         node.remove();
       });
@@ -1484,40 +1511,248 @@ function setupNabiQuestionSection() {
     activeTimers.push(answerTimer);
   };
 
-  const buildCalendlyCard = () => {
-    const card = document.createElement("div");
-    card.className = "nabi-calendly-card";
-    card.setAttribute("aria-label", "Schedule a Skin ID demo");
+  const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+  const toDateKey = (date: Date) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+  const formatDateLabel = (dateKey: string) =>
+    new Date(`${dateKey}T12:00:00`).toLocaleDateString(undefined, {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    });
+
+  const formatMonthLabel = (dateKey: string) =>
+    new Date(`${dateKey}T12:00:00`).toLocaleDateString(undefined, {
+      month: "long",
+      year: "numeric",
+    });
+
+  const formatTimeLabel = (isoDate: string, timezone: string) =>
+    new Date(isoDate).toLocaleTimeString(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: timezone,
+    });
+
+  const getSlotEndTime = (slotStart: string) =>
+    availableDates.flatMap((date) => date.slots).find((slot) => slot.start === slotStart)?.end ?? slotStart;
+
+  const getLeadData = (): SchedulingLeadData => ({ ...qualificationData });
+
+  const buildScheduler = () => {
+    const scheduler = document.createElement("div");
+    scheduler.className = "nabi-scheduler";
+    scheduler.setAttribute("aria-label", "Custom Nabi scheduling");
+
+    const header = document.createElement("div");
+    header.className = "nabi-scheduler-header";
 
     const title = document.createElement("strong");
-    title.textContent = "Book the next conversation";
+    title.textContent = "Choose a demo time";
 
-    const copy = document.createElement("p");
-    copy.textContent = "Choose a time and we can look at your store, catalog, and first personalization path together.";
+    const timezone = bookingState.timezone ?? detectVisitorTimezone();
+    const zone = document.createElement("span");
+    zone.textContent = timezone;
+    header.append(title, zone);
 
-    const frame = document.createElement("iframe");
-    frame.className = "nabi-calendly-frame";
-    frame.title = "Schedule with Nabi";
-    frame.src = calendlyUrl;
-    frame.loading = "lazy";
+    const calendar = document.createElement("div");
+    calendar.className = "nabi-scheduler-calendar";
 
-    card.append(title, copy, frame);
+    const firstDate = availableDates[0]?.date ?? toDateKey(new Date());
+    const month = document.createElement("div");
+    month.className = "nabi-scheduler-month";
+    month.textContent = formatMonthLabel(firstDate);
+
+    const days = document.createElement("div");
+    days.className = "nabi-scheduler-days";
+
+    availableDates.forEach((date) => {
+      const dayButton = document.createElement("button");
+      dayButton.className = "nabi-scheduler-day";
+      dayButton.type = "button";
+      dayButton.dataset.date = date.date;
+      dayButton.classList.toggle("is-selected", bookingState.selectedDate === date.date);
+      dayButton.setAttribute("aria-pressed", String(bookingState.selectedDate === date.date));
+      dayButton.innerHTML = `<span>${new Date(`${date.date}T12:00:00`).toLocaleDateString(undefined, {
+        weekday: "short",
+      })}</span><strong>${new Date(`${date.date}T12:00:00`).getDate()}</strong>`;
+      dayButton.addEventListener("click", () => {
+        bookingState = {
+          ...bookingState,
+          bookingStatus: "selecting",
+          selectedDate: date.date,
+          selectedStartTime: null,
+          timezone,
+        };
+        syncLeadBookingState();
+        const nextScheduler = buildScheduler();
+        nextScheduler.classList.add("is-visible");
+        scheduler.replaceWith(nextScheduler);
+      });
+      days.appendChild(dayButton);
+    });
+
+    calendar.append(month, days);
+
+    const slots = document.createElement("div");
+    slots.className = "nabi-scheduler-slots";
+
+    const selectedDate = availableDates.find((date) => date.date === bookingState.selectedDate);
+    if (selectedDate) {
+      const slotTitle = document.createElement("p");
+      slotTitle.textContent = "Available times";
+      slots.appendChild(slotTitle);
+
+      selectedDate.slots.forEach((slot) => {
+        const slotButton = document.createElement("button");
+        slotButton.className = "nabi-scheduler-slot";
+        slotButton.type = "button";
+        slotButton.textContent = formatTimeLabel(slot.start, timezone);
+        slotButton.classList.toggle("is-selected", bookingState.selectedStartTime === slot.start);
+        slotButton.setAttribute("aria-pressed", String(bookingState.selectedStartTime === slot.start));
+        slotButton.addEventListener("click", () => {
+          bookingState = {
+            ...bookingState,
+            bookingStatus: "selecting",
+            selectedStartTime: slot.start,
+            timezone,
+          };
+          syncLeadBookingState();
+          const nextScheduler = buildScheduler();
+          nextScheduler.classList.add("is-visible");
+          scheduler.replaceWith(nextScheduler);
+        });
+        slots.appendChild(slotButton);
+      });
+    } else {
+      const prompt = document.createElement("p");
+      prompt.textContent = "Select an available date to see times.";
+      slots.appendChild(prompt);
+    }
+
+    const summary = document.createElement("div");
+    summary.className = "nabi-scheduler-summary";
+
+    if (bookingState.selectedDate && bookingState.selectedStartTime) {
+      const dateLine = document.createElement("span");
+      dateLine.textContent = formatDateLabel(bookingState.selectedDate);
+
+      const timeLine = document.createElement("span");
+      timeLine.textContent = formatTimeLabel(bookingState.selectedStartTime, timezone);
+
+      const detailLine = document.createElement("span");
+      detailLine.textContent = `${timezone} · ${schedulingConfig.meetingDurationMinutes} min`;
+
+      const confirm = document.createElement("button");
+      confirm.className = "nabi-scheduler-confirm";
+      confirm.type = "button";
+      confirm.textContent = bookingState.bookingStatus === "booking" ? "Booking..." : "Book this time";
+      confirm.disabled = bookingState.bookingStatus === "booking";
+      confirm.addEventListener("click", async () => {
+        const selectedStartTime = bookingState.selectedStartTime;
+
+        if (!selectedStartTime || bookingState.bookingStatus === "booking") {
+          return;
+        }
+
+        const currentFlowVersion = flowVersion;
+        bookingState = {
+          ...bookingState,
+          bookingStatus: "booking",
+        };
+        syncLeadBookingState();
+        const nextScheduler = buildScheduler();
+        nextScheduler.classList.add("is-visible");
+        scheduler.replaceWith(nextScheduler);
+
+        try {
+          const startTime = selectedStartTime;
+          const response = await schedulingService.createBooking({
+            leadId: bookingState.leadId,
+            leadData: getLeadData(),
+            startTime,
+            endTime: getSlotEndTime(startTime),
+            timezone,
+          });
+          if (currentFlowVersion !== flowVersion) {
+            return;
+          }
+
+          bookingState = {
+            ...bookingState,
+            bookingStatus: "booked",
+            selectedStartTime: response.startTime,
+            googleEventId: response.eventId,
+            googleMeetUrl: response.meetUrl,
+          };
+          syncLeadBookingState();
+          clearActiveControls();
+
+          const confirmation = response.attendeeEmailSent
+            ? `You're booked. An invitation has been sent to ${qualificationData.email}.`
+            : `This time is selected in demo mode. The secure Google Calendar booking endpoint will create the real event and send the invite once connected.`;
+          revealNode(buildMessage("nabi", confirmation));
+          revealNode(buildBookingConfirmation(response.startTime, response.endTime, timezone, response.meetUrl));
+        } catch {
+          if (currentFlowVersion !== flowVersion) {
+            return;
+          }
+          bookingState = {
+            ...bookingState,
+            bookingStatus: "failed",
+          };
+          syncLeadBookingState();
+          revealNode(buildMessage("nabi", "That time could not be booked. Pick another one and I'll refresh the available slots."));
+        }
+      });
+
+      summary.append(dateLine, timeLine, detailLine, confirm);
+    }
+
+    scheduler.append(header, calendar, slots, summary);
+    return scheduler;
+  };
+
+  const buildBookingConfirmation = (startTime: string, endTime: string, timezone: string, meetUrl: string | null) => {
+    const card = document.createElement("div");
+    card.className = "nabi-booking-confirmation";
+
+    const date = document.createElement("span");
+    date.textContent = formatDateLabel(toDateKey(new Date(startTime)));
+
+    const time = document.createElement("span");
+    time.textContent = `${formatTimeLabel(startTime, timezone)}-${formatTimeLabel(endTime, timezone)}`;
+
+    const zone = document.createElement("span");
+    zone.textContent = timezone;
+
+    const meet = document.createElement("span");
+    if (meetUrl) {
+      const link = document.createElement("a");
+      link.href = meetUrl;
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      link.textContent = "Google Meet";
+      meet.appendChild(link);
+    } else {
+      meet.textContent = "Google Meet will be attached by the secure booking endpoint.";
+    }
+
+    card.append(date, time, zone, meet);
     return card;
   };
 
   const completeQualification = () => {
     const isComplete = qualificationQuestions.every((question) => qualificationData[question.field].trim().length > 0);
+    const currentFlowVersion = flowVersion;
 
     if (!isComplete) {
       setBusy(false);
       return;
     }
-
-    leadBookingState = {
-      ...leadBookingState,
-      bookingStatus: "ready_to_book",
-    };
-    syncLeadBookingState();
 
     const catalogPhrase =
       qualificationData.catalogSize === "500+"
@@ -1528,13 +1763,54 @@ function setupNabiQuestionSection() {
     const conclusion = `${qualificationData.storeName} looks like a sensible fit to evaluate. For ${qualificationData.businessType.toLowerCase()} teams on ${qualificationData.platform}, ${catalogPhrase} can benefit from a guided Skin ID path focused on ${qualificationData.primaryGoal.toLowerCase()}.`;
 
     revealWithTyping(conclusion, () => {
-      revealNode(buildCalendlyCard());
-      setBusy(false);
-    });
+      revealWithTyping("Perfect. Let's find a time that works.", async () => {
+        if (currentFlowVersion !== flowVersion) {
+          return;
+        }
+        try {
+          bookingState = {
+            ...bookingState,
+            bookingStatus: "selecting",
+            timezone: detectVisitorTimezone(),
+          };
+          syncLeadBookingState();
+          const leadResponse = await schedulingService.createLead(getLeadData());
+          if (currentFlowVersion !== flowVersion) {
+            return;
+          }
+          bookingState = {
+            ...bookingState,
+            leadId: leadResponse.leadId,
+          };
+          const today = new Date();
+          const horizon = new Date(today);
+          horizon.setDate(today.getDate() + schedulingConfig.bookingWindowDays);
+          const availability = await schedulingService.getAvailableSlots({
+            startDate: toDateKey(today),
+            endDate: toDateKey(horizon),
+            timezone: bookingState.timezone ?? detectVisitorTimezone(),
+          });
+          if (currentFlowVersion !== flowVersion) {
+            return;
+          }
+          availableDates = availability.dates;
 
-    // Future Supabase Edge Function boundary: submit qualificationData with
-    // leadBookingState.leadId, leadBookingState.bookingStatus, and
-    // leadBookingState.calendlyEventUri once credentials and table schema exist.
+          if (!availableDates.length) {
+            revealNode(buildMessage("nabi", "I don't see available demo times right now. Try again shortly and I'll check the calendar again."));
+          } else {
+            revealNode(buildScheduler());
+          }
+        } catch {
+          bookingState = {
+            ...bookingState,
+            bookingStatus: "failed",
+          };
+          syncLeadBookingState();
+          revealNode(buildMessage("nabi", "I couldn't load the calendar right now. Try again shortly and I'll check availability again."));
+        }
+        setBusy(false);
+      });
+    });
   };
 
   const renderQualificationQuestion = (index: number) => {
@@ -1549,16 +1825,30 @@ function setupNabiQuestionSection() {
       const controls = document.createElement("div");
       controls.className = "nabi-qualification-controls";
 
-      if (question.inputType === "text") {
+      if (question.inputType === "text" || question.inputType === "email") {
         const form = document.createElement("form");
         form.className = "nabi-qualification-form";
 
         const input = document.createElement("input");
         input.className = "nabi-qualification-input";
-        input.type = "text";
+        input.type = question.inputType === "email" ? "email" : "text";
         input.name = question.field;
-        input.autocomplete = "organization";
-        input.placeholder = "Enter brand or store name";
+        input.autocomplete =
+          question.field === "firstName"
+            ? "given-name"
+            : question.field === "lastName"
+              ? "family-name"
+              : question.field === "email"
+                ? "email"
+                : "organization";
+        input.placeholder =
+          question.field === "firstName"
+            ? "Enter first name"
+            : question.field === "lastName"
+              ? "Enter last name"
+              : question.field === "email"
+                ? "name@company.com"
+                : "Enter brand or store name";
         input.setAttribute("aria-label", question.prompt);
 
         const submit = document.createElement("button");
@@ -1569,7 +1859,14 @@ function setupNabiQuestionSection() {
         const error = document.createElement("p");
         error.className = "nabi-qualification-error";
         error.hidden = true;
-        error.textContent = "Please enter a store or brand name.";
+        error.textContent =
+          question.inputType === "email"
+            ? "Please enter a valid work email."
+            : question.field === "firstName"
+              ? "Please enter your first name."
+              : question.field === "lastName"
+                ? "Please enter your last name."
+                : "Please enter a store or brand name.";
 
         form.append(input, submit, error);
         form.addEventListener("submit", (event) => {
@@ -1577,6 +1874,11 @@ function setupNabiQuestionSection() {
           const value = input.value.trim();
 
           if (!value) {
+            error.hidden = false;
+            return;
+          }
+
+          if (question.inputType === "email" && !isValidEmail(value)) {
             error.hidden = false;
             return;
           }
@@ -1627,25 +1929,30 @@ function setupNabiQuestionSection() {
       return;
     }
 
+    flowVersion += 1;
+    const currentFlowVersion = flowVersion;
     clearTimers();
     clearActiveControls();
     setBusy(true);
     section!.dataset.nabiMode = "qualification";
     promptList!.hidden = true;
     resetButton!.hidden = false;
-    resetButton!.textContent = "Back to topics";
+    resetButton!.textContent = "Back to questions";
     qualificationData = createEmptyQualificationData();
-    leadBookingState = {
-      leadId: null,
-      bookingStatus: "not_started",
-      calendlyEventUri: null,
-    };
+    bookingState = createEmptyBookingState();
+    availableDates = [];
     syncLeadBookingState();
 
     revealNode(buildMessage("user", "See if Skin ID fits your store"));
 
     const startTimer = window.setTimeout(() => {
+      if (currentFlowVersion !== flowVersion) {
+        return;
+      }
       revealWithTyping("Let's see if Skin ID makes sense for your store.", () => {
+        if (currentFlowVersion !== flowVersion) {
+          return;
+        }
         renderQualificationQuestion(0);
       });
     }, 220);
@@ -1693,6 +2000,8 @@ function setupNabiQuestionSection() {
       return;
     }
 
+    flowVersion += 1;
+    const currentFlowVersion = flowVersion;
     clearTimers();
     setBusy(true);
     section.classList.add("has-conversation");
@@ -1705,7 +2014,13 @@ function setupNabiQuestionSection() {
     revealNode(buildMessage("user", item.question));
 
     const typingTimer = window.setTimeout(() => {
+      if (currentFlowVersion !== flowVersion) {
+        return;
+      }
       revealWithTyping(item.answer, () => {
+        if (currentFlowVersion !== flowVersion) {
+          return;
+        }
         if (item.followUps.length > 0 && depth < 3) {
           const followUps = buildFollowUps(item.followUps, depth + 1);
           followUps.classList.add("is-latest");
