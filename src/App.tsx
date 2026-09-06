@@ -2,6 +2,9 @@ import { useEffect } from "react";
 import {
   createEmptyBookingState,
   detectVisitorTimezone,
+  formatBookingTime,
+  getTimezoneOptions,
+  getZonedDateKey,
   schedulingConfig,
   schedulingIntegration,
   schedulingService,
@@ -1366,11 +1369,13 @@ function setupNabiQuestionSection() {
   }
 
   const questionMap = new Map(nabiQuestionItems.map((item) => [item.id, item]));
+  const isDebugTimezoneMode = new URLSearchParams(window.location.search).get("debugTimezone") === "1";
   let activeTimers: number[] = [];
   let isResponding = false;
   let qualificationData = createEmptyQualificationData();
   let bookingState: SchedulingBookingState = createEmptyBookingState();
   let availableDates: AvailabilityDate[] = [];
+  let schedulerMonthKey: string | null = null;
   let flowVersion = 0;
 
   const syncLeadBookingState = () => {
@@ -1393,7 +1398,7 @@ function setupNabiQuestionSection() {
     });
     thread
       .querySelectorAll<HTMLButtonElement>(
-        ".nabi-follow-up-pill, .nabi-qualification-option, .nabi-qualification-submit, .nabi-scheduler-day, .nabi-scheduler-slot, .nabi-scheduler-confirm",
+        ".nabi-follow-up-pill, .nabi-qualification-option, .nabi-qualification-submit, .nabi-scheduler-day, .nabi-scheduler-month-nav, .nabi-scheduler-slot, .nabi-scheduler-confirm, .nabi-timezone-trigger, .nabi-timezone-search, .nabi-timezone-option, .nabi-timezone-close",
       )
       .forEach((button) => {
         button.disabled = busy;
@@ -1418,6 +1423,7 @@ function setupNabiQuestionSection() {
     qualificationData = createEmptyQualificationData();
     bookingState = createEmptyBookingState();
     availableDates = [];
+    schedulerMonthKey = null;
     syncLeadBookingState();
     delete section.dataset.nabiMode;
     section.classList.remove("has-conversation");
@@ -1513,34 +1519,136 @@ function setupNabiQuestionSection() {
 
   const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
-  const toDateKey = (date: Date) =>
-    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const parseDateKey = (dateKey: string) => {
+    const [year = "0", month = "1", day = "1"] = dateKey.split("-");
+    return {
+      year: Number(year),
+      month: Number(month),
+      day: Number(day),
+    };
+  };
 
-  const formatDateLabel = (dateKey: string) =>
-    new Date(`${dateKey}T12:00:00`).toLocaleDateString(undefined, {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    });
+  const getMonthKey = (dateKey: string) => dateKey.slice(0, 7);
 
-  const formatMonthLabel = (dateKey: string) =>
-    new Date(`${dateKey}T12:00:00`).toLocaleDateString(undefined, {
+  const formatMonthLabel = (monthKey: string) =>
+    new Date(`${monthKey}-01T12:00:00`).toLocaleDateString(undefined, {
       month: "long",
       year: "numeric",
     });
 
-  const formatTimeLabel = (isoDate: string, timezone: string) =>
-    new Date(isoDate).toLocaleTimeString(undefined, {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-      timeZone: timezone,
-    });
+  const getDateKeyFromParts = (year: number, month: number, day: number) =>
+    `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+  const getDaysInMonth = (monthKey: string) => {
+    const { year, month } = parseDateKey(`${monthKey}-01`);
+    return new Date(Date.UTC(year, month, 0, 12)).getUTCDate();
+  };
+
+  const getMondayFirstWeekdayIndex = (dateKey: string) => {
+    const { year, month, day } = parseDateKey(dateKey);
+    const weekday = new Date(Date.UTC(year, month - 1, day, 12)).getUTCDay();
+    return (weekday + 6) % 7;
+  };
+
+  const shiftMonthKey = (monthKey: string, offset: number) => {
+    const { year, month } = parseDateKey(`${monthKey}-01`);
+    const date = new Date(Date.UTC(year, month - 1 + offset, 1, 12));
+    return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+  };
+
+  const getProspectDateRange = (timezone: string) => {
+    const now = new Date();
+    const horizon = new Date(now.getTime() + schedulingConfig.bookingWindowDays * 86_400_000);
+    return {
+      startDate: getZonedDateKey(now, timezone),
+      endDate: getZonedDateKey(horizon, timezone),
+    };
+  };
+
+  const getSchedulerMonthKey = (timezone: string) => {
+    const { startDate, endDate } = getProspectDateRange(timezone);
+    const minMonth = getMonthKey(startDate);
+    const maxMonth = getMonthKey(endDate);
+    const requestedMonth = schedulerMonthKey ?? getMonthKey(bookingState.selectedDate ?? availableDates[0]?.date ?? startDate);
+    if (requestedMonth < minMonth) {
+      return minMonth;
+    }
+    if (requestedMonth > maxMonth) {
+      return maxMonth;
+    }
+    return requestedMonth;
+  };
+
+  const buildMonthDateKeys = (monthKey: string) => {
+    const { year, month } = parseDateKey(`${monthKey}-01`);
+    return Array.from({ length: getDaysInMonth(monthKey) }, (_, index) => getDateKeyFromParts(year, month, index + 1));
+  };
 
   const getSlotEndTime = (slotStart: string) =>
     availableDates.flatMap((date) => date.slots).find((slot) => slot.start === slotStart)?.end ?? slotStart;
 
   const getLeadData = (): SchedulingLeadData => ({ ...qualificationData });
+
+  const getSchedulerTimezone = () => bookingState.timezone ?? detectVisitorTimezone();
+
+  const refreshAvailabilityForTimezone = async (timezone: string) => {
+    const { startDate, endDate } = getProspectDateRange(timezone);
+    const availability = await schedulingService.getAvailableSlots({
+      startDate,
+      endDate,
+      timezone,
+    });
+    availableDates = availability.dates;
+    schedulerMonthKey = getSchedulerMonthKey(timezone);
+  };
+
+  const applySchedulerTimezone = async (nextTimezone: string) => {
+    const previousSelectedDate = bookingState.selectedDate;
+    const previousSelectedStartTime = bookingState.selectedStartTime;
+
+    bookingState = {
+      ...bookingState,
+      timezone: nextTimezone,
+    };
+    syncLeadBookingState();
+    await refreshAvailabilityForTimezone(nextTimezone);
+
+    const validSelectedSlot = previousSelectedStartTime
+      ? availableDates
+          .flatMap((date) => date.slots.map((slot) => ({ date: date.date, slot })))
+          .find(({ slot }) => slot.start === previousSelectedStartTime)
+      : null;
+    const validSelectedDate = previousSelectedDate
+      ? availableDates.find((date) => date.date === previousSelectedDate && date.slots.length > 0)
+      : null;
+
+    if (validSelectedSlot) {
+      bookingState = {
+        ...bookingState,
+        selectedDate: validSelectedSlot.date,
+        selectedStartTime: validSelectedSlot.slot.start,
+        timezone: nextTimezone,
+      };
+      schedulerMonthKey = getMonthKey(validSelectedSlot.date);
+    } else if (validSelectedDate) {
+      bookingState = {
+        ...bookingState,
+        selectedDate: validSelectedDate.date,
+        selectedStartTime: null,
+        timezone: nextTimezone,
+      };
+      schedulerMonthKey = getMonthKey(validSelectedDate.date);
+    } else {
+      bookingState = {
+        ...bookingState,
+        selectedDate: null,
+        selectedStartTime: null,
+        timezone: nextTimezone,
+      };
+      schedulerMonthKey = null;
+    }
+    syncLeadBookingState();
+  };
 
   const buildScheduler = () => {
     const scheduler = document.createElement("div");
@@ -1553,37 +1661,258 @@ function setupNabiQuestionSection() {
     const title = document.createElement("strong");
     title.textContent = "Choose a demo time";
 
-    const timezone = bookingState.timezone ?? detectVisitorTimezone();
+    const timezone = getSchedulerTimezone();
+    const timezoneReferenceDate = bookingState.selectedStartTime ? new Date(bookingState.selectedStartTime) : new Date();
+    const timezoneOptions = getTimezoneOptions(timezoneReferenceDate, timezone);
+    const selectedTimezoneOption = timezoneOptions.find((option) => option.timeZone === timezone) ?? timezoneOptions[0];
     const zone = document.createElement("span");
-    zone.textContent = timezone;
+    zone.className = "nabi-scheduler-timezone";
+    const zoneLabel = document.createElement("span");
+    zoneLabel.textContent = "Times shown in your timezone";
+
+    const timezonePicker = document.createElement("div");
+    timezonePicker.className = "nabi-timezone-picker";
+
+    const timezoneTrigger = document.createElement("button");
+    timezoneTrigger.className = "nabi-timezone-trigger";
+    timezoneTrigger.type = "button";
+    timezoneTrigger.setAttribute("aria-label", "Change timezone");
+    timezoneTrigger.setAttribute("aria-expanded", "false");
+    timezoneTrigger.textContent = selectedTimezoneOption?.label ?? timezone;
+
+    const timezonePanel = document.createElement("div");
+    const timezonePanelId = `nabi-timezone-panel-${Math.random().toString(36).slice(2)}`;
+    timezonePanel.className = "nabi-timezone-panel";
+    timezonePanel.id = timezonePanelId;
+    timezonePanel.hidden = true;
+    timezoneTrigger.setAttribute("aria-controls", timezonePanelId);
+
+    const renderTimezoneResults = (timezoneResults: HTMLElement, query: string) => {
+      const normalizedQuery = query.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const matches = timezoneOptions
+        .filter((option) => !normalizedQuery || option.searchText.includes(normalizedQuery));
+
+      timezoneResults.replaceChildren();
+
+      if (!matches.length) {
+        const empty = document.createElement("p");
+        empty.className = "nabi-timezone-empty";
+        empty.textContent = "No matching timezone.";
+        timezoneResults.appendChild(empty);
+        return;
+      }
+
+      matches.forEach((option) => {
+        const optionButton = document.createElement("button");
+        optionButton.className = "nabi-timezone-option";
+        optionButton.type = "button";
+        optionButton.classList.toggle("is-selected", option.timeZone === timezone);
+        optionButton.setAttribute("aria-pressed", String(option.timeZone === timezone));
+        const optionLabel = document.createElement("strong");
+        optionLabel.textContent = option.label;
+        const optionIdentifier = document.createElement("span");
+        optionIdentifier.textContent = option.timeZone;
+        optionButton.append(optionLabel, optionIdentifier);
+        optionButton.addEventListener("click", async () => {
+          closeTimezonePicker();
+          if (option.timeZone === timezone) {
+            return;
+          }
+
+          timezoneTrigger.disabled = true;
+          await applySchedulerTimezone(option.timeZone);
+          const nextScheduler = buildScheduler();
+          nextScheduler.classList.add("is-visible");
+          scheduler.replaceWith(nextScheduler);
+        });
+        timezoneResults.appendChild(optionButton);
+      });
+    };
+
+    const closeTimezonePicker = () => {
+      timezonePanel.hidden = true;
+      timezonePanel.replaceChildren();
+      timezonePicker.classList.remove("is-open");
+      timezoneTrigger.setAttribute("aria-expanded", "false");
+      document.removeEventListener("pointerdown", handleTimezoneOutsidePointerDown, true);
+      document.removeEventListener("keydown", handleTimezoneKeyDown);
+    };
+
+    const openTimezonePicker = () => {
+      const timezoneSearch = document.createElement("input");
+      timezoneSearch.className = "nabi-timezone-search";
+      timezoneSearch.type = "search";
+      timezoneSearch.placeholder = "Search timezone...";
+      timezoneSearch.setAttribute("aria-label", "Search timezone");
+
+      const closeButton = document.createElement("button");
+      closeButton.className = "nabi-timezone-close";
+      closeButton.type = "button";
+      closeButton.textContent = "Close";
+      closeButton.addEventListener("click", closeTimezonePicker);
+
+      const timezoneResults = document.createElement("div");
+      timezoneResults.className = "nabi-timezone-results";
+
+      timezoneSearch.addEventListener("input", () => {
+        renderTimezoneResults(timezoneResults, timezoneSearch.value);
+      });
+
+      timezonePanel.replaceChildren(timezoneSearch, closeButton, timezoneResults);
+      timezonePanel.hidden = false;
+      timezonePicker.classList.add("is-open");
+      timezoneTrigger.setAttribute("aria-expanded", "true");
+      renderTimezoneResults(timezoneResults, "");
+      document.addEventListener("pointerdown", handleTimezoneOutsidePointerDown, true);
+      document.addEventListener("keydown", handleTimezoneKeyDown);
+      timezoneSearch.focus();
+    };
+
+    function handleTimezoneOutsidePointerDown(event: PointerEvent) {
+      if (!timezonePicker.contains(event.target as Node)) {
+        closeTimezonePicker();
+      }
+    }
+
+    function handleTimezoneKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        closeTimezonePicker();
+        timezoneTrigger.focus();
+      }
+    }
+
+    timezoneTrigger.addEventListener("click", () => {
+      if (timezonePanel.hidden) {
+        openTimezonePicker();
+      } else {
+        closeTimezonePicker();
+      }
+    });
+
+    timezonePicker.append(timezoneTrigger, timezonePanel);
+    zone.append(zoneLabel, timezonePicker);
     header.append(title, zone);
 
     const calendar = document.createElement("div");
     calendar.className = "nabi-scheduler-calendar";
 
-    const firstDate = availableDates[0]?.date ?? toDateKey(new Date());
+    const { startDate: bookingStartDate, endDate: bookingEndDate } = getProspectDateRange(timezone);
+    const availabilityByDate = new Map(availableDates.map((date) => [date.date, date]));
+    const activeMonthKey = getSchedulerMonthKey(timezone);
+    schedulerMonthKey = activeMonthKey;
+    const minMonthKey = getMonthKey(bookingStartDate);
+    const maxMonthKey = getMonthKey(bookingEndDate);
+
+    const monthRow = document.createElement("div");
+    monthRow.className = "nabi-scheduler-month-row";
+
+    const previousMonth = document.createElement("button");
+    previousMonth.className = "nabi-scheduler-month-nav";
+    previousMonth.type = "button";
+    previousMonth.textContent = "‹";
+    previousMonth.setAttribute("aria-label", "Previous month");
+    previousMonth.disabled = shiftMonthKey(activeMonthKey, -1) < minMonthKey;
+    previousMonth.addEventListener("click", () => {
+      const nextMonthKey = shiftMonthKey(activeMonthKey, -1);
+      if (nextMonthKey < minMonthKey) {
+        return;
+      }
+      schedulerMonthKey = nextMonthKey;
+      if (!bookingState.selectedDate?.startsWith(nextMonthKey)) {
+        bookingState = {
+          ...bookingState,
+          selectedDate: null,
+          selectedStartTime: null,
+        };
+        syncLeadBookingState();
+      }
+      const nextScheduler = buildScheduler();
+      nextScheduler.classList.add("is-visible");
+      scheduler.replaceWith(nextScheduler);
+    });
+
     const month = document.createElement("div");
     month.className = "nabi-scheduler-month";
-    month.textContent = formatMonthLabel(firstDate);
+    month.textContent = formatMonthLabel(activeMonthKey);
+
+    const nextMonth = document.createElement("button");
+    nextMonth.className = "nabi-scheduler-month-nav";
+    nextMonth.type = "button";
+    nextMonth.textContent = "›";
+    nextMonth.setAttribute("aria-label", "Next month");
+    nextMonth.disabled = shiftMonthKey(activeMonthKey, 1) > maxMonthKey;
+    nextMonth.addEventListener("click", () => {
+      const nextMonthKey = shiftMonthKey(activeMonthKey, 1);
+      if (nextMonthKey > maxMonthKey) {
+        return;
+      }
+      schedulerMonthKey = nextMonthKey;
+      if (!bookingState.selectedDate?.startsWith(nextMonthKey)) {
+        bookingState = {
+          ...bookingState,
+          selectedDate: null,
+          selectedStartTime: null,
+        };
+        syncLeadBookingState();
+      }
+      const nextScheduler = buildScheduler();
+      nextScheduler.classList.add("is-visible");
+      scheduler.replaceWith(nextScheduler);
+    });
+
+    monthRow.append(previousMonth, month, nextMonth);
+
+    const weekdays = document.createElement("div");
+    weekdays.className = "nabi-scheduler-weekdays";
+    ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].forEach((weekday) => {
+      const weekdayLabel = document.createElement("span");
+      weekdayLabel.textContent = weekday;
+      weekdays.appendChild(weekdayLabel);
+    });
 
     const days = document.createElement("div");
     days.className = "nabi-scheduler-days";
 
-    availableDates.forEach((date) => {
+    const leadingBlankCount = getMondayFirstWeekdayIndex(`${activeMonthKey}-01`);
+    for (let index = 0; index < leadingBlankCount; index += 1) {
+      const emptyCell = document.createElement("span");
+      emptyCell.className = "nabi-scheduler-day nabi-scheduler-day-empty";
+      emptyCell.setAttribute("aria-hidden", "true");
+      days.appendChild(emptyCell);
+    }
+
+    buildMonthDateKeys(activeMonthKey).forEach((dateKey) => {
+      const date = availabilityByDate.get(dateKey);
+      const dayNumber = parseDateKey(dateKey).day;
+      const isSelected = bookingState.selectedDate === dateKey;
+      const isPast = dateKey < bookingStartDate;
+      const isOutsideWindow = dateKey < bookingStartDate || dateKey > bookingEndDate;
+      const isSunday = getMondayFirstWeekdayIndex(dateKey) === 6;
+      const isAvailable = Boolean(date?.slots.length) && !isPast && !isOutsideWindow && !isSunday;
       const dayButton = document.createElement("button");
       dayButton.className = "nabi-scheduler-day";
       dayButton.type = "button";
-      dayButton.dataset.date = date.date;
-      dayButton.classList.toggle("is-selected", bookingState.selectedDate === date.date);
-      dayButton.setAttribute("aria-pressed", String(bookingState.selectedDate === date.date));
-      dayButton.innerHTML = `<span>${new Date(`${date.date}T12:00:00`).toLocaleDateString(undefined, {
-        weekday: "short",
-      })}</span><strong>${new Date(`${date.date}T12:00:00`).getDate()}</strong>`;
+      dayButton.dataset.date = dateKey;
+      dayButton.disabled = !isAvailable;
+      dayButton.classList.toggle("is-available", isAvailable);
+      dayButton.classList.toggle("is-selected", isSelected);
+      dayButton.classList.toggle("is-past", isPast);
+      dayButton.classList.toggle("is-sunday", isSunday);
+      dayButton.classList.toggle("is-outside-window", isOutsideWindow);
+      dayButton.setAttribute("aria-pressed", String(isSelected));
+      dayButton.setAttribute(
+        "aria-label",
+        `${dateKey}${isAvailable ? ", available" : ", unavailable"}${isSelected ? ", selected" : ""}`,
+      );
+      dayButton.innerHTML = `<strong>${dayNumber}</strong>`;
       dayButton.addEventListener("click", () => {
+        if (!isAvailable) {
+          return;
+        }
         bookingState = {
           ...bookingState,
           bookingStatus: "selecting",
-          selectedDate: date.date,
+          selectedDate: dateKey,
           selectedStartTime: null,
           timezone,
         };
@@ -1595,7 +1924,7 @@ function setupNabiQuestionSection() {
       days.appendChild(dayButton);
     });
 
-    calendar.append(month, days);
+    calendar.append(monthRow, weekdays, days);
 
     const slots = document.createElement("div");
     slots.className = "nabi-scheduler-slots";
@@ -1610,7 +1939,7 @@ function setupNabiQuestionSection() {
         const slotButton = document.createElement("button");
         slotButton.className = "nabi-scheduler-slot";
         slotButton.type = "button";
-        slotButton.textContent = formatTimeLabel(slot.start, timezone);
+        slotButton.textContent = formatBookingTime(slot.start, timezone).time;
         slotButton.classList.toggle("is-selected", bookingState.selectedStartTime === slot.start);
         slotButton.setAttribute("aria-pressed", String(bookingState.selectedStartTime === slot.start));
         slotButton.addEventListener("click", () => {
@@ -1637,14 +1966,22 @@ function setupNabiQuestionSection() {
     summary.className = "nabi-scheduler-summary";
 
     if (bookingState.selectedDate && bookingState.selectedStartTime) {
+      const selectedStartDisplay = formatBookingTime(bookingState.selectedStartTime, timezone);
       const dateLine = document.createElement("span");
-      dateLine.textContent = formatDateLabel(bookingState.selectedDate);
+      dateLine.textContent = selectedStartDisplay.date;
 
       const timeLine = document.createElement("span");
-      timeLine.textContent = formatTimeLabel(bookingState.selectedStartTime, timezone);
+      timeLine.textContent = selectedStartDisplay.time;
 
       const detailLine = document.createElement("span");
       detailLine.textContent = `${timezone} · ${schedulingConfig.meetingDurationMinutes} min`;
+
+      if (isDebugTimezoneMode) {
+        const debugLine = document.createElement("code");
+        debugLine.className = "nabi-scheduler-debug-line";
+        debugLine.textContent = `UTC slot: ${bookingState.selectedStartTime} | Displayed as: ${selectedStartDisplay.label} | Timezone: ${timezone}`;
+        summary.appendChild(debugLine);
+      }
 
       const confirm = document.createElement("button");
       confirm.className = "nabi-scheduler-confirm";
@@ -1693,26 +2030,38 @@ function setupNabiQuestionSection() {
 
           const confirmation = response.attendeeEmailSent
             ? `You're booked. An invitation has been sent to ${qualificationData.email}.`
-            : `This time is selected in demo mode. The secure Google Calendar booking endpoint will create the real event and send the invite once connected.`;
+            : `This time is selected in development mock mode.`;
           revealNode(buildMessage("nabi", confirmation));
           revealNode(buildBookingConfirmation(response.startTime, response.endTime, timezone, response.meetUrl));
-        } catch {
+        } catch (error) {
           if (currentFlowVersion !== flowVersion) {
             return;
           }
+          const isSlotUnavailable = error instanceof Error && error.message === "SLOT_UNAVAILABLE";
           bookingState = {
             ...bookingState,
-            bookingStatus: "failed",
+            bookingStatus: isSlotUnavailable ? "selecting" : "failed",
+            selectedStartTime: isSlotUnavailable ? null : bookingState.selectedStartTime,
           };
           syncLeadBookingState();
-          revealNode(buildMessage("nabi", "That time could not be booked. Pick another one and I'll refresh the available slots."));
+          thread.querySelectorAll<HTMLElement>(".nabi-scheduler").forEach((node) => {
+            node.remove();
+          });
+          if (isSlotUnavailable) {
+            await refreshAvailabilityForTimezone(timezone);
+            revealNode(buildMessage("nabi", "That time was just taken. Pick another one and I'll refresh the available slots."));
+          } else {
+            revealNode(buildMessage("nabi", "That time could not be booked. Your selected slot is still here, so you can try again."));
+          }
+          revealNode(buildScheduler());
         }
       });
 
       summary.append(dateLine, timeLine, detailLine, confirm);
     }
 
-    scheduler.append(header, calendar, slots, summary);
+    scheduler.appendChild(header);
+    scheduler.append(calendar, slots, summary);
     return scheduler;
   };
 
@@ -1721,10 +2070,10 @@ function setupNabiQuestionSection() {
     card.className = "nabi-booking-confirmation";
 
     const date = document.createElement("span");
-    date.textContent = formatDateLabel(toDateKey(new Date(startTime)));
+    date.textContent = formatBookingTime(startTime, timezone).date;
 
     const time = document.createElement("span");
-    time.textContent = `${formatTimeLabel(startTime, timezone)}-${formatTimeLabel(endTime, timezone)}`;
+    time.textContent = `${formatBookingTime(startTime, timezone).time}-${formatBookingTime(endTime, timezone).time}`;
 
     const zone = document.createElement("span");
     zone.textContent = timezone;
@@ -1745,6 +2094,89 @@ function setupNabiQuestionSection() {
     return card;
   };
 
+  function buildLeadRetryCta() {
+    const wrap = document.createElement("div");
+    wrap.className = "nabi-qualification-cta";
+    wrap.setAttribute("aria-label", "Retry lead capture");
+
+    const note = document.createElement("p");
+    note.textContent = "Your answers are still here. I can try saving the lead again.";
+
+    const button = document.createElement("button");
+    button.className = "nabi-qualification-start";
+    button.type = "button";
+    button.textContent = "Try again";
+    button.addEventListener("click", () => {
+      if (isResponding) {
+        return;
+      }
+
+      clearActiveControls();
+      setBusy(true);
+      loadSchedulerAfterLead(flowVersion);
+    });
+
+    wrap.append(note, button);
+    return wrap;
+  }
+
+  async function loadSchedulerAfterLead(currentFlowVersion: number) {
+    if (currentFlowVersion !== flowVersion) {
+      return;
+    }
+
+    bookingState = {
+      ...bookingState,
+      bookingStatus: "selecting",
+      timezone: detectVisitorTimezone(),
+    };
+    schedulerMonthKey = null;
+    syncLeadBookingState();
+
+    try {
+      const leadResponse = await schedulingService.createLead(getLeadData());
+      bookingState = {
+        ...bookingState,
+        leadId: leadResponse.leadId,
+      };
+    } catch {
+      bookingState = {
+        ...bookingState,
+        bookingStatus: "failed",
+      };
+      syncLeadBookingState();
+      revealNode(buildMessage("nabi", "I couldn't save the lead right now. Check the Supabase connection, then try again."));
+      revealNode(buildLeadRetryCta());
+      setBusy(false);
+      return;
+    }
+
+    if (currentFlowVersion !== flowVersion) {
+      return;
+    }
+
+    try {
+      await refreshAvailabilityForTimezone(bookingState.timezone ?? detectVisitorTimezone());
+      if (currentFlowVersion !== flowVersion) {
+        return;
+      }
+
+      if (!availableDates.length) {
+        revealNode(buildMessage("nabi", "I don't see available demo times right now. Try again shortly and I'll check the calendar again."));
+      } else {
+        revealNode(buildScheduler());
+      }
+    } catch {
+      bookingState = {
+        ...bookingState,
+        bookingStatus: "failed",
+      };
+      syncLeadBookingState();
+      revealNode(buildMessage("nabi", "I couldn't load available times right now. Try again shortly and I'll check the calendar again."));
+    }
+    setBusy(false);
+  }
+
   const completeQualification = () => {
     const isComplete = qualificationQuestions.every((question) => qualificationData[question.field].trim().length > 0);
     const currentFlowVersion = flowVersion;
@@ -1764,51 +2196,7 @@ function setupNabiQuestionSection() {
 
     revealWithTyping(conclusion, () => {
       revealWithTyping("Perfect. Let's find a time that works.", async () => {
-        if (currentFlowVersion !== flowVersion) {
-          return;
-        }
-        try {
-          bookingState = {
-            ...bookingState,
-            bookingStatus: "selecting",
-            timezone: detectVisitorTimezone(),
-          };
-          syncLeadBookingState();
-          const leadResponse = await schedulingService.createLead(getLeadData());
-          if (currentFlowVersion !== flowVersion) {
-            return;
-          }
-          bookingState = {
-            ...bookingState,
-            leadId: leadResponse.leadId,
-          };
-          const today = new Date();
-          const horizon = new Date(today);
-          horizon.setDate(today.getDate() + schedulingConfig.bookingWindowDays);
-          const availability = await schedulingService.getAvailableSlots({
-            startDate: toDateKey(today),
-            endDate: toDateKey(horizon),
-            timezone: bookingState.timezone ?? detectVisitorTimezone(),
-          });
-          if (currentFlowVersion !== flowVersion) {
-            return;
-          }
-          availableDates = availability.dates;
-
-          if (!availableDates.length) {
-            revealNode(buildMessage("nabi", "I don't see available demo times right now. Try again shortly and I'll check the calendar again."));
-          } else {
-            revealNode(buildScheduler());
-          }
-        } catch {
-          bookingState = {
-            ...bookingState,
-            bookingStatus: "failed",
-          };
-          syncLeadBookingState();
-          revealNode(buildMessage("nabi", "I couldn't load the calendar right now. Try again shortly and I'll check availability again."));
-        }
-        setBusy(false);
+        await loadSchedulerAfterLead(currentFlowVersion);
       });
     });
   };

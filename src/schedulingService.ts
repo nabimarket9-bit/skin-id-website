@@ -1,3 +1,13 @@
+import {
+  generateTimezoneAwareMockAvailability,
+  schedulingConfig,
+  type AvailabilityDate,
+} from "./availabilityEngine";
+import { isSupabaseConfigured, supabase } from "./supabaseClient";
+
+export type { AvailabilityDate } from "./availabilityEngine";
+export { getZonedDateKey } from "./availabilityEngine";
+
 export type SchedulingLeadData = {
   storeName: string;
   businessType: string;
@@ -9,7 +19,7 @@ export type SchedulingLeadData = {
   email: string;
 };
 
-export type BookingStatus = "not_started" | "selecting" | "booking" | "booked" | "failed";
+export type BookingStatus = "not_started" | "slot_selected" | "selecting" | "booking" | "booked" | "failed";
 
 export type SchedulingBookingState = {
   leadId: string | null;
@@ -21,23 +31,13 @@ export type SchedulingBookingState = {
   googleMeetUrl: string | null;
 };
 
-export type AvailabilitySlot = {
-  start: string;
-  end: string;
-};
-
-export type AvailabilityDate = {
-  date: string;
-  slots: AvailabilitySlot[];
-};
-
 export type AvailabilityResponse = {
   dates: AvailabilityDate[];
 };
 
 export type CreateLeadResponse = {
-  leadId: string | null;
-  mode: "mock";
+  leadId: string;
+  mode: "supabase";
 };
 
 export type CreateBookingResponse = {
@@ -47,28 +47,31 @@ export type CreateBookingResponse = {
   endTime: string;
   meetUrl: string | null;
   attendeeEmailSent: boolean;
-  mode: "mock";
+  mode: "google" | "mock";
 };
 
-export const schedulingConfig = {
-  meetingDurationMinutes: 30,
-  minimumNoticeHours: 12,
-  bookingWindowDays: 14,
-  bufferBeforeMinutes: 0,
-  bufferAfterMinutes: 15,
-  workingDays: [1, 2, 3, 4, 5],
-  workingHours: {
-    startHour: 9,
-    endHour: 16,
-  },
+export type FormattedBookingTime = {
+  date: string;
+  time: string;
+  timeZoneName: string;
+  label: string;
 };
+
+export type TimezoneOption = {
+  timeZone: string;
+  label: string;
+  searchText: string;
+};
+
+export { schedulingConfig };
 
 export const schedulingIntegration = {
-  mode: "mock",
+  mode: isSupabaseConfigured ? "supabase" : "unconfigured",
   endpoints: {
-    createLead: "/create-lead",
-    getAvailability: "/calendar-availability",
-    createBooking: "/create-booking",
+    createLead: "create-lead",
+    updateBookingSelection: "update-booking-selection",
+    getAvailability: "calendar-availability",
+    createBooking: "create-google-booking",
   },
 } as const;
 
@@ -77,37 +80,129 @@ const wait = (durationMs: number) =>
     window.setTimeout(resolve, durationMs);
   });
 
-const toDateKey = (date: Date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+const availabilityCache = new Map<string, AvailabilityResponse>();
 
-const addMinutes = (date: Date, minutes: number) => new Date(date.getTime() + minutes * 60_000);
-
-const createLocalDateTime = (dateKey: string, hour: number, minute: number) => {
-  const [year = "0", month = "1", day = "1"] = dateKey.split("-");
-  return new Date(Number(year), Number(month) - 1, Number(day), hour, minute, 0, 0);
-};
-
-const createMockSlotsForDate = (dateKey: string): AvailabilitySlot[] => {
-  const slots = [
-    [9, 0],
-    [9, 30],
-    [10, 30],
-    [14, 0],
-    [15, 30],
-  ];
-
-  return slots.map(([hour, minute]) => {
-    const start = createLocalDateTime(dateKey, hour, minute);
-    const end = addMinutes(start, schedulingConfig.meetingDurationMinutes);
-    return {
-      start: start.toISOString(),
-      end: end.toISOString(),
-    };
-  });
-};
+export const toUtcIsoTimestamp = (timestamp: string) => new Date(timestamp).toISOString();
 
 export const detectVisitorTimezone = () =>
   Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+
+const fallbackTimezones = [
+  "Europe/Paris",
+  "Europe/London",
+  "Europe/Berlin",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Toronto",
+  "America/Mexico_City",
+  "America/Sao_Paulo",
+  "Asia/Dubai",
+  "Asia/Kolkata",
+  "Asia/Singapore",
+  "Asia/Tokyo",
+  "Asia/Seoul",
+  "Australia/Sydney",
+  "Pacific/Auckland",
+  "UTC",
+];
+
+const timezoneSearchAliases: Record<string, string> = {
+  "America/New_York": "nyc manhattan brooklyn united states usa",
+  "America/Los_Angeles": "la california united states usa",
+  "America/Chicago": "illinois united states usa",
+  "America/Denver": "colorado united states usa",
+  "America/Toronto": "canada ontario",
+  "America/Mexico_City": "mexico cdmx",
+  "America/Sao_Paulo": "sao paulo sao paolo brazil brasil",
+  "Asia/Kolkata": "mumbai bombay delhi india",
+  "Asia/Dubai": "uae united arab emirates",
+  "Asia/Singapore": "sg",
+  "Asia/Tokyo": "japan",
+  "Asia/Seoul": "korea",
+  "Australia/Sydney": "australia nsw",
+  "Pacific/Auckland": "new zealand nz",
+};
+
+const normalizeSearchText = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+const getTimezoneCityLabel = (timezone: string) => {
+  const city = timezone.split("/").at(-1) ?? timezone;
+  return city.replace(/_/g, " ");
+};
+
+export const getTimezoneName = (timezone: string, referenceDate = new Date()) => {
+  try {
+    const parts = new Intl.DateTimeFormat(undefined, {
+      timeZone: timezone,
+      timeZoneName: "short",
+    }).formatToParts(referenceDate);
+    return parts.find((part) => part.type === "timeZoneName")?.value ?? timezone;
+  } catch {
+    return timezone;
+  }
+};
+
+export const formatTimezoneDisplay = (timezone: string, referenceDate = new Date()) =>
+  `${getTimezoneCityLabel(timezone)} (${getTimezoneName(timezone, referenceDate)})`;
+
+export const getSupportedTimezones = () => {
+  try {
+    const supportedValuesOf = Intl.supportedValuesOf?.bind(Intl);
+    if (supportedValuesOf) {
+      return supportedValuesOf("timeZone");
+    }
+  } catch {
+    // Fall through to the curated fallback list.
+  }
+  return fallbackTimezones;
+};
+
+export const getTimezoneOptions = (referenceDate = new Date(), selectedTimezone = detectVisitorTimezone()): TimezoneOption[] => {
+  const timezones = new Set([...getSupportedTimezones(), selectedTimezone]);
+  return [...timezones]
+    .filter(Boolean)
+    .map((timeZone) => {
+      const label = formatTimezoneDisplay(timeZone, referenceDate);
+      return {
+        timeZone,
+        label,
+        searchText: normalizeSearchText(`${label} ${timeZone.replace(/_/g, " ")} ${timezoneSearchAliases[timeZone] ?? ""}`),
+      };
+    })
+    .sort((left, right) => left.label.localeCompare(right.label));
+};
+
+export const formatBookingTime = (utcTimestamp: string, timezone: string): FormattedBookingTime => {
+  const parts = new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: timezone,
+    timeZoneName: "short",
+  }).formatToParts(new Date(utcTimestamp));
+
+  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  const date = `${getPart("month")} ${getPart("day")}, ${getPart("year")}`;
+  const dayPeriod = getPart("dayPeriod");
+  const time = `${getPart("hour")}:${getPart("minute")}${dayPeriod ? ` ${dayPeriod}` : ""}`;
+  const timeZoneName = getPart("timeZoneName");
+
+  return {
+    date,
+    time,
+    timeZoneName,
+    label: `${date} · ${time}${timeZoneName ? ` ${timeZoneName}` : ""}`,
+  };
+};
 
 export const createEmptyBookingState = (): SchedulingBookingState => ({
   leadId: null,
@@ -121,11 +216,27 @@ export const createEmptyBookingState = (): SchedulingBookingState => ({
 
 export const schedulingService = {
   async createLead(leadData: SchedulingLeadData): Promise<CreateLeadResponse> {
-    void leadData;
-    await wait(320);
+    if (!supabase) {
+      throw new Error("Supabase lead capture is not configured.");
+    }
+
+    const { data, error } = await supabase.functions.invoke<{ leadId: string }>(
+      schedulingIntegration.endpoints.createLead,
+      {
+        body: {
+          ...leadData,
+          timezone: detectVisitorTimezone(),
+        },
+      },
+    );
+
+    if (error || !data?.leadId) {
+      throw new Error("Lead capture failed.");
+    }
+
     return {
-      leadId: null,
-      mode: "mock",
+      leadId: data.leadId,
+      mode: "supabase",
     };
   },
 
@@ -134,29 +245,43 @@ export const schedulingService = {
     endDate: string;
     timezone: string;
   }): Promise<AvailabilityResponse> {
-    void params.endDate;
-    void params.timezone;
-    await wait(360);
-
-    const start = new Date(`${params.startDate}T00:00:00`);
-    const dates: AvailabilityDate[] = [];
-
-    for (let dayOffset = 0; dayOffset < schedulingConfig.bookingWindowDays; dayOffset += 1) {
-      const date = new Date(start);
-      date.setDate(start.getDate() + dayOffset);
-
-      if (!schedulingConfig.workingDays.includes(date.getDay())) {
-        continue;
-      }
-
-      const dateKey = toDateKey(date);
-      dates.push({
-        date: dateKey,
-        slots: createMockSlotsForDate(dateKey),
-      });
+    const cacheKey = `${params.startDate}:${params.endDate}:${params.timezone}`;
+    const cachedAvailability = availabilityCache.get(cacheKey);
+    if (cachedAvailability) {
+      return cachedAvailability;
     }
 
-    return { dates };
+    if (import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_AVAILABILITY === "1") {
+      await wait(360);
+
+      const mockAvailability = { dates: generateTimezoneAwareMockAvailability(params) };
+      availabilityCache.set(cacheKey, mockAvailability);
+      return mockAvailability;
+    }
+
+    if (!supabase) {
+      throw new Error("Calendar availability is not configured.");
+    }
+
+    await wait(360);
+
+    const { data, error } = await supabase.functions.invoke<AvailabilityResponse>(
+      schedulingIntegration.endpoints.getAvailability,
+      {
+        body: {
+          startDate: params.startDate,
+          endDate: params.endDate,
+          prospectTimezone: params.timezone,
+        },
+      },
+    );
+
+    if (error || !data?.dates) {
+      throw new Error("Calendar availability could not be loaded.");
+    }
+
+    availabilityCache.set(cacheKey, data);
+    return data;
   },
 
   async createBooking(params: {
@@ -166,19 +291,83 @@ export const schedulingService = {
     endTime: string;
     timezone: string;
   }): Promise<CreateBookingResponse> {
-    void params.leadId;
     void params.leadData;
-    void params.timezone;
-    await wait(520);
+
+    if (!supabase || !params.leadId) {
+      throw new Error("Google booking is not configured.");
+    }
+
+    if (import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_BOOKING === "1") {
+      const { data, error } = await supabase.functions.invoke<{ success: boolean }>(
+        schedulingIntegration.endpoints.updateBookingSelection,
+        {
+          body: {
+            leadId: params.leadId,
+            startTime: toUtcIsoTimestamp(params.startTime),
+            endTime: toUtcIsoTimestamp(params.endTime),
+            timezone: params.timezone,
+          },
+        },
+      );
+
+      if (error || !data?.success) {
+        throw new Error("Booking selection update failed.");
+      }
+
+      await wait(520);
+
+      return {
+        success: true,
+        eventId: null,
+        startTime: toUtcIsoTimestamp(params.startTime),
+        endTime: toUtcIsoTimestamp(params.endTime),
+        meetUrl: null,
+        attendeeEmailSent: false,
+        mode: "mock",
+      };
+    }
+
+    const { data, error } = await supabase.functions.invoke<
+      | {
+          success: true;
+          eventId: string;
+          startTime: string;
+          endTime: string;
+          meetUrl: string;
+          attendeeEmailSent: boolean;
+        }
+      | {
+          success: false;
+          code?: string;
+        }
+    >(
+      schedulingIntegration.endpoints.createBooking,
+      {
+        body: {
+          leadId: params.leadId,
+          startTime: toUtcIsoTimestamp(params.startTime),
+          endTime: toUtcIsoTimestamp(params.endTime),
+          timezone: params.timezone,
+        },
+      },
+    );
+
+    if (error || !data) {
+      throw new Error("Google booking failed.");
+    }
+
+    if (!data.success) {
+      throw new Error(data.code ?? "Google booking failed.");
+    }
 
     return {
       success: true,
-      eventId: null,
-      startTime: params.startTime,
-      endTime: params.endTime,
-      meetUrl: null,
-      attendeeEmailSent: false,
-      mode: "mock",
+      eventId: data.eventId,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      meetUrl: data.meetUrl,
+      attendeeEmailSent: data.attendeeEmailSent,
+      mode: "google",
     };
   },
 };
