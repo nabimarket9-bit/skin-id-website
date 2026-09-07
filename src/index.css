@@ -1597,7 +1597,15 @@
     .nabi-booking-confirmation{display:grid;gap:8px;width:min(100%,520px);padding:16px;border-radius:22px;border:1px solid rgba(255,231,163,.18);background:linear-gradient(180deg,#11100d,#070707);box-shadow:0 18px 44px rgba(0,0,0,.2)}
     .nabi-booking-confirmation span,.nabi-booking-confirmation a{color:rgba(247,241,232,.86);font-size:13px;line-height:1.45}
     .nabi-booking-confirmation a{color:#ffe7a3;font-weight:850}
-    .nabi-chat-reset{appearance:none;position:relative;z-index:1;margin-top:14px;border:1px solid rgba(255,231,163,.2);border-radius:999px;background:#090a0d;color:rgba(244,221,176,.86);font:inherit;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:10px 13px;cursor:pointer;transition:transform .22s ease,border-color .22s ease,color .22s ease,background .22s ease}
+    .nabi-chat-nav{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px}
+    .nabi-chat-history-nav{display:flex;align-items:center;gap:8px}
+    .nabi-chat-history-nav[hidden]{display:none}
+    .nabi-history-button{appearance:none;display:grid;place-items:center;width:38px;height:38px;padding:0;border:1px solid rgba(255,231,163,.2);border-radius:14px;background:linear-gradient(180deg,#101116,#07080b);color:rgba(255,231,163,.88);font:inherit;font-size:17px;font-weight:900;line-height:1;cursor:pointer;box-shadow:0 10px 26px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.06);transition:transform .22s ease,border-color .22s ease,color .22s ease,background .22s ease,opacity .22s ease,box-shadow .22s ease}
+    .nabi-history-button span{display:block;line-height:1;transform:translateY(-1px)}
+    .nabi-history-button:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(255,231,163,.46);color:#fff2bf;background:linear-gradient(180deg,#15161c,#0b0c10);box-shadow:0 14px 32px rgba(0,0,0,.26),0 0 18px rgba(212,175,55,.08),inset 0 1px 0 rgba(255,255,255,.08)}
+    .nabi-history-button:active:not(:disabled){transform:translateY(0) scale(.97);box-shadow:0 8px 20px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.05)}
+    .nabi-history-button:disabled{opacity:.34;cursor:not-allowed;transform:none;color:rgba(247,241,232,.42);border-color:rgba(255,255,255,.1);background:#07080a;box-shadow:none}
+    .nabi-chat-reset{appearance:none;position:relative;z-index:1;border:1px solid rgba(255,231,163,.2);border-radius:999px;background:#090a0d;color:rgba(244,221,176,.86);font:inherit;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:10px 13px;cursor:pointer;transition:transform .22s ease,border-color .22s ease,color .22s ease,background .22s ease}
     .nabi-chat-reset:hover{transform:translateY(-1px);border-color:rgba(255,231,163,.42);color:#fff2bf;background:#101114}
 
     .deep-system{padding:132px 20px}.depth-grid{display:grid;grid-template-columns:repeat(5,minmax(220px,1fr));gap:16px;overflow-x:auto;padding:44px 0 18px;scrollbar-width:none}.depth-grid::-webkit-scrollbar{display:none}
@@ -3871,6 +3879,9 @@
       .nabi-scheduler-month-nav{width:34px;height:34px;font-size:17px}
       .nabi-scheduler-slot{min-height:44px}
       .nabi-scheduler-confirm{width:100%;min-height:46px}
+      .nabi-chat-nav{display:grid;grid-template-columns:1fr;gap:10px}
+      .nabi-chat-history-nav{justify-content:flex-start;width:100%}
+      .nabi-history-button{width:42px;height:42px;border-radius:15px;font-size:18px}
       .nabi-chat-reset{width:100%;min-height:44px}
     }
 

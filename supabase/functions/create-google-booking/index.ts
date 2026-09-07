@@ -30,6 +30,11 @@ type BusyPeriod = {
   end: string;
 };
 
+type GoogleEventResult = {
+  event: Record<string, unknown>;
+  created: boolean;
+};
+
 type WeekdayKey = "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday";
 
 type TimeRange = readonly [string, string];
@@ -74,6 +79,19 @@ const jsonResponse = (body: Record<string, unknown>, status = 200) =>
 
 const cleanText = (value: unknown, maxLength: number) =>
   typeof value === "string" ? value.trim().replace(/\s+/g, " ").slice(0, maxLength) : "";
+
+const escapeHtml = (value: unknown) =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const displayValue = (value: unknown) => {
+  const cleaned = cleanText(value, 500);
+  return cleaned || "Not provided";
+};
 
 const addMinutes = (date: Date, minutes: number) => new Date(date.getTime() + minutes * 60_000);
 
@@ -195,6 +213,80 @@ const extractMeetUrl = (event: Record<string, unknown>) => {
   return videoEntry?.uri ?? null;
 };
 
+const formatInternalBookingTime = (timestamp: string, timezone: string) =>
+  new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })
+    .format(new Date(timestamp))
+    .replace(" at ", " · ");
+
+const buildInternalBookingEmailHtml = (params: {
+  lead: LeadRow;
+  startIso: string;
+  endIso: string;
+  timezone: string;
+  meetUrl: string;
+}) => {
+  const prospectStart = formatInternalBookingTime(params.startIso, params.timezone);
+  const prospectEnd = new Intl.DateTimeFormat("en-US", {
+    timeZone: params.timezone,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(new Date(params.endIso));
+  const nabiStart = formatInternalBookingTime(params.startIso, schedulingConfig.ownerTimezone);
+  const nabiEnd = new Intl.DateTimeFormat("en-US", {
+    timeZone: schedulingConfig.ownerTimezone,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(new Date(params.endIso));
+
+  const row = (label: string, value: unknown) =>
+    `<tr><td style="padding:6px 0;color:#8f8f8f;font-size:13px;line-height:1.4;">${escapeHtml(label)}</td><td style="padding:6px 0;color:#111111;font-size:13px;line-height:1.4;font-weight:700;text-align:right;">${escapeHtml(displayValue(value))}</td></tr>`;
+
+  return `<!doctype html>
+<html>
+  <body style="margin:0;background:#f4f1ea;padding:28px 14px;font-family:Inter,Arial,sans-serif;color:#111111;">
+    <div style="max-width:620px;margin:0 auto;background:#ffffff;border:1px solid #e4dac6;border-radius:24px;overflow:hidden;box-shadow:0 18px 44px rgba(0,0,0,.08);">
+      <div style="background:#050506;padding:26px 24px;border-bottom:3px solid #d4af37;">
+        <p style="margin:0 0 8px;color:#d4af37;font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;">New Skin ID demo booked</p>
+        <h1 style="margin:0;color:#ffffff;font-size:25px;line-height:1.12;letter-spacing:-.03em;">${escapeHtml(displayValue(params.lead.store_name))}</h1>
+      </div>
+      <div style="padding:24px;">
+        <h2 style="margin:0 0 10px;color:#111111;font-size:12px;letter-spacing:.14em;text-transform:uppercase;">Prospect</h2>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:22px;">${row("First name", params.lead.first_name)}${row("Last name", params.lead.last_name)}${row("Email", params.lead.email)}</table>
+
+        <h2 style="margin:0 0 10px;color:#111111;font-size:12px;letter-spacing:.14em;text-transform:uppercase;">Company</h2>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:22px;">${row("Store", params.lead.store_name)}${row("Business type", params.lead.business_type)}${row("Platform", params.lead.platform)}${row("Catalog size", params.lead.catalog_size)}</table>
+
+        <h2 style="margin:0 0 10px;color:#111111;font-size:12px;letter-spacing:.14em;text-transform:uppercase;">Qualification</h2>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:22px;">${row("Primary goal", params.lead.primary_goal)}</table>
+
+        <div style="border:1px solid #eadfca;border-radius:18px;background:#fbf8f1;padding:18px;margin-bottom:22px;">
+          <h2 style="margin:0 0 14px;color:#111111;font-size:12px;letter-spacing:.14em;text-transform:uppercase;">Meeting</h2>
+          <p style="margin:0 0 12px;color:#6e6557;font-size:12px;font-weight:800;text-transform:uppercase;">Prospect time</p>
+          <p style="margin:0 0 2px;color:#111111;font-size:18px;line-height:1.35;font-weight:800;">${escapeHtml(prospectStart)}-${escapeHtml(prospectEnd)}</p>
+          <p style="margin:0 0 18px;color:#6e6557;font-size:13px;">${escapeHtml(params.timezone)}</p>
+          <p style="margin:0 0 12px;color:#6e6557;font-size:12px;font-weight:800;text-transform:uppercase;">Nabi time</p>
+          <p style="margin:0 0 2px;color:#111111;font-size:18px;line-height:1.35;font-weight:800;">${escapeHtml(nabiStart)}-${escapeHtml(nabiEnd)}</p>
+          <p style="margin:0;color:#6e6557;font-size:13px;">${escapeHtml(schedulingConfig.ownerTimezone)}</p>
+        </div>
+
+        <h2 style="margin:0 0 14px;color:#111111;font-size:12px;letter-spacing:.14em;text-transform:uppercase;">Google Meet</h2>
+        <a href="${escapeHtml(params.meetUrl)}" style="display:inline-block;background:#111111;color:#ffffff;text-decoration:none;border-radius:999px;padding:13px 18px;font-size:13px;font-weight:900;border:1px solid #d4af37;">Join Google Meet</a>
+      </div>
+    </div>
+  </body>
+</html>`;
+};
+
 const getAccessToken = async (credentials: {
   clientId: string;
   clientSecret: string;
@@ -308,7 +400,7 @@ const createGoogleEvent = async (params: {
   lead: LeadRow;
   startIso: string;
   endIso: string;
-}) => {
+}): Promise<GoogleEventResult> => {
   const prospectName = `${params.lead.first_name} ${params.lead.last_name}`.trim();
   const response = await fetch(
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(params.calendarId)}/events?conferenceDataVersion=1&sendUpdates=all`,
@@ -346,11 +438,15 @@ const createGoogleEvent = async (params: {
   );
 
   if (response.status === 409) {
-    return await getExistingGoogleEvent({
+    const event = await getExistingGoogleEvent({
       accessToken: params.accessToken,
       calendarId: params.calendarId,
       eventId: params.eventId,
     });
+    if (!event) {
+      throw new Error("Google event conflict lookup failed");
+    }
+    return { event, created: false };
   }
 
   if (!response.ok) {
@@ -361,7 +457,80 @@ const createGoogleEvent = async (params: {
     throw new Error("Google event creation failed");
   }
 
-  return await response.json();
+  return {
+    event: await response.json(),
+    created: true,
+  };
+};
+
+const sendInternalBookingNotification = async (params: {
+  lead: LeadRow;
+  eventId: string;
+  startIso: string;
+  endIso: string;
+  timezone: string;
+  meetUrl: string;
+}) => {
+  try {
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    const notificationEmail = Deno.env.get("NABI_BOOKING_NOTIFICATION_EMAIL");
+    const emailFrom = Deno.env.get("NABI_EMAIL_FROM");
+    const missingSecrets = [
+      !resendApiKey ? "RESEND_API_KEY" : null,
+      !notificationEmail ? "NABI_BOOKING_NOTIFICATION_EMAIL" : null,
+      !emailFrom ? "NABI_EMAIL_FROM" : null,
+    ].filter(Boolean);
+
+    if (missingSecrets.length > 0) {
+      console.warn("create-google-booking internal notification skipped; missing configuration", {
+        missingSecrets,
+      });
+      return;
+    }
+
+    const subjectStoreName = cleanText(params.lead.store_name, 140);
+    const subject = subjectStoreName ? `New Skin ID demo booked — ${subjectStoreName}` : "New Skin ID demo booked";
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": `skin-id-booking-notification-${params.eventId}`,
+      },
+      body: JSON.stringify({
+        from: emailFrom,
+        to: notificationEmail,
+        subject,
+        html: buildInternalBookingEmailHtml(params),
+      }),
+    });
+
+    if (!response.ok) {
+      let body: Record<string, unknown> | null = null;
+      try {
+        body = await response.json();
+      } catch {
+        body = null;
+      }
+
+      console.error("create-google-booking internal notification failed", {
+        status: response.status,
+        statusText: response.statusText,
+        resendName: body?.name,
+        resendMessage: body?.message,
+      });
+      return;
+    }
+
+    const body = await response.json().catch(() => null);
+    console.log("create-google-booking internal notification sent", {
+      leadId: params.lead.id,
+      eventId: params.eventId,
+      resendEmailId: body?.id,
+    });
+  } catch (error) {
+    console.error("create-google-booking internal notification unexpected error", error);
+  }
 };
 
 const bookingResponse = (params: {
@@ -563,7 +732,7 @@ Deno.serve(async (request) => {
       return jsonResponse({ success: false, code: "SLOT_UNAVAILABLE" });
     }
 
-    const event = await createGoogleEvent({
+    const googleEventResult = await createGoogleEvent({
       accessToken,
       calendarId: googleCalendarId,
       eventId,
@@ -571,6 +740,7 @@ Deno.serve(async (request) => {
       startIso: new Date(startMs).toISOString(),
       endIso: new Date(endMs).toISOString(),
     });
+    const event = googleEventResult.event;
     const meetUrl = extractMeetUrl(event);
 
     if (!event?.id || !meetUrl) {
@@ -586,6 +756,8 @@ Deno.serve(async (request) => {
       eventId: event.id,
     });
 
+    const confirmedEventId = String(event.id);
+
     const { error: updateError } = await supabase
       .from("skin_id_leads")
       .update({
@@ -593,7 +765,7 @@ Deno.serve(async (request) => {
         selected_start_time: new Date(startMs).toISOString(),
         selected_end_time: new Date(endMs).toISOString(),
         timezone,
-        google_calendar_event_id: event.id,
+        google_calendar_event_id: confirmedEventId,
         google_meet_url: meetUrl,
         updated_at: new Date().toISOString(),
       })
@@ -603,18 +775,29 @@ Deno.serve(async (request) => {
       console.error("create-google-booking Supabase update failed after Google event creation", {
         code: updateError.code,
         message: updateError.message,
-        eventId: event.id,
+        eventId: confirmedEventId,
       });
       return jsonResponse({ error: "Booking could not be created" }, 500);
     }
 
     console.log("create-google-booking Supabase update success", {
       leadId,
-      eventId: event.id,
+      eventId: confirmedEventId,
     });
 
+    if (googleEventResult.created) {
+      await sendInternalBookingNotification({
+        lead,
+        eventId: confirmedEventId,
+        startIso: new Date(startMs).toISOString(),
+        endIso: new Date(endMs).toISOString(),
+        timezone,
+        meetUrl,
+      });
+    }
+
     return bookingResponse({
-      eventId: event.id,
+      eventId: confirmedEventId,
       startTime: new Date(startMs).toISOString(),
       endTime: new Date(endMs).toISOString(),
       meetUrl,

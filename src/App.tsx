@@ -45,167 +45,153 @@ type NabiQuestionItem = {
   followUps: NabiQuestionItem[];
 };
 
+type NabiHistoryState = {
+  threadHtml: string;
+};
+
 const nabiQuestionItems: NabiQuestionItem[] = [
   {
+    id: "stack",
+    question: "Will Skin ID work with my current stack?",
+    answer:
+      "Yes. Skin ID can integrate with Shopify, Wix, Squarespace, Magento, BigCommerce, and any custom storefront.",
+    followUps: [
+      {
+        id: "stack-integration",
+        question: "What does integrating Skin ID into my store look like?",
+        answer:
+          "We define how Skin ID should fit into your store, configure it around your requirements, and handle the implementation from there.",
+        followUps: [
+          {
+            id: "stack-integration-design",
+            question: "Can Skin ID match our existing design?",
+            answer:
+              "Yes. Skin ID is fully white-labeled and adapted to your existing brand identity, so it feels like part of your store rather than a third-party tool.",
+            followUps: [],
+          },
+          {
+            id: "stack-integration-placement",
+            question: "Where does Skin ID appear on the store?",
+            answer:
+              "Wherever it makes the most sense in your customer journey. Its placement is defined with you as part of the implementation.",
+            followUps: [],
+          },
+        ],
+      },
+      {
+        id: "stack-catalog",
+        question: "How does Skin ID connect to my catalog?",
+        answer:
+          "We retrieve your product images, exact product names, product IDs and variants, then structure them in a database connected to your stack and Skin ID.",
+        followUps: [
+          {
+            id: "stack-catalog-updates",
+            question: "What happens when we add or remove products?",
+            answer:
+              "Your Skin ID catalog can be updated as your assortment changes, so recommendations stay aligned with what you actually sell.",
+            followUps: [],
+          },
+          {
+            id: "stack-catalog-control",
+            question: "Can we control which products Skin ID uses?",
+            answer:
+              "Yes. You can define which products are included, excluded, or treated differently within Skin ID.",
+            followUps: [],
+          },
+        ],
+      },
+      {
+        id: "stack-team",
+        question: "How do you work with our team during integration?",
+        answer:
+          "We need about one hour with someone from your team to define the direction, requirements and rules. We handle the rest, with an open line throughout implementation for any questions or adjustments.",
+        followUps: [
+          {
+            id: "stack-team-involved",
+            question: "Who should be involved from our side?",
+            answer:
+              "One person who understands your store and can validate the key decisions is usually enough.",
+            followUps: [],
+          },
+          {
+            id: "stack-team-changes",
+            question: "Can we make changes during implementation?",
+            answer:
+              "Yes. You stay in contact with us throughout implementation, so requirements, rules or details can be adjusted before launch.",
+            followUps: [],
+          },
+        ],
+      },
+    ],
+  },
+  {
     id: "conversion",
-    question: "How does Skin ID increase conversion?",
+    question: "Where does Skin ID impact conversion?",
     answer:
-      "Skin ID turns open-ended browsing into a guided routine decision. It helps visitors understand what fits their skin, why each product belongs in the routine, and what to add next, so the purchase feels clearer and less risky.",
+      "Between discovery and purchase. Skin ID narrows the catalog around each customer and turns uncertainty into a clear, personalized path to purchase.",
     followUps: [
       {
-        id: "conversion-lift",
-        question: "Where does the conversion lift usually happen?",
+        id: "conversion-journey",
+        question: "What changes in the customer journey?",
         answer:
-          "The lift usually comes from reducing hesitation before the product detail page and making the routine feel complete at add-to-cart. Customers get a clearer reason to choose, a clearer next step, and fewer abandoned comparisons.",
+          "Instead of asking customers to navigate the catalog and figure out what fits them, Skin ID turns discovery into a guided, personalized path toward the right products.",
         followUps: [
           {
-            id: "conversion-lift-measure",
-            question: "How would we measure that?",
+            id: "conversion-journey-browse",
+            question: "Does Skin ID change how customers browse the store?",
             answer:
-              "We would compare guided-flow visitors against your current product discovery path, then watch recommendation engagement, add-to-cart rate, routine attachment, conversion rate, and average order value.",
+              "It doesn't have to replace browsing. It gives customers a personalized route through the catalog when they want guidance.",
             followUps: [],
           },
           {
-            id: "conversion-lift-funnel",
-            question: "Where should the flow sit in the funnel?",
+            id: "conversion-journey-entry",
+            question: "When should customers enter the Skin ID experience?",
             answer:
-              "The best first placement is usually a high-intent landing page, a routine finder entry point, or a product category path where visitors already need help narrowing options.",
-            followUps: [],
-          },
-        ],
-      },
-      {
-        id: "conversion-test",
-        question: "How quickly can we test this?",
-        answer:
-          "A focused test can start with a limited catalog slice, a small set of product rules, and one primary conversion goal. That keeps the first experiment tight enough to learn quickly without rebuilding the storefront.",
-        followUps: [
-          {
-            id: "conversion-test-scope",
-            question: "What should the first test include?",
-            answer:
-              "A practical first test includes the hero entry point, the guided Skin ID experience, a curated routine output, and tracking for clicks, add-to-cart, conversion, and routine completion.",
+              "That depends on your customer journey. We define the entry points around where Skin ID can be most useful to the buying decision.",
             followUps: [],
           },
         ],
       },
       {
-        id: "conversion-paid",
-        question: "Can this support paid landing pages?",
+        id: "conversion-friction",
+        question: "Where does Skin ID remove friction in the buying journey?",
         answer:
-          "Yes. Skin ID can act as the decision layer after an ad click, turning broad paid traffic into a guided routine path that matches the promise of the campaign.",
+          "At the decision stage. It reduces the uncertainty around what to choose, what fits the customer, and which products make sense together.",
         followUps: [
           {
-            id: "conversion-paid-creative",
-            question: "Can the questions match the campaign angle?",
+            id: "conversion-friction-unknown",
+            question: "How does Skin ID handle customers who don't know what they need?",
             answer:
-              "Yes. The flow can be configured around the audience, claim, or skin concern used in the campaign so the recommendation path feels continuous from ad to store.",
+              "They don't need to know. Skin ID turns what it learns about them into a clear selection of products that fit their needs.",
             followUps: [],
           },
-        ],
-      },
-    ],
-  },
-  {
-    id: "shopify",
-    question: "Will this work with my existing Shopify store?",
-    answer:
-      "Yes. Skin ID is designed to sit on top of an existing commerce stack, including Shopify storefronts. The experience can be configured around your catalog, brand flow, and conversion goals without rebuilding the entire store.",
-    followUps: [
-      {
-        id: "shopify-implementation",
-        question: "What does implementation require?",
-        answer:
-          "Implementation starts with catalog structure, product rules, the desired entry points, and the customer data you want to collect. From there, Skin ID can be configured as an experience layer around your existing store.",
-        followUps: [
           {
-            id: "shopify-implementation-team",
-            question: "Who needs to be involved?",
+            id: "conversion-friction-choices",
+            question: "Does Skin ID reduce the number of choices customers see?",
             answer:
-              "Usually the ecommerce lead, brand or creative owner, and whoever manages the storefront theme or app stack. The first pass does not need a large technical team.",
+              "Yes, when that's useful. Instead of making customers evaluate the entire catalog, Skin ID focuses their attention on the products relevant to them.",
             followUps: [],
           },
         ],
       },
       {
-        id: "shopify-theme",
-        question: "Can it match our current theme?",
+        id: "conversion-aov",
+        question: "Does Skin ID impact AOV too?",
         answer:
-          "Yes. The interface can use your typography, palette, spacing, and product presentation style so the experience feels native to the store instead of bolted on.",
+          "Yes. Skin ID can increase AOV by recommending complete product combinations rather than isolated products, although the opportunity also depends on the size of your catalog.",
         followUps: [
           {
-            id: "shopify-theme-assets",
-            question: "What assets would you need?",
+            id: "conversion-aov-basket",
+            question: "How does Skin ID build a larger basket?",
             answer:
-              "Useful assets include your product imagery, logo, brand colors, typography rules, product benefit language, and any current quiz or routine logic you already trust.",
+              "By showing which products make sense together rather than recommending them in isolation, Skin ID can turn a single-product decision into a broader routine.",
             followUps: [],
           },
-        ],
-      },
-      {
-        id: "shopify-pdp",
-        question: "Does it connect to product pages?",
-        answer:
-          "Yes. Recommendations can link into product pages, routine bundles, or add-to-cart actions depending on how your store is structured.",
-        followUps: [
           {
-            id: "shopify-pdp-bundles",
-            question: "Can it recommend a full routine?",
+            id: "conversion-aov-catalog",
+            question: "Does AOV potential depend on our catalog?",
             answer:
-              "Yes. Skin ID is designed for routine logic, so it can recommend a cleanser, serum, moisturizer, SPF, or any product sequence your catalog supports.",
-            followUps: [],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "products",
-    question: "How does Skin ID choose products?",
-    answer:
-      "Skin ID combines visitor inputs, skin goals, face-driven context, and catalog rules into a recommendation logic layer. The goal is not to surface random bestsellers, but to build a coherent routine that makes sense for the customer and the brand.",
-    followUps: [
-      {
-        id: "products-control",
-        question: "Can the brand control recommendations?",
-        answer:
-          "Yes. Brand rules can define which products are eligible, when products should be excluded, and how routines should be assembled for different customer needs.",
-        followUps: [
-          {
-            id: "products-control-rules",
-            question: "Can we lock certain rules?",
-            answer:
-              "Yes. Rules such as ingredient exclusions, routine order, concern fit, availability, and brand-priority products can be treated as hard constraints.",
-            followUps: [],
-          },
-        ],
-      },
-      {
-        id: "products-ranking",
-        question: "How are routines ranked?",
-        answer:
-          "Routines are ranked around fit, completeness, and business rules. The best recommendation is the one that feels credible to the customer and useful for the brand.",
-        followUps: [
-          {
-            id: "products-ranking-aov",
-            question: "Can ranking support AOV goals?",
-            answer:
-              "Yes. AOV can be included as a ranking signal as long as it does not weaken customer trust or recommend products that do not fit the stated need.",
-            followUps: [],
-          },
-        ],
-      },
-      {
-        id: "products-inventory",
-        question: "Can inventory priorities be included?",
-        answer:
-          "Yes. Inventory, margin, seasonal launches, and hero products can inform the rules, while still keeping the customer-facing recommendation grounded in fit.",
-        followUps: [
-          {
-            id: "products-inventory-out-of-stock",
-            question: "What happens when something is out of stock?",
-            answer:
-              "The routine can route around unavailable products and choose the next best eligible option, so customers do not land on a dead recommendation.",
+              "Yes. The more relevant products your catalog can combine into a customer's routine, the greater the opportunity to influence basket size.",
             followUps: [],
           },
         ],
@@ -214,51 +200,294 @@ const nabiQuestionItems: NabiQuestionItem[] = [
   },
   {
     id: "quiz",
-    question: "Does this replace my current quiz?",
+    question: "Why is Skin ID better than a quiz?",
     answer:
-      "It can, but it does not have to. Skin ID can replace a static quiz when the brand wants a richer decision experience, or it can work alongside an existing quiz as the premium personalization layer for higher-intent traffic.",
+      "A quiz relies on what customers say about their skin. Skin ID combines those answers with visual analysis to match each customer directly with the right products.",
     followUps: [
       {
-        id: "quiz-replace",
-        question: "When should we replace the quiz?",
+        id: "quiz-personalize",
+        question: "What can Skin ID personalize that a quiz can't?",
         answer:
-          "Replacing the quiz makes sense when the current flow feels flat, collects data without improving decisions, or fails to explain why a recommendation is right.",
+          "A quiz personalizes from declared answers. Skin ID goes further by combining customer inputs with skin analysis and your catalog to personalize the actual products and routine.",
         followUps: [
           {
-            id: "quiz-replace-signals",
-            question: "What signals show the quiz is underperforming?",
+            id: "quiz-personalize-different",
+            question: "Is every customer's result different?",
             answer:
-              "Common signals include quiz starts without completions, low product click-through from results, weak add-to-cart from recommendations, and customers still needing support to choose.",
+              "It can be. Results are built from each customer's inputs, skin analysis and the products that fit that specific profile.",
+            followUps: [],
+          },
+          {
+            id: "quiz-personalize-routine",
+            question: "Does Skin ID personalize the entire routine?",
+            answer:
+              "Yes. Skin ID can personalize both the individual products and how they fit together into a complete routine.",
             followUps: [],
           },
         ],
       },
       {
-        id: "quiz-compare",
-        question: "Can we compare both flows?",
+        id: "quiz-recommend",
+        question: "How does Skin ID decide which products to recommend?",
         answer:
-          "Yes. A comparison can run the existing quiz beside Skin ID and measure completion, recommendation engagement, add-to-cart, conversion, and routine value.",
+          "The recommendation logic is built with our skincare expert, who defines how products, skin profiles, concerns and routine roles should match.",
         followUps: [
           {
-            id: "quiz-compare-duration",
-            question: "How long should the comparison run?",
+            id: "quiz-recommend-rules",
+            question: "Can we define our own recommendation rules?",
             answer:
-              "The right window depends on traffic, but the goal is to reach enough guided sessions to compare behavior with confidence instead of relying on a few anecdotes.",
+              "Yes. Your own product requirements and business rules can be incorporated into the recommendation logic during implementation.",
+            followUps: [],
+          },
+          {
+            id: "quiz-recommend-similar",
+            question: "How does Skin ID handle products that serve similar purposes?",
+            answer:
+              "The logic determines which product fits the customer and its role in the routine rather than treating similar products as interchangeable.",
             followUps: [],
           },
         ],
       },
       {
-        id: "quiz-returning",
-        question: "What changes for returning customers?",
+        id: "quiz-alongside",
+        question: "Can Skin ID work alongside an existing quiz?",
         answer:
-          "Returning customers can move through a shorter path, using prior answers or past routine context where available so the experience feels smarter over time.",
+          "No. Skin ID is designed to replace that part of the journey rather than add another layer on top of an existing quiz.",
         followUps: [
           {
-            id: "quiz-returning-retention",
-            question: "Can it support replenishment?",
+            id: "quiz-alongside-current",
+            question: "What happens to our current quiz?",
             answer:
-              "Yes. The same logic can help returning customers replenish, adjust a routine, or discover the next product instead of starting from scratch.",
+              "Skin ID takes over that part of the customer journey, so customers don't have to go through two overlapping experiences.",
+            followUps: [],
+          },
+          {
+            id: "quiz-alongside-reuse",
+            question: "Can we reuse anything from our existing quiz?",
+            answer:
+              "Yes. Relevant questions and logic can be considered when we design your Skin ID flow, rather than starting blindly from scratch.",
+            followUps: [],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "pricing",
+    question: "Why isn't pricing listed?",
+    answer:
+      "Because no two deployments are the same. Skin ID is built around each company's catalog, needs and integration, so a fixed price wouldn't reflect what is actually being deployed.",
+    followUps: [
+      {
+        id: "pricing-store",
+        question: "How do I get pricing for my store?",
+        answer:
+          "We first need a call to understand your needs and the actual work required for your deployment. From there, we can price it accurately.",
+        followUps: [
+          {
+            id: "pricing-store-info",
+            question: "What information do you need before the call?",
+            answer:
+              "Just enough context about your store, catalog and what you want Skin ID to accomplish. We can cover the rest during the call.",
+            followUps: [],
+          },
+          {
+            id: "pricing-store-proposal",
+            question: "Do we get a custom proposal after the call?",
+            answer:
+              "Yes. Once we understand the deployment, we can provide a proposal built around the actual scope of your Skin ID.",
+            followUps: [],
+          },
+        ],
+      },
+      {
+        id: "pricing-setup",
+        question: "What does the setup include?",
+        answer:
+          "Everything required to launch Skin ID: product integration, configuration, white-labeling, implementation and support throughout the process.",
+        followUps: [
+          {
+            id: "pricing-setup-white-label",
+            question: "Is white-labeling included?",
+            answer:
+              "Yes. White-labeling is part of the setup, so Skin ID is delivered as an experience consistent with your brand.",
+            followUps: [],
+          },
+          {
+            id: "pricing-setup-costs",
+            question: "Are there additional implementation costs?",
+            answer:
+              "The agreed setup covers the implementation scope defined with you. If the scope changes afterward, we discuss it with you before any additional work.",
+            followUps: [],
+          },
+        ],
+      },
+      {
+        id: "pricing-self-service",
+        question: "Why isn't Skin ID self-service?",
+        answer:
+          "Because self-service would limit the level of personalization we can build into every part of Skin ID. When even a 1% conversion difference matters, we don't believe in leaving those details to a generic setup.",
+        followUps: [
+          {
+            id: "pricing-self-service-custom",
+            question: "What does the custom setup let you personalize?",
+            answer:
+              "The experience, flow, recommendation logic, catalog rules, branding and how Skin ID fits into your customer journey.",
+            followUps: [],
+          },
+          {
+            id: "pricing-self-service-standard",
+            question: "What would we lose with a standard setup?",
+            answer:
+              "The details that make Skin ID specific to your store. A standard setup would force different catalogs, customers and buying journeys through the same experience.",
+            followUps: [],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "implementation",
+    question: "How long does implementation take?",
+    answer:
+      "It mainly depends on the size of your catalog and the flow you choose. Once those are defined, we can give you a clear implementation timeline.",
+    followUps: [
+      {
+        id: "implementation-process",
+        question: "What happens during implementation?",
+        answer:
+          "We configure the Skin ID logic, integrate your catalog, build the agreed flow, adapt the experience to your brand, then prepare everything for launch.",
+        followUps: [
+          {
+            id: "implementation-process-review",
+            question: "Do we get to review Skin ID before launch?",
+            answer:
+              "Yes. You review the experience before it goes live and can flag anything that needs to be adjusted.",
+            followUps: [],
+          },
+          {
+            id: "implementation-process-ready",
+            question: "How do you make sure everything is ready to go live?",
+            answer:
+              "We validate the flow, catalog, recommendation logic and store integration before launch.",
+            followUps: [],
+          },
+        ],
+      },
+      {
+        id: "implementation-team",
+        question: "What do you need from our team?",
+        answer:
+          "Just one meeting after the deal to define the requirements and direction. From there, we handle the implementation.",
+        followUps: [
+          {
+            id: "implementation-team-attend",
+            question: "Who needs to attend that meeting?",
+            answer:
+              "Someone who can define the store's requirements and make or validate decisions around the Skin ID experience.",
+            followUps: [],
+          },
+          {
+            id: "implementation-team-decisions",
+            question: "What needs to be decided during the meeting?",
+            answer:
+              "The direction, flow, requirements, catalog rules and any store-specific expectations we need to build around.",
+            followUps: [],
+          },
+        ],
+      },
+      {
+        id: "implementation-flow",
+        question: "What do you mean by “flow”?",
+        answer:
+          "The flow defines how the Skin ID experience works: how many questions are asked, which questions appear, when they appear, and how the journey progresses.",
+        followUps: [
+          {
+            id: "implementation-flow-different",
+            question: "Can the flow be different for every store?",
+            answer:
+              "Yes. The flow is designed around the store, its catalog and what it needs to learn from the customer.",
+            followUps: [],
+          },
+          {
+            id: "implementation-flow-branches",
+            question: "Can different answers lead to different paths?",
+            answer:
+              "Yes. The journey can branch based on customer answers instead of forcing everyone through the exact same sequence.",
+            followUps: [],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "difference",
+    question: "How is Skin ID different from what's already out there?",
+    answer:
+      "Skin ID isn't another skin analysis or recommendation tool. It's a personalized commerce layer built around your catalog, turning analysis into a complete path from product discovery to purchase.",
+    followUps: [
+      {
+        id: "difference-commerce-layer",
+        question: "What do you mean by a “commerce layer”?",
+        answer:
+          "Skin ID sits between discovery and purchase, using what it learns about each customer to determine how your catalog should be presented to them.",
+        followUps: [
+          {
+            id: "difference-commerce-layer-widget",
+            question: "How does that differ from a recommendation widget?",
+            answer:
+              "A widget gives recommendations at one point in the journey. Skin ID connects discovery, personalization and product selection into a broader path to purchase.",
+            followUps: [],
+          },
+          {
+            id: "difference-commerce-layer-storefront",
+            question: "Does Skin ID become part of the existing storefront?",
+            answer:
+              "Yes. It's integrated and white-labeled around the existing store rather than presented as a separate external experience.",
+            followUps: [],
+          },
+        ],
+      },
+      {
+        id: "difference-logic",
+        question: "How is the recommendation logic different?",
+        answer:
+          "The logic is built specifically around your catalog, with skincare expertise defining how products should match different profiles, concerns and routines. It's not the same recommendation model applied to every store.",
+        followUps: [
+          {
+            id: "difference-logic-catalog",
+            question: "Is the logic built specifically for our catalog?",
+            answer:
+              "Yes. The logic is configured around the products you actually sell rather than applying the same recommendation structure to every catalog.",
+            followUps: [],
+          },
+          {
+            id: "difference-logic-commercial",
+            question: "Can commercial rules influence recommendations?",
+            answer:
+              "Yes. Store-specific commercial rules can be incorporated, as long as they remain compatible with the relevance of the recommendation.",
+            followUps: [],
+          },
+        ],
+      },
+      {
+        id: "difference-replaces",
+        question: "What does Skin ID replace in the customer journey?",
+        answer:
+          "It replaces the fragmented steps customers use to figure out what to buy: quizzes, manual product discovery, comparison and routine building, bringing them into one personalized journey.",
+        followUps: [
+          {
+            id: "difference-replaces-discovery",
+            question: "Does Skin ID replace product discovery entirely?",
+            answer:
+              "Not necessarily. Customers can still browse normally, while Skin ID gives those who need guidance a personalized route through the catalog.",
+            followUps: [],
+          },
+          {
+            id: "difference-replaces-routine",
+            question: "Does it replace routine building too?",
+            answer:
+              "Yes. When the store requires it, Skin ID can build the product selection and the routine around the customer in the same experience.",
             followUps: [],
           },
         ],
@@ -1360,18 +1589,39 @@ function setupNabiQuestionSection() {
   const promptList = section?.querySelector<HTMLElement>(".nabi-prompt-list");
   const emptyState = section?.querySelector<HTMLElement>(".nabi-empty-state");
   const resetButton = section?.querySelector<HTMLButtonElement>(".nabi-chat-reset");
+  const historyNav = section?.querySelector<HTMLElement>(".nabi-chat-history-nav");
+  const historyBackButton = section?.querySelector<HTMLButtonElement>(".nabi-history-back");
+  const historyForwardButton = section?.querySelector<HTMLButtonElement>(".nabi-history-forward");
   const promptButtons = section
     ? Array.from(section.querySelectorAll<HTMLButtonElement>("[data-nabi-question]"))
     : [];
 
-  if (!section || !thread || !promptList || !emptyState || !resetButton || !promptButtons.length) {
+  if (
+    !section ||
+    !thread ||
+    !promptList ||
+    !emptyState ||
+    !resetButton ||
+    !historyNav ||
+    !historyBackButton ||
+    !historyForwardButton ||
+    !promptButtons.length
+  ) {
     return () => undefined;
   }
 
   const questionMap = new Map(nabiQuestionItems.map((item) => [item.id, item]));
+  const allQuestionMap = new Map<string, NabiQuestionItem>();
+  const registerQuestion = (item: NabiQuestionItem) => {
+    allQuestionMap.set(item.id, item);
+    item.followUps.forEach(registerQuestion);
+  };
+  nabiQuestionItems.forEach(registerQuestion);
   const isDebugTimezoneMode = new URLSearchParams(window.location.search).get("debugTimezone") === "1";
   let activeTimers: number[] = [];
   let isResponding = false;
+  let qnaHistory: NabiHistoryState[] = [];
+  let qnaHistoryIndex = -1;
   let qualificationData = createEmptyQualificationData();
   let bookingState: SchedulingBookingState = createEmptyBookingState();
   let availableDates: AvailabilityDate[] = [];
@@ -1396,6 +1646,8 @@ function setupNabiQuestionSection() {
     promptButtons.forEach((button) => {
       button.disabled = busy;
     });
+    historyBackButton.disabled = busy || qnaHistoryIndex <= 0;
+    historyForwardButton.disabled = busy || qnaHistoryIndex < 0 || qnaHistoryIndex >= qnaHistory.length - 1;
     thread
       .querySelectorAll<HTMLButtonElement>(
         ".nabi-follow-up-pill, .nabi-qualification-option, .nabi-qualification-submit, .nabi-scheduler-day, .nabi-scheduler-month-nav, .nabi-scheduler-slot, .nabi-scheduler-confirm, .nabi-timezone-trigger, .nabi-timezone-search, .nabi-timezone-option, .nabi-timezone-close",
@@ -1404,6 +1656,13 @@ function setupNabiQuestionSection() {
         button.disabled = busy;
       });
     section.dataset.responding = String(busy);
+  };
+
+  const updateHistoryControls = () => {
+    const hasQnaHistory = qnaHistory.length > 0 && section.dataset.nabiMode === "qa";
+    historyNav.hidden = !hasQnaHistory;
+    historyBackButton.disabled = isResponding || qnaHistoryIndex <= 0;
+    historyForwardButton.disabled = isResponding || qnaHistoryIndex < 0 || qnaHistoryIndex >= qnaHistory.length - 1;
   };
 
   const removeGeneratedConversation = () => {
@@ -1420,6 +1679,8 @@ function setupNabiQuestionSection() {
     flowVersion += 1;
     clearTimers();
     removeGeneratedConversation();
+    qnaHistory = [];
+    qnaHistoryIndex = -1;
     qualificationData = createEmptyQualificationData();
     bookingState = createEmptyBookingState();
     availableDates = [];
@@ -1431,6 +1692,7 @@ function setupNabiQuestionSection() {
     resetButton.hidden = true;
     resetButton.textContent = "Back to topics";
     setBusy(false);
+    updateHistoryControls();
   };
 
   const buildMessage = (role: "user" | "nabi", text: string) => {
@@ -1496,6 +1758,58 @@ function setupNabiQuestionSection() {
       .forEach((node) => {
         node.remove();
       });
+  };
+
+  const bindRestoredQnaControls = () => {
+    thread.querySelectorAll<HTMLButtonElement>(".nabi-follow-up-pill[data-nabi-follow-up-id]").forEach((pill) => {
+      const item = allQuestionMap.get(pill.dataset.nabiFollowUpId ?? "");
+      const depth = Number(pill.dataset.nabiDepth ?? "2");
+      if (!item) {
+        return;
+      }
+      pill.addEventListener("click", () => askQuestion(item, depth));
+    });
+
+    thread.querySelectorAll<HTMLButtonElement>(".nabi-qualification-start").forEach((button) => {
+      button.addEventListener("click", startQualification);
+    });
+  };
+
+  const captureQnaState = (): NabiHistoryState => {
+    const clone = thread.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll<HTMLElement>(".nabi-message, .nabi-follow-ups, .nabi-qualification-cta").forEach((node) => {
+      node.classList.add("is-visible");
+    });
+    return {
+      threadHtml: clone.innerHTML,
+    };
+  };
+
+  const pushQnaHistoryState = () => {
+    const nextState = captureQnaState();
+    qnaHistory = qnaHistory.slice(0, qnaHistoryIndex + 1);
+    qnaHistory.push(nextState);
+    qnaHistoryIndex = qnaHistory.length - 1;
+    updateHistoryControls();
+  };
+
+  const restoreQnaHistoryState = (nextIndex: number) => {
+    if (isResponding || nextIndex < 0 || nextIndex >= qnaHistory.length) {
+      return;
+    }
+
+    flowVersion += 1;
+    clearTimers();
+    qnaHistoryIndex = nextIndex;
+    thread.innerHTML = qnaHistory[qnaHistoryIndex].threadHtml;
+    bindRestoredQnaControls();
+    section.classList.add("has-conversation");
+    section.dataset.nabiMode = "qa";
+    promptList.hidden = true;
+    resetButton.hidden = false;
+    resetButton.textContent = "Back to topics";
+    setBusy(false);
+    updateHistoryControls();
   };
 
   const revealWithTyping = (text: string, afterReveal?: () => void) => {
@@ -2326,6 +2640,7 @@ function setupNabiQuestionSection() {
     promptList!.hidden = true;
     resetButton!.hidden = false;
     resetButton!.textContent = "Back to questions";
+    updateHistoryControls();
     qualificationData = createEmptyQualificationData();
     bookingState = createEmptyBookingState();
     availableDates = [];
@@ -2376,6 +2691,8 @@ function setupNabiQuestionSection() {
       pill.className = "nabi-follow-up-pill";
       pill.type = "button";
       pill.textContent = followUp.question;
+      pill.dataset.nabiFollowUpId = followUp.id;
+      pill.dataset.nabiDepth = String(depth);
       pill.addEventListener("click", () => askQuestion(followUp, depth));
       wrap.appendChild(pill);
     });
@@ -2416,6 +2733,7 @@ function setupNabiQuestionSection() {
         } else {
           revealNode(buildQualificationCta());
         }
+        pushQnaHistoryState();
         setBusy(false);
       });
     }, 220);
@@ -2436,13 +2754,20 @@ function setupNabiQuestionSection() {
     return () => button.removeEventListener("click", onClick);
   });
 
+  const onHistoryBackClick = () => restoreQnaHistoryState(qnaHistoryIndex - 1);
+  const onHistoryForwardClick = () => restoreQnaHistoryState(qnaHistoryIndex + 1);
+
   resetButton.addEventListener("click", resetConversation);
+  historyBackButton.addEventListener("click", onHistoryBackClick);
+  historyForwardButton.addEventListener("click", onHistoryForwardClick);
   resetConversation();
 
   return () => {
     clearTimers();
     setBusy(false);
     resetButton.removeEventListener("click", resetConversation);
+    historyBackButton.removeEventListener("click", onHistoryBackClick);
+    historyForwardButton.removeEventListener("click", onHistoryForwardClick);
     promptCleanups.forEach((cleanup) => cleanup());
   };
 }
@@ -6515,12 +6840,20 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
         </div>
 
         <div class="nabi-prompt-list" aria-label="Initial questions">
-          <button class="nabi-prompt" type="button" data-nabi-question="conversion">How does Skin ID increase conversion?</button>
-          <button class="nabi-prompt" type="button" data-nabi-question="shopify">Will this work with my existing Shopify store?</button>
-          <button class="nabi-prompt" type="button" data-nabi-question="products">How does Skin ID choose products?</button>
-          <button class="nabi-prompt" type="button" data-nabi-question="quiz">Does this replace my current quiz?</button>
+          <button class="nabi-prompt" type="button" data-nabi-question="stack">Will Skin ID work with my current stack?</button>
+          <button class="nabi-prompt" type="button" data-nabi-question="conversion">Where does Skin ID impact conversion?</button>
+          <button class="nabi-prompt" type="button" data-nabi-question="quiz">Why is Skin ID better than a quiz?</button>
+          <button class="nabi-prompt" type="button" data-nabi-question="pricing">Why isn't pricing listed?</button>
+          <button class="nabi-prompt" type="button" data-nabi-question="implementation">How long does implementation take?</button>
+          <button class="nabi-prompt" type="button" data-nabi-question="difference">How is Skin ID different from what's already out there?</button>
         </div>
-        <button class="nabi-chat-reset" type="button" hidden>Back to topics</button>
+        <div class="nabi-chat-nav">
+          <div class="nabi-chat-history-nav" hidden aria-label="Conversation history controls">
+            <button class="nabi-history-button nabi-history-back" type="button" aria-label="Back" title="Back" disabled><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
+            <button class="nabi-history-button nabi-history-forward" type="button" aria-label="Forward" title="Forward" disabled><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
+          </div>
+          <button class="nabi-chat-reset" type="button" hidden>Back to topics</button>
+        </div>
       </div>
     </div>
   </section>
