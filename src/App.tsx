@@ -1583,11 +1583,13 @@ function setupBusinessImpactSection() {
   };
 }
 
-function setupNabiQuestionSection() {
-  const section = document.querySelector<HTMLElement>(".nabi-qa");
+function setupNabiQuestionExperience(section: HTMLElement) {
   const thread = section?.querySelector<HTMLElement>(".nabi-chat-thread");
   const promptList = section?.querySelector<HTMLElement>(".nabi-prompt-list");
   const emptyState = section?.querySelector<HTMLElement>(".nabi-empty-state");
+  const entryChoices = section?.querySelector<HTMLElement>(".nabi-widget-entry");
+  const askEntryButton = section?.querySelector<HTMLButtonElement>(".nabi-widget-entry-ask");
+  const bookEntryButton = section?.querySelector<HTMLButtonElement>(".nabi-widget-entry-book");
   const resetButton = section?.querySelector<HTMLButtonElement>(".nabi-chat-reset");
   const historyNav = section?.querySelector<HTMLElement>(".nabi-chat-history-nav");
   const historyBackButton = section?.querySelector<HTMLButtonElement>(".nabi-history-back");
@@ -1646,11 +1648,17 @@ function setupNabiQuestionSection() {
     promptButtons.forEach((button) => {
       button.disabled = busy;
     });
+    if (askEntryButton) {
+      askEntryButton.disabled = busy;
+    }
+    if (bookEntryButton) {
+      bookEntryButton.disabled = busy;
+    }
     historyBackButton.disabled = busy || qnaHistoryIndex <= 0;
     historyForwardButton.disabled = busy || qnaHistoryIndex < 0 || qnaHistoryIndex >= qnaHistory.length - 1;
     thread
       .querySelectorAll<HTMLButtonElement>(
-        ".nabi-follow-up-pill, .nabi-qualification-option, .nabi-qualification-submit, .nabi-scheduler-day, .nabi-scheduler-month-nav, .nabi-scheduler-slot, .nabi-scheduler-confirm, .nabi-timezone-trigger, .nabi-timezone-search, .nabi-timezone-option, .nabi-timezone-close",
+    ".nabi-follow-up-pill, .nabi-qualification-option, .nabi-qualification-submit, .nabi-scheduler-day, .nabi-scheduler-month-nav, .nabi-scheduler-slot, .nabi-scheduler-confirm, .nabi-timezone-trigger, .nabi-timezone-search, .nabi-timezone-option, .nabi-timezone-close",
       )
       .forEach((button) => {
         button.disabled = busy;
@@ -1675,7 +1683,7 @@ function setupNabiQuestionSection() {
       });
   };
 
-  const resetConversation = () => {
+  const resetConversation = (showEntry = false) => {
     flowVersion += 1;
     clearTimers();
     removeGeneratedConversation();
@@ -1688,7 +1696,10 @@ function setupNabiQuestionSection() {
     syncLeadBookingState();
     delete section.dataset.nabiMode;
     section.classList.remove("has-conversation");
-    promptList.hidden = false;
+    promptList.hidden = showEntry;
+    if (entryChoices) {
+      entryChoices.hidden = !showEntry;
+    }
     resetButton.hidden = true;
     resetButton.textContent = "Back to topics";
     setBusy(false);
@@ -2638,6 +2649,9 @@ function setupNabiQuestionSection() {
     setBusy(true);
     section!.dataset.nabiMode = "qualification";
     promptList!.hidden = true;
+    if (entryChoices) {
+      entryChoices.hidden = true;
+    }
     resetButton!.hidden = false;
     resetButton!.textContent = "Back to questions";
     updateHistoryControls();
@@ -2712,6 +2726,9 @@ function setupNabiQuestionSection() {
     section.classList.add("has-conversation");
     section.dataset.nabiMode = "qa";
     promptList.hidden = true;
+    if (entryChoices) {
+      entryChoices.hidden = true;
+    }
     resetButton.hidden = false;
     resetButton.textContent = "Back to topics";
     clearActiveControls();
@@ -2756,19 +2773,110 @@ function setupNabiQuestionSection() {
 
   const onHistoryBackClick = () => restoreQnaHistoryState(qnaHistoryIndex - 1);
   const onHistoryForwardClick = () => restoreQnaHistoryState(qnaHistoryIndex + 1);
+  const onResetClick = () => resetConversation(false);
+  const onAskEntryClick = () => resetConversation(false);
+  const onBookEntryClick = () => startQualification();
 
-  resetButton.addEventListener("click", resetConversation);
+  resetButton.addEventListener("click", onResetClick);
   historyBackButton.addEventListener("click", onHistoryBackClick);
   historyForwardButton.addEventListener("click", onHistoryForwardClick);
-  resetConversation();
+  askEntryButton?.addEventListener("click", onAskEntryClick);
+  bookEntryButton?.addEventListener("click", onBookEntryClick);
+  resetConversation(Boolean(entryChoices));
 
   return () => {
     clearTimers();
     setBusy(false);
-    resetButton.removeEventListener("click", resetConversation);
+    resetButton.removeEventListener("click", onResetClick);
     historyBackButton.removeEventListener("click", onHistoryBackClick);
     historyForwardButton.removeEventListener("click", onHistoryForwardClick);
+    askEntryButton?.removeEventListener("click", onAskEntryClick);
+    bookEntryButton?.removeEventListener("click", onBookEntryClick);
     promptCleanups.forEach((cleanup) => cleanup());
+  };
+}
+
+function setupNabiQuestionSection() {
+  const cleanups = Array.from(document.querySelectorAll<HTMLElement>(".nabi-qa")).map((section) =>
+    setupNabiQuestionExperience(section),
+  );
+
+  return () => {
+    cleanups.forEach((cleanup) => cleanup());
+  };
+}
+
+function setupNabiFloatingLauncher() {
+  const widget = document.querySelector<HTMLElement>(".nabi-floating-assistant");
+  const launcher = widget?.querySelector<HTMLButtonElement>(".nabi-floating-launcher");
+  const panel = widget?.querySelector<HTMLElement>(".nabi-floating-panel");
+  const closeButton = widget?.querySelector<HTMLButtonElement>(".nabi-floating-close");
+  const logoCanvas = widget?.querySelector<HTMLCanvasElement>(".nabi-floating-logo-canvas");
+
+  if (!widget || !launcher || !panel || !closeButton) {
+    return () => undefined;
+  }
+
+  let disposed = false;
+  let cleanupFloatingLogoModel: () => void = () => undefined;
+
+  const setOpen = (open: boolean) => {
+    widget.dataset.open = String(open);
+    launcher.setAttribute("aria-expanded", String(open));
+    panel.setAttribute("aria-hidden", String(!open));
+    if (open) {
+      panel.removeAttribute("inert");
+    } else {
+      panel.setAttribute("inert", "");
+    }
+    panel.hidden = false;
+  };
+
+  const onLauncherClick = () => {
+    setOpen(widget.dataset.open !== "true");
+  };
+
+  const onCloseClick = () => {
+    setOpen(false);
+    launcher.focus();
+  };
+
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Escape" && widget.dataset.open === "true") {
+      setOpen(false);
+      launcher.focus();
+    }
+  };
+
+  setOpen(false);
+  launcher.addEventListener("click", onLauncherClick);
+  closeButton.addEventListener("click", onCloseClick);
+  document.addEventListener("keydown", onKeyDown);
+
+  if (logoCanvas) {
+    void import("./lib/setupLogoIntro")
+      .then(({ setupFloatingLogoLauncherModel }) => {
+        if (disposed) {
+          return;
+        }
+
+        cleanupFloatingLogoModel = setupFloatingLogoLauncherModel(logoCanvas, () => {
+          if (!disposed) {
+            launcher.dataset.logoRenderer = "webgl";
+          }
+        });
+      })
+      .catch(() => {
+        launcher.dataset.logoRenderer = "fallback";
+      });
+  }
+
+  return () => {
+    disposed = true;
+    cleanupFloatingLogoModel();
+    launcher.removeEventListener("click", onLauncherClick);
+    closeButton.removeEventListener("click", onCloseClick);
+    document.removeEventListener("keydown", onKeyDown);
   };
 }
 
@@ -6877,7 +6985,57 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
 
   <section class="blackout" id="apply">
     <div class="blackout-pin"><canvas class="final-canvas" id="finalCanvas"></canvas><div class="blackout-bg" id="blackoutBg"></div><div class="final-word"><h2><span class="final-line" id="f1">Your <span class="highlight-word highlight-gold">visitors</span> already have questions.</span><span class="final-line" id="f2">Your store needs to <span class="highlight-word highlight-blue">answer</span> them.</span></h2><p class="final-line" id="f3">Skin ID turns <span class="highlight-word highlight-gold">product confusion</span> into a <span class="highlight-word highlight-cyan">personalized buying path</span> configured around your catalog, UX and growth goals.</p><a class="cta magnetic final-line" id="f4" href="${calendlyUrl}" target="_blank" rel="noreferrer"><span class="btn-text">Discover Skin ID</span></a></div></div>
-  </section>`;
+  </section>
+
+  <aside class="nabi-floating-assistant nabi-qa" aria-label="Floating Ask Nabi assistant" data-open="false">
+    <div class="nabi-floating-panel" id="nabiFloatingPanel" aria-label="Ask Nabi floating panel">
+      <div class="nabi-chat-panel" aria-label="Guided Nabi questions">
+        <div class="nabi-chat-top">
+          <div class="nabi-assistant-id">
+            <div class="nabi-assistant-avatar" aria-hidden="true"><img src="/nabi-logo-cropped.png" alt="" /></div>
+            <div>
+              <span>Ask Nabi</span>
+              <strong>Skin ID Assistant</strong>
+            </div>
+          </div>
+          <button class="nabi-floating-close" type="button" aria-label="Close Ask Nabi">Close</button>
+        </div>
+
+        <div class="nabi-chat-thread" aria-live="polite">
+          <div class="nabi-empty-state is-visible">
+            <div class="nabi-empty-avatar" aria-hidden="true"><img src="/nabi-logo-cropped.png" alt="" /></div>
+            <p>How can Nabi help?</p>
+          </div>
+        </div>
+
+        <div class="nabi-widget-entry" aria-label="Ask Nabi quick actions">
+          <button class="nabi-widget-entry-choice nabi-widget-entry-ask" type="button">Ask Nabi</button>
+          <button class="nabi-widget-entry-choice nabi-widget-entry-book" type="button">Book a meeting</button>
+        </div>
+
+        <div class="nabi-prompt-list" aria-label="Initial questions" hidden>
+          <button class="nabi-prompt" type="button" data-nabi-question="stack">Will Skin ID work with my current stack?</button>
+          <button class="nabi-prompt" type="button" data-nabi-question="conversion">Where does Skin ID impact conversion?</button>
+          <button class="nabi-prompt" type="button" data-nabi-question="quiz">Why is Skin ID better than a quiz?</button>
+          <button class="nabi-prompt" type="button" data-nabi-question="pricing">Why isn't pricing listed?</button>
+          <button class="nabi-prompt" type="button" data-nabi-question="implementation">How long does implementation take?</button>
+          <button class="nabi-prompt" type="button" data-nabi-question="difference">How is Skin ID different from what's already out there?</button>
+        </div>
+        <div class="nabi-chat-nav">
+          <div class="nabi-chat-history-nav" hidden aria-label="Conversation history controls">
+            <button class="nabi-history-button nabi-history-back" type="button" aria-label="Back" title="Back" disabled><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
+            <button class="nabi-history-button nabi-history-forward" type="button" aria-label="Forward" title="Forward" disabled><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
+          </div>
+          <button class="nabi-chat-reset" type="button" hidden>Back to topics</button>
+        </div>
+      </div>
+    </div>
+    <button class="nabi-floating-launcher" type="button" aria-label="Open Ask Nabi" aria-controls="nabiFloatingPanel" aria-expanded="false">
+      <span class="nabi-floating-launcher-mark" aria-hidden="true">
+        <canvas class="nabi-floating-logo-canvas"></canvas>
+      </span>
+    </button>
+  </aside>`;
 
 const landingHtmlMobileDiagnostic = landingHtml;
 
@@ -6927,6 +7085,7 @@ export default function App() {
       const cleanupMobileNavScrollBehavior = setupMobileNavScrollBehavior();
       const cleanupBusinessImpactSection = setupBusinessImpactSection();
       const cleanupNabiQuestionSection = setupNabiQuestionSection();
+      const cleanupNabiFloatingLauncher = setupNabiFloatingLauncher();
       const cleanupLandingInteractions = setupLandingInteractions();
       const syncMobileFaceControllerState = () => {
         if (!faceScanController) {
@@ -7041,6 +7200,7 @@ export default function App() {
         cleanupMobileNavScrollBehavior();
         cleanupBusinessImpactSection();
         cleanupNabiQuestionSection();
+        cleanupNabiFloatingLauncher();
         cleanupHeroSceneTransitions();
         cleanupDecisionSummaryBoard();
         cleanupLandingInteractions();
@@ -7250,6 +7410,7 @@ export default function App() {
     const cleanupDecisionSummaryBoard = setupDecisionSummaryBoard();
     const cleanupBusinessImpactSection = setupBusinessImpactSection();
     const cleanupNabiQuestionSection = setupNabiQuestionSection();
+    const cleanupNabiFloatingLauncher = setupNabiFloatingLauncher();
     const cleanupLandingInteractions = setupLandingInteractions();
 
     return () => {
@@ -7270,6 +7431,7 @@ export default function App() {
       cleanupDecisionSummaryBoard();
       cleanupBusinessImpactSection();
       cleanupNabiQuestionSection();
+      cleanupNabiFloatingLauncher();
       cleanupLandingInteractions();
     };
   }, []);

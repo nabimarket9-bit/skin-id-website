@@ -27,6 +27,8 @@ type IntroResources = {
   textures: Set<Texture>;
 };
 
+type LogoModelResources = IntroResources;
+
 function markDisposableMesh(mesh: Mesh, resources: IntroResources) {
   resources.geometries.add(mesh.geometry);
 
@@ -67,6 +69,12 @@ function getPowerPreference(touchDevice: boolean): WebGLPowerPreference {
 
 function getMobileFramebufferPixelBudget(touchDevice: boolean) {
   return touchDevice ? 1_050_000 : Number.POSITIVE_INFINITY;
+}
+
+function disposeLogoResources(resources: LogoModelResources) {
+  resources.geometries.forEach((geometry) => geometry.dispose());
+  resources.materials.forEach((material) => material.dispose());
+  resources.textures.forEach((texture) => texture.dispose());
 }
 
 function canResumeIntro(exitStarted: boolean, destroyed: boolean, logoLoaded: boolean) {
@@ -195,9 +203,7 @@ export function setupLogoIntro() {
     frameId = pauseIntroFrame(frameId);
     scene.environment = null;
     logoGroup.clear();
-    resources.geometries.forEach((geometry) => geometry.dispose());
-    resources.materials.forEach((material) => material.dispose());
-    resources.textures.forEach((texture) => texture.dispose());
+    disposeLogoResources(resources);
     environmentTarget.dispose();
     pmremGenerator.dispose();
     renderer.renderLists.dispose();
@@ -342,6 +348,147 @@ export function setupLogoIntro() {
     window.removeEventListener("resize", resize);
     document.removeEventListener("visibilitychange", onVisibilityChange);
     document.body.classList.remove("intro-lock");
+    releaseRenderer();
+  };
+}
+
+export function setupFloatingLogoLauncherModel(canvas: HTMLCanvasElement, onReady?: () => void) {
+  const resources: LogoModelResources = {
+    geometries: new Set(),
+    materials: new Set(),
+    textures: new Set(),
+  };
+  const touchDevice = isTouchDevice();
+  const maxPixelRatio = touchDevice ? 1.25 : 1.5;
+
+  const renderer = new WebGLRenderer({
+    canvas,
+    alpha: true,
+    antialias: !touchDevice,
+    powerPreference: "low-power",
+  });
+  renderer.outputColorSpace = SRGBColorSpace;
+  renderer.toneMapping = ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxPixelRatio));
+  renderer.setClearColor(0x000000, 0);
+
+  const scene = new Scene();
+  const camera = new PerspectiveCamera(28, 1, 0.1, 50);
+  const logoGroup = new Group();
+  const ambient = new AmbientLight("#ffffff", 3.4);
+  const keyLight = new DirectionalLight("#ffffff", 3);
+  const rimLight = new DirectionalLight("#ffffff", 2.2);
+  const pmremGenerator = new PMREMGenerator(renderer);
+  const roomEnvironment = new RoomEnvironment();
+  const environmentTarget = pmremGenerator.fromScene(roomEnvironment, 0.04);
+  roomEnvironment.dispose();
+
+  let destroyed = false;
+  let frameId = 0;
+  let logoLoaded = false;
+  let rendererReleased = false;
+
+  const resize = () => {
+    const { clientWidth, clientHeight } = canvas;
+    if (!clientWidth || !clientHeight) {
+      return;
+    }
+
+    camera.aspect = clientWidth / clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(clientWidth, clientHeight, false);
+  };
+
+  const pauseFrame = () => {
+    if (frameId) {
+      window.cancelAnimationFrame(frameId);
+      frameId = 0;
+    }
+  };
+
+  const releaseRenderer = () => {
+    if (rendererReleased) {
+      return;
+    }
+
+    rendererReleased = true;
+    destroyed = true;
+    pauseFrame();
+    scene.environment = null;
+    logoGroup.clear();
+    disposeLogoResources(resources);
+    environmentTarget.dispose();
+    pmremGenerator.dispose();
+    renderer.renderLists.dispose();
+    renderer.dispose();
+    renderer.forceContextLoss();
+    canvas.width = 1;
+    canvas.height = 1;
+  };
+
+  const animate = (timestamp: number) => {
+    if (destroyed || document.hidden) {
+      frameId = 0;
+      return;
+    }
+
+    const spin = (timestamp / INTRO_DURATION_MS) * Math.PI * 2;
+    logoGroup.position.set(0, 0, 0);
+    logoGroup.rotation.set(0, spin, 0);
+    logoGroup.scale.setScalar(1.16);
+    camera.lookAt(0, 0, 0);
+    renderer.render(scene, camera);
+    frameId = window.requestAnimationFrame(animate);
+  };
+
+  const resumeFrame = () => {
+    if (!frameId && !destroyed && logoLoaded && !document.hidden) {
+      frameId = window.requestAnimationFrame(animate);
+    }
+  };
+
+  const onVisibilityChange = () => {
+    if (document.hidden) {
+      pauseFrame();
+      return;
+    }
+
+    resumeFrame();
+  };
+
+  scene.environment = environmentTarget.texture;
+  camera.position.set(0, 0, 4.2);
+  keyLight.position.set(2.2, 1.7, 4.2);
+  rimLight.position.set(-2.1, 1.1, 3.4);
+  scene.add(ambient);
+  scene.add(keyLight);
+  scene.add(rimLight);
+  scene.add(logoGroup);
+
+  loadLogo(resources)
+    .then((logo) => {
+      if (destroyed) {
+        return;
+      }
+
+      logoLoaded = true;
+      logoGroup.add(logo);
+      resize();
+      onReady?.();
+      resumeFrame();
+    })
+    .catch(() => {
+      releaseRenderer();
+    });
+
+  window.addEventListener("resize", resize);
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  resize();
+
+  return () => {
+    window.removeEventListener("resize", resize);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
     releaseRenderer();
   };
 }
