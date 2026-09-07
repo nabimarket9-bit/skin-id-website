@@ -359,7 +359,7 @@ export function setupFloatingLogoLauncherModel(canvas: HTMLCanvasElement, onRead
     textures: new Set(),
   };
   const touchDevice = isTouchDevice();
-  const maxPixelRatio = touchDevice ? 1.25 : 1.5;
+  const maxPixelRatio = touchDevice ? 1.5 : 2;
 
   const renderer = new WebGLRenderer({
     canvas,
@@ -370,7 +370,8 @@ export function setupFloatingLogoLauncherModel(canvas: HTMLCanvasElement, onRead
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxPixelRatio));
+  const resolvePixelRatio = () => Math.min(window.devicePixelRatio || 1, maxPixelRatio);
+  renderer.setPixelRatio(resolvePixelRatio());
   renderer.setClearColor(0x000000, 0);
 
   const scene = new Scene();
@@ -397,6 +398,7 @@ export function setupFloatingLogoLauncherModel(canvas: HTMLCanvasElement, onRead
 
     camera.aspect = clientWidth / clientHeight;
     camera.updateProjectionMatrix();
+    renderer.setPixelRatio(resolvePixelRatio());
     renderer.setSize(clientWidth, clientHeight, false);
   };
 
