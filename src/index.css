@@ -1631,13 +1631,13 @@
     .nabi-floating-close{appearance:none;border:1px solid rgba(255,231,163,.18);border-radius:999px;background:#090a0d;color:rgba(244,221,176,.86);font:inherit;font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;padding:9px 10px;cursor:pointer;transition:transform .22s ease,border-color .22s ease,color .22s ease,background .22s ease}
     .nabi-floating-close:hover{transform:translateY(-1px);border-color:rgba(255,231,163,.42);color:#fff2bf;background:#101114}
     .nabi-floating-launcher-shell{pointer-events:auto;will-change:transform}
-    .nabi-floating-assistant[data-open="false"] .nabi-floating-launcher-shell{animation:nabiLauncherAttention 6s ease-in-out 5s infinite}
+    .nabi-floating-launcher-shell.is-shaking{animation:nabiLauncherAttention .85s ease-in-out}
     .nabi-floating-launcher{appearance:none;display:grid;place-items:center;width:108px;height:108px;padding:0;border:1px solid rgba(255,231,163,.32);border-radius:36px;background:radial-gradient(circle at 50% 42%,rgba(255,231,163,.1),transparent 44%),linear-gradient(180deg,#101116,#050506);color:#fffaf0;cursor:pointer;box-shadow:0 18px 48px rgba(0,0,0,.36),0 0 30px rgba(212,175,55,.1),inset 0 1px 0 rgba(255,255,255,.08);transition:transform .24s cubic-bezier(.22,1,.36,1),border-color .22s ease,box-shadow .22s ease,background .22s ease}
     .nabi-floating-launcher:hover{transform:translateY(-2px) scale(1.02);border-color:rgba(255,231,163,.58);box-shadow:0 22px 56px rgba(0,0,0,.42),0 0 34px rgba(212,175,55,.14),inset 0 1px 0 rgba(255,255,255,.1)}
     .nabi-floating-launcher-mark{position:relative;display:grid;place-items:center;width:96px;height:96px;border-radius:32px;overflow:hidden}
     .nabi-floating-logo-canvas{grid-area:1/1;width:100%;height:100%;display:block;opacity:0;pointer-events:none}
     .nabi-floating-launcher[data-logo-renderer="webgl"] .nabi-floating-logo-canvas{opacity:1}
-    @keyframes nabiLauncherAttention{0%,15%,100%{transform:translate3d(0,0,0) rotate(0deg)}2%{transform:translate3d(-8px,-2px,0) rotate(-9deg)}4%{transform:translate3d(10px,1px,0) rotate(10deg)}6%{transform:translate3d(-7px,-3px,0) rotate(-8deg)}8%{transform:translate3d(7px,1px,0) rotate(8deg)}10%{transform:translate3d(-4px,-1px,0) rotate(-5deg)}12%{transform:translate3d(4px,0,0) rotate(4deg)}14%{transform:translate3d(-2px,0,0) rotate(-2deg)}}
+    @keyframes nabiLauncherAttention{0%,100%{transform:translate3d(0,0,0) rotate(0deg)}12%{transform:translate3d(-8px,-2px,0) rotate(-9deg)}24%{transform:translate3d(10px,1px,0) rotate(10deg)}36%{transform:translate3d(-7px,-3px,0) rotate(-8deg)}48%{transform:translate3d(7px,1px,0) rotate(8deg)}60%{transform:translate3d(-4px,-1px,0) rotate(-5deg)}72%{transform:translate3d(4px,0,0) rotate(4deg)}84%{transform:translate3d(-2px,0,0) rotate(-2deg)}}
 
     @media (hover: hover) and (pointer: fine) {
       .nabi-floating-assistant[data-open="false"] .nabi-floating-launcher-shell:hover{animation:none}
@@ -4025,6 +4025,10 @@
         backdrop-filter: none !important;
       }
 
+      body.mobile-diagnostic .nabi-floating-launcher-shell.is-shaking {
+        animation: nabiLauncherAttention .85s ease-in-out !important;
+      }
+
       body.mobile-diagnostic .noise {
         display: block !important;
         opacity: .038;
@@ -4794,7 +4798,9 @@
       .hero-statement:before,
       .hero-statement:after,
       .hero-statement .hero-slot-reel,
-      .decision-summary-board {
+      .decision-summary-board,
+      .nabi-floating-launcher-shell,
+      body.mobile-diagnostic .nabi-floating-launcher-shell.is-shaking {
         animation: none !important;
       }
     }

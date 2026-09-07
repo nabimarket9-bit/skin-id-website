@@ -2809,16 +2809,69 @@ function setupNabiQuestionSection() {
 function setupNabiFloatingLauncher() {
   const widget = document.querySelector<HTMLElement>(".nabi-floating-assistant");
   const launcher = widget?.querySelector<HTMLButtonElement>(".nabi-floating-launcher");
+  const launcherShell = widget?.querySelector<HTMLElement>(".nabi-floating-launcher-shell");
   const panel = widget?.querySelector<HTMLElement>(".nabi-floating-panel");
   const closeButton = widget?.querySelector<HTMLButtonElement>(".nabi-floating-close");
   const logoCanvas = widget?.querySelector<HTMLCanvasElement>(".nabi-floating-logo-canvas");
 
-  if (!widget || !launcher || !panel || !closeButton) {
+  if (!widget || !launcher || !launcherShell || !panel || !closeButton) {
     return () => undefined;
   }
 
   let disposed = false;
   let cleanupFloatingLogoModel: () => void = () => undefined;
+  let shakeDelay = 0;
+  let shakeEndDelay = 0;
+  let launcherHovered = false;
+  const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const hoverCapableQuery = window.matchMedia("(hover: hover) and (pointer: fine)");
+  const shakeInitialDelayMs = 5000;
+  const shakeRepeatDelayMs = 6000;
+  const shakeDurationMs = 850;
+
+  const clearShakeTimers = () => {
+    window.clearTimeout(shakeDelay);
+    window.clearTimeout(shakeEndDelay);
+    shakeDelay = 0;
+    shakeEndDelay = 0;
+  };
+
+  const canShake = () =>
+    !disposed &&
+    widget.dataset.open !== "true" &&
+    !document.hidden &&
+    !reducedMotionQuery.matches &&
+    (!hoverCapableQuery.matches || !launcherHovered);
+
+  const scheduleShake = (delay = shakeRepeatDelayMs) => {
+    clearShakeTimers();
+    launcherShell.classList.remove("is-shaking");
+
+    if (!canShake()) {
+      return;
+    }
+
+    shakeDelay = window.setTimeout(() => {
+      if (!canShake()) {
+        scheduleShake(shakeRepeatDelayMs);
+        return;
+      }
+
+      launcherShell.classList.remove("is-shaking");
+      void launcherShell.offsetWidth;
+      launcherShell.classList.add("is-shaking");
+
+      shakeEndDelay = window.setTimeout(() => {
+        launcherShell.classList.remove("is-shaking");
+        scheduleShake(shakeRepeatDelayMs);
+      }, shakeDurationMs);
+    }, delay);
+  };
+
+  const pauseShake = () => {
+    clearShakeTimers();
+    launcherShell.classList.remove("is-shaking");
+  };
 
   const setOpen = (open: boolean) => {
     widget.dataset.open = String(open);
@@ -2830,6 +2883,12 @@ function setupNabiFloatingLauncher() {
       panel.setAttribute("inert", "");
     }
     panel.hidden = false;
+
+    if (open) {
+      pauseShake();
+    } else {
+      scheduleShake(shakeInitialDelayMs);
+    }
   };
 
   const onLauncherClick = () => {
@@ -2848,10 +2907,50 @@ function setupNabiFloatingLauncher() {
     }
   };
 
+  const onLauncherMouseEnter = () => {
+    if (!hoverCapableQuery.matches) {
+      return;
+    }
+
+    launcherHovered = true;
+    pauseShake();
+  };
+
+  const onLauncherMouseLeave = () => {
+    if (!hoverCapableQuery.matches) {
+      return;
+    }
+
+    launcherHovered = false;
+    if (widget.dataset.open !== "true") {
+      scheduleShake(shakeInitialDelayMs);
+    }
+  };
+
+  const onVisibilityChange = () => {
+    if (document.hidden) {
+      pauseShake();
+    } else if (widget.dataset.open !== "true") {
+      scheduleShake(shakeInitialDelayMs);
+    }
+  };
+
+  const onReducedMotionChange = () => {
+    if (reducedMotionQuery.matches) {
+      pauseShake();
+    } else if (widget.dataset.open !== "true") {
+      scheduleShake(shakeInitialDelayMs);
+    }
+  };
+
   setOpen(false);
   launcher.addEventListener("click", onLauncherClick);
+  launcher.addEventListener("mouseenter", onLauncherMouseEnter);
+  launcher.addEventListener("mouseleave", onLauncherMouseLeave);
   closeButton.addEventListener("click", onCloseClick);
   document.addEventListener("keydown", onKeyDown);
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  reducedMotionQuery.addEventListener("change", onReducedMotionChange);
 
   if (logoCanvas) {
     void import("./lib/setupLogoIntro")
@@ -2873,10 +2972,15 @@ function setupNabiFloatingLauncher() {
 
   return () => {
     disposed = true;
+    pauseShake();
     cleanupFloatingLogoModel();
     launcher.removeEventListener("click", onLauncherClick);
+    launcher.removeEventListener("mouseenter", onLauncherMouseEnter);
+    launcher.removeEventListener("mouseleave", onLauncherMouseLeave);
     closeButton.removeEventListener("click", onCloseClick);
     document.removeEventListener("keydown", onKeyDown);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+    reducedMotionQuery.removeEventListener("change", onReducedMotionChange);
   };
 }
 
