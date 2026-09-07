@@ -7030,11 +7030,13 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
         </div>
       </div>
     </div>
-    <button class="nabi-floating-launcher" type="button" aria-label="Open Ask Nabi" aria-controls="nabiFloatingPanel" aria-expanded="false">
-      <span class="nabi-floating-launcher-mark" aria-hidden="true">
-        <canvas class="nabi-floating-logo-canvas"></canvas>
-      </span>
-    </button>
+    <div class="nabi-floating-launcher-shell">
+      <button class="nabi-floating-launcher" type="button" aria-label="Open Ask Nabi" aria-controls="nabiFloatingPanel" aria-expanded="false">
+        <span class="nabi-floating-launcher-mark" aria-hidden="true">
+          <canvas class="nabi-floating-logo-canvas"></canvas>
+        </span>
+      </button>
+    </div>
   </aside>`;
 
 const landingHtmlMobileDiagnostic = landingHtml;

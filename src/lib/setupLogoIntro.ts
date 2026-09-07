@@ -5,6 +5,7 @@ import {
   BufferGeometry,
   DirectionalLight,
   Group,
+  LinearMipmapLinearFilter,
   Material,
   Mesh,
   PMREMGenerator,
@@ -75,6 +76,16 @@ function disposeLogoResources(resources: LogoModelResources) {
   resources.geometries.forEach((geometry) => geometry.dispose());
   resources.materials.forEach((material) => material.dispose());
   resources.textures.forEach((texture) => texture.dispose());
+}
+
+function improveLogoTextureSampling(resources: LogoModelResources, renderer: WebGLRenderer) {
+  const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+
+  resources.textures.forEach((texture) => {
+    texture.minFilter = LinearMipmapLinearFilter;
+    texture.anisotropy = Math.min(8, maxAnisotropy);
+    texture.needsUpdate = true;
+  });
 }
 
 function canResumeIntro(exitStarted: boolean, destroyed: boolean, logoLoaded: boolean) {
@@ -359,12 +370,12 @@ export function setupFloatingLogoLauncherModel(canvas: HTMLCanvasElement, onRead
     textures: new Set(),
   };
   const touchDevice = isTouchDevice();
-  const maxPixelRatio = touchDevice ? 1.5 : 2;
+  const maxPixelRatio = touchDevice ? 2 : 2.5;
 
   const renderer = new WebGLRenderer({
     canvas,
     alpha: true,
-    antialias: !touchDevice,
+    antialias: true,
     powerPreference: "low-power",
   });
   renderer.outputColorSpace = SRGBColorSpace;
@@ -476,6 +487,7 @@ export function setupFloatingLogoLauncherModel(canvas: HTMLCanvasElement, onRead
 
       logoLoaded = true;
       logoGroup.add(logo);
+      improveLogoTextureSampling(resources, renderer);
       resize();
       onReady?.();
       resumeFrame();
