@@ -12,6 +12,7 @@ import {
   type SchedulingBookingState,
   type SchedulingLeadData,
 } from "./schedulingService";
+import { buildQualificationMessage } from "./qualificationMessage";
 
 const calendlyUrl = "https://calendly.com/nabi_";
 const heroModelSceneEvent = "nabi:hero-model-scene";
@@ -48,6 +49,9 @@ type NabiQuestionItem = {
 type NabiHistoryState = {
   threadHtml: string;
 };
+
+type PopupMode = "home" | "topics" | "qa" | "booking" | "scheduler" | "booked";
+type PopupBookingSource = "direct" | "ask-nabi" | null;
 
 const nabiQuestionItems: NabiQuestionItem[] = [
   {
@@ -499,9 +503,12 @@ const nabiQuestionItems: NabiQuestionItem[] = [
 type QualificationData = {
   storeName: string;
   businessType: string;
+  businessTypeOther: string;
   platform: string;
+  platformOther: string;
   catalogSize: string;
   primaryGoal: string;
+  primaryGoals: string[];
   firstName: string;
   lastName: string;
   email: string;
@@ -519,9 +526,12 @@ type QualificationQuestion = {
 const createEmptyQualificationData = (): QualificationData => ({
   storeName: "",
   businessType: "",
+  businessTypeOther: "",
   platform: "",
+  platformOther: "",
   catalogSize: "",
   primaryGoal: "",
+  primaryGoals: [],
   firstName: "",
   lastName: "",
   email: "",
@@ -543,7 +553,15 @@ const qualificationQuestions: QualificationQuestion[] = [
     field: "platform",
     prompt: "What platform is your store running on?",
     inputType: "options",
-    options: ["Shopify", "Shopify Plus", "WooCommerce", "Magento", "Other"],
+    options: [
+      "Shopify",
+      "Wix",
+      "Squarespace",
+      "BigCommerce",
+      "Magento / Adobe Commerce",
+      "Salesforce Commerce Cloud",
+      "Other",
+    ],
   },
   {
     field: "catalogSize",
@@ -579,6 +597,28 @@ const qualificationQuestions: QualificationQuestion[] = [
     inputType: "email",
   },
 ];
+
+const getResolvedBusinessType = (data: QualificationData) =>
+  data.businessType === "Other" ? data.businessTypeOther.trim() : data.businessType;
+
+const getResolvedPlatform = (data: QualificationData) =>
+  data.platform === "Other" ? data.platformOther.trim() : data.platform;
+
+const getOrderedPrimaryGoals = (data: QualificationData) =>
+  data.primaryGoals.length > 0 ? data.primaryGoals : data.primaryGoal ? [data.primaryGoal] : [];
+
+export const getCatalogRelevancePhrase = (catalogSize: string) => {
+  if (catalogSize === "500+") {
+    return "a large catalog makes structured discovery especially relevant";
+  }
+  if (catalogSize === "100–500" || catalogSize === "100â€“500") {
+    return "a broad catalog creates room to reduce choice overload";
+  }
+  if (catalogSize === "25–100" || catalogSize === "25â€“100") {
+    return "a focused catalog can benefit from clearer routine guidance";
+  }
+  return "a smaller catalog is a good place to clarify which products work together";
+};
 
 function setupContrastSlides(root: HTMLElement): ContrastSlideController[] {
   const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -1590,6 +1630,7 @@ function setupNabiQuestionExperience(section: HTMLElement) {
   const entryChoices = section?.querySelector<HTMLElement>(".nabi-widget-entry");
   const askEntryButton = section?.querySelector<HTMLButtonElement>(".nabi-widget-entry-ask");
   const bookEntryButton = section?.querySelector<HTMLButtonElement>(".nabi-widget-entry-book");
+  const popupBackButton = section?.querySelector<HTMLButtonElement>(".nabi-floating-back");
   const resetButton = section?.querySelector<HTMLButtonElement>(".nabi-chat-reset");
   const historyNav = section?.querySelector<HTMLElement>(".nabi-chat-history-nav");
   const historyBackButton = section?.querySelector<HTMLButtonElement>(".nabi-history-back");
@@ -1629,6 +1670,11 @@ function setupNabiQuestionExperience(section: HTMLElement) {
   let availableDates: AvailabilityDate[] = [];
   let schedulerMonthKey: string | null = null;
   let flowVersion = 0;
+  const isFloatingPopup = Boolean(entryChoices && popupBackButton);
+  let popupMode: PopupMode = isFloatingPopup ? "home" : "topics";
+  let popupBookingStepIndex = 0;
+  let popupBookingSource: PopupBookingSource = null;
+  let popupScrollFrames: number[] = [];
 
   const syncLeadBookingState = () => {
     section.dataset.leadBookingStatus = bookingState.bookingStatus;
@@ -1641,6 +1687,45 @@ function setupNabiQuestionExperience(section: HTMLElement) {
   const clearTimers = () => {
     activeTimers.forEach((timer) => window.clearTimeout(timer));
     activeTimers = [];
+    clearPopupScrollFrames();
+  };
+
+  const clearPopupScrollFrames = () => {
+    popupScrollFrames.forEach((frame) => window.cancelAnimationFrame(frame));
+    popupScrollFrames = [];
+  };
+
+  const scrollPopupToElement = (target: HTMLElement, behavior: ScrollBehavior = "smooth") => {
+    if (!isFloatingPopup) {
+      return;
+    }
+
+    clearPopupScrollFrames();
+    const targetFlowVersion = flowVersion;
+    const firstFrame = window.requestAnimationFrame(() => {
+      const secondFrame = window.requestAnimationFrame(() => {
+        popupScrollFrames = [];
+        if (targetFlowVersion !== flowVersion || !target.isConnected) {
+          return;
+        }
+
+        const maxScrollTop = Math.max(0, thread.scrollHeight - thread.clientHeight);
+        const targetTop = Math.max(0, Math.min(target.offsetTop - 12, maxScrollTop));
+        thread.scrollTo({
+          top: targetTop,
+          behavior,
+        });
+      });
+      popupScrollFrames = [secondFrame];
+    });
+    popupScrollFrames = [firstFrame];
+  };
+
+  const scrollPopupToLatestContent = (behavior: ScrollBehavior = "smooth") => {
+    const latest = Array.from(thread.children).at(-1);
+    if (latest instanceof HTMLElement) {
+      scrollPopupToElement(latest, behavior);
+    }
   };
 
   const setBusy = (busy: boolean) => {
@@ -1654,11 +1739,14 @@ function setupNabiQuestionExperience(section: HTMLElement) {
     if (bookEntryButton) {
       bookEntryButton.disabled = busy;
     }
+    if (popupBackButton) {
+      popupBackButton.disabled = busy;
+    }
     historyBackButton.disabled = busy || qnaHistoryIndex <= 0;
     historyForwardButton.disabled = busy || qnaHistoryIndex < 0 || qnaHistoryIndex >= qnaHistory.length - 1;
     thread
       .querySelectorAll<HTMLButtonElement>(
-    ".nabi-follow-up-pill, .nabi-qualification-option, .nabi-qualification-submit, .nabi-scheduler-day, .nabi-scheduler-month-nav, .nabi-scheduler-slot, .nabi-scheduler-confirm, .nabi-timezone-trigger, .nabi-timezone-search, .nabi-timezone-option, .nabi-timezone-close",
+    ".nabi-follow-up-pill, .nabi-qualification-option, .nabi-qualification-submit, .nabi-qualification-send, .nabi-scheduler-day, .nabi-scheduler-month-nav, .nabi-scheduler-slot, .nabi-scheduler-confirm, .nabi-timezone-trigger, .nabi-timezone-search, .nabi-timezone-option, .nabi-timezone-close",
       )
       .forEach((button) => {
         button.disabled = busy;
@@ -1671,6 +1759,35 @@ function setupNabiQuestionExperience(section: HTMLElement) {
     historyNav.hidden = !hasQnaHistory;
     historyBackButton.disabled = isResponding || qnaHistoryIndex <= 0;
     historyForwardButton.disabled = isResponding || qnaHistoryIndex < 0 || qnaHistoryIndex >= qnaHistory.length - 1;
+  };
+
+  const updatePopupBackControl = () => {
+    if (!popupBackButton) {
+      return;
+    }
+
+    const shouldShowPopupBack =
+      isFloatingPopup &&
+      bookingState.bookingStatus !== "booked" &&
+      (popupMode === "topics" || popupMode === "booking" || popupMode === "scheduler");
+
+    popupBackButton.hidden = !shouldShowPopupBack;
+    popupBackButton.disabled = isResponding;
+  };
+
+  const syncPopupNavigationState = () => {
+    if (!isFloatingPopup) {
+      return;
+    }
+
+    section.dataset.popupMode = popupMode;
+    section.dataset.popupBookingStep = String(popupBookingStepIndex);
+    updatePopupBackControl();
+  };
+
+  const getPopupBookingStepIndex = () => {
+    const parsedStep = Number(section.dataset.popupBookingStep);
+    return Number.isFinite(parsedStep) ? parsedStep : popupBookingStepIndex;
   };
 
   const removeGeneratedConversation = () => {
@@ -1696,6 +1813,13 @@ function setupNabiQuestionExperience(section: HTMLElement) {
     syncLeadBookingState();
     delete section.dataset.nabiMode;
     section.classList.remove("has-conversation");
+    clearPromptDraft();
+    if (isFloatingPopup) {
+      popupMode = showEntry ? "home" : "topics";
+      popupBookingStepIndex = 0;
+      popupBookingSource = null;
+      syncPopupNavigationState();
+    }
     promptList.hidden = showEntry;
     if (entryChoices) {
       entryChoices.hidden = !showEntry;
@@ -1704,6 +1828,7 @@ function setupNabiQuestionExperience(section: HTMLElement) {
     resetButton.textContent = "Back to topics";
     setBusy(false);
     updateHistoryControls();
+    updatePopupBackControl();
   };
 
   const buildMessage = (role: "user" | "nabi", text: string) => {
@@ -1757,8 +1882,15 @@ function setupNabiQuestionExperience(section: HTMLElement) {
     thread.appendChild(node);
     const revealTimer = window.setTimeout(() => {
       node.classList.add("is-visible");
+      scrollPopupToElement(node);
     }, 20);
     activeTimers.push(revealTimer);
+  };
+
+  const appendVisibleNode = (node: HTMLElement) => {
+    node.classList.add("is-visible");
+    thread.appendChild(node);
+    scrollPopupToElement(node);
   };
 
   const clearActiveControls = () => {
@@ -1771,6 +1903,61 @@ function setupNabiQuestionExperience(section: HTMLElement) {
       });
   };
 
+  let resetPromptComposerDraft = () => undefined;
+
+  const clearPromptDraft = () => {
+    resetPromptComposerDraft();
+    promptButtons.forEach((button) => {
+      button.classList.remove("is-selected");
+      button.setAttribute("aria-pressed", "false");
+    });
+  };
+
+  const buildQnaComposer = (
+    onSend: () => void,
+    placeholder = "Select a question",
+  ) => {
+    const composer = document.createElement("form");
+    composer.className = "nabi-qualification-composer nabi-qna-composer";
+
+    const composerBody = document.createElement("div");
+    composerBody.className = "nabi-qualification-composer-body";
+
+    const input = document.createElement("input");
+    input.className = "nabi-qualification-composer-input";
+    input.type = "text";
+    input.readOnly = true;
+    input.placeholder = placeholder;
+    input.setAttribute("aria-label", "Selected question");
+
+    const sendButton = document.createElement("button");
+    sendButton.className = "nabi-qualification-send";
+    sendButton.type = "submit";
+    sendButton.disabled = true;
+    sendButton.setAttribute("aria-label", "Send answer");
+    sendButton.innerHTML =
+      '<svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m6.5 10.5 5.5-5.5 5.5 5.5"/></svg>';
+
+    const setDraftText = (text: string) => {
+      input.value = text;
+      sendButton.disabled = text.trim().length === 0;
+      composer.classList.toggle("is-ready", text.trim().length > 0);
+    };
+
+    composer.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (sendButton.disabled) {
+        return;
+      }
+      onSend();
+    });
+
+    composerBody.appendChild(input);
+    composer.append(composerBody, sendButton);
+
+    return { composer, setDraftText };
+  };
+
   const bindRestoredQnaControls = () => {
     thread.querySelectorAll<HTMLButtonElement>(".nabi-follow-up-pill[data-nabi-follow-up-id]").forEach((pill) => {
       const item = allQuestionMap.get(pill.dataset.nabiFollowUpId ?? "");
@@ -1778,11 +1965,33 @@ function setupNabiQuestionExperience(section: HTMLElement) {
       if (!item) {
         return;
       }
-      pill.addEventListener("click", () => askQuestion(item, depth));
+      pill.addEventListener("click", () => {
+        const followUps = pill.closest<HTMLElement>(".nabi-follow-ups");
+        followUps?.querySelectorAll<HTMLButtonElement>(".nabi-follow-up-pill").forEach((button) => {
+          button.classList.toggle("is-selected", button === pill);
+          button.setAttribute("aria-pressed", String(button === pill));
+        });
+        const send = followUps?.querySelector<HTMLButtonElement>(".nabi-qualification-send");
+        const input = followUps?.querySelector<HTMLInputElement>(".nabi-qualification-composer-input");
+        if (input && send) {
+          input.value = item.question;
+          send.disabled = false;
+          input.closest(".nabi-qualification-composer")?.classList.add("is-ready");
+          send.onclick = (event) => {
+            event.preventDefault();
+            askQuestion(item, depth);
+          };
+        }
+      });
     });
 
     thread.querySelectorAll<HTMLButtonElement>(".nabi-qualification-start").forEach((button) => {
-      button.addEventListener("click", startQualification);
+      button.addEventListener("click", () => {
+        if (isFloatingPopup) {
+          popupBookingSource = "ask-nabi";
+        }
+        startQualification();
+      });
     });
   };
 
@@ -1821,6 +2030,7 @@ function setupNabiQuestionExperience(section: HTMLElement) {
     resetButton.textContent = "Back to topics";
     setBusy(false);
     updateHistoryControls();
+    scrollPopupToLatestContent("auto");
   };
 
   const revealWithTyping = (text: string, afterReveal?: () => void) => {
@@ -1912,7 +2122,47 @@ function setupNabiQuestionExperience(section: HTMLElement) {
   const getSlotEndTime = (slotStart: string) =>
     availableDates.flatMap((date) => date.slots).find((slot) => slot.start === slotStart)?.end ?? slotStart;
 
-  const getLeadData = (): SchedulingLeadData => ({ ...qualificationData });
+  const getLeadData = (): SchedulingLeadData => ({
+    storeName: qualificationData.storeName,
+    businessType: getResolvedBusinessType(qualificationData),
+    platform: getResolvedPlatform(qualificationData),
+    catalogSize: qualificationData.catalogSize,
+    primaryGoal: getOrderedPrimaryGoals(qualificationData).join(", "),
+    firstName: qualificationData.firstName,
+    lastName: qualificationData.lastName,
+    email: qualificationData.email,
+  });
+
+  const getQualificationAnswerLabel = (question: QualificationQuestion) => {
+    if (question.field === "businessType") {
+      return getResolvedBusinessType(qualificationData);
+    }
+    if (question.field === "platform") {
+      return getResolvedPlatform(qualificationData);
+    }
+    if (question.field === "primaryGoal") {
+      return getOrderedPrimaryGoals(qualificationData).join(", ");
+    }
+    const value = qualificationData[question.field];
+    return Array.isArray(value) ? value.join(", ") : value;
+  };
+
+  const isQuestionComplete = (question: QualificationQuestion) => {
+    if (question.field === "businessType") {
+      return qualificationData.businessType === "Other"
+        ? qualificationData.businessTypeOther.trim().length > 0
+        : qualificationData.businessType.trim().length > 0;
+    }
+    if (question.field === "platform") {
+      return qualificationData.platform === "Other"
+        ? qualificationData.platformOther.trim().length > 0
+        : qualificationData.platform.trim().length > 0;
+    }
+    if (question.field === "primaryGoal") {
+      return getOrderedPrimaryGoals(qualificationData).length > 0;
+    }
+    return getQualificationAnswerLabel(question).trim().length > 0;
+  };
 
   const getSchedulerTimezone = () => bookingState.timezone ?? detectVisitorTimezone();
 
@@ -2352,6 +2602,10 @@ function setupNabiQuestionExperience(section: HTMLElement) {
           };
           syncLeadBookingState();
           clearActiveControls();
+        if (isFloatingPopup) {
+          popupMode = "booked";
+          syncPopupNavigationState();
+        }
 
           const confirmation = response.attendeeEmailSent
             ? `You're booked. An invitation has been sent to ${qualificationData.email}.`
@@ -2458,22 +2712,24 @@ function setupNabiQuestionExperience(section: HTMLElement) {
     schedulerMonthKey = null;
     syncLeadBookingState();
 
-    try {
-      const leadResponse = await schedulingService.createLead(getLeadData());
-      bookingState = {
-        ...bookingState,
-        leadId: leadResponse.leadId,
-      };
-    } catch {
-      bookingState = {
-        ...bookingState,
-        bookingStatus: "failed",
-      };
-      syncLeadBookingState();
-      revealNode(buildMessage("nabi", "I couldn't save the lead right now. Check the Supabase connection, then try again."));
-      revealNode(buildLeadRetryCta());
-      setBusy(false);
-      return;
+    if (!bookingState.leadId) {
+      try {
+        const leadResponse = await schedulingService.createLead(getLeadData());
+        bookingState = {
+          ...bookingState,
+          leadId: leadResponse.leadId,
+        };
+      } catch {
+        bookingState = {
+          ...bookingState,
+          bookingStatus: "failed",
+        };
+        syncLeadBookingState();
+        revealNode(buildMessage("nabi", "I couldn't save the lead right now. Check the Supabase connection, then try again."));
+        revealNode(buildLeadRetryCta());
+        setBusy(false);
+        return;
+      }
     }
 
     if (currentFlowVersion !== flowVersion) {
@@ -2489,6 +2745,11 @@ function setupNabiQuestionExperience(section: HTMLElement) {
       if (!availableDates.length) {
         revealNode(buildMessage("nabi", "I don't see available demo times right now. Try again shortly and I'll check the calendar again."));
       } else {
+        if (isFloatingPopup) {
+          popupMode = "scheduler";
+          popupBookingStepIndex = qualificationQuestions.length;
+          syncPopupNavigationState();
+        }
         revealNode(buildScheduler());
       }
     } catch {
@@ -2503,7 +2764,7 @@ function setupNabiQuestionExperience(section: HTMLElement) {
   }
 
   const completeQualification = () => {
-    const isComplete = qualificationQuestions.every((question) => qualificationData[question.field].trim().length > 0);
+    const isComplete = qualificationQuestions.every(isQuestionComplete);
     const currentFlowVersion = flowVersion;
 
     if (!isComplete) {
@@ -2511,20 +2772,377 @@ function setupNabiQuestionExperience(section: HTMLElement) {
       return;
     }
 
-    const catalogPhrase =
-      qualificationData.catalogSize === "500+"
-        ? "a large skincare catalog"
-        : qualificationData.catalogSize === "100–500"
-          ? "a broad skincare catalog"
-          : "a focused skincare catalog";
-    const conclusion = `${qualificationData.storeName} looks like a sensible fit to evaluate. For ${qualificationData.businessType.toLowerCase()} teams on ${qualificationData.platform}, ${catalogPhrase} can benefit from a guided Skin ID path focused on ${qualificationData.primaryGoal.toLowerCase()}.`;
-
-    revealWithTyping(conclusion, () => {
+    const continueToScheduler = () => {
       revealWithTyping("Perfect. Let's find a time that works.", async () => {
         await loadSchedulerAfterLead(currentFlowVersion);
       });
-    });
+    };
+
+    if (isFloatingPopup && popupBookingSource === "direct") {
+      continueToScheduler();
+      return;
+    }
+
+    const conclusion = buildQualificationMessage(qualificationData);
+    revealWithTyping(conclusion, continueToScheduler);
   };
+
+  const buildQualificationControls = (
+    question: QualificationQuestion,
+    onComplete: (answerLabel: string) => void,
+  ) => {
+    const controls = document.createElement("div");
+    controls.className = "nabi-qualification-controls";
+
+    const error = document.createElement("p");
+    error.className = "nabi-qualification-error";
+    error.hidden = true;
+
+    const composer = document.createElement("form");
+    composer.className = "nabi-qualification-composer";
+
+    const composerBody = document.createElement("div");
+    composerBody.className = "nabi-qualification-composer-body";
+
+    const sendButton = document.createElement("button");
+    sendButton.className = "nabi-qualification-send";
+    sendButton.type = "submit";
+    sendButton.setAttribute("aria-label", "Send answer");
+    sendButton.innerHTML =
+      '<svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m6.5 10.5 5.5-5.5 5.5 5.5"/></svg>';
+
+    const setSendReady = (ready: boolean) => {
+      sendButton.disabled = !ready;
+      composer.classList.toggle("is-ready", ready);
+    };
+
+    const markNotStarted = () => {
+      bookingState = {
+        ...bookingState,
+        bookingStatus: "not_started",
+      };
+    };
+
+    if (question.inputType === "text" || question.inputType === "email") {
+      const input = document.createElement("input");
+      input.className = "nabi-qualification-composer-input";
+      input.type = question.inputType === "email" ? "email" : "text";
+      input.name = question.field;
+      input.value = getQualificationAnswerLabel(question);
+      input.autocomplete =
+        question.field === "firstName"
+          ? "given-name"
+          : question.field === "lastName"
+            ? "family-name"
+            : question.field === "email"
+              ? "email"
+              : "organization";
+      input.placeholder =
+        question.field === "firstName"
+          ? "Enter first name"
+          : question.field === "lastName"
+            ? "Enter last name"
+            : question.field === "email"
+              ? "name@company.com"
+              : "Enter brand or store name";
+      input.setAttribute("aria-label", question.prompt);
+
+      const validate = () => {
+        const value = input.value.trim();
+        setSendReady(question.inputType === "email" ? isValidEmail(value) : value.length > 0);
+        error.hidden = true;
+      };
+
+      input.addEventListener("input", validate);
+      composer.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const value = input.value.trim();
+
+        if (!value) {
+          error.textContent =
+            question.field === "firstName"
+              ? "Please enter your first name."
+              : question.field === "lastName"
+                ? "Please enter your last name."
+                : "Please enter a store or brand name.";
+          error.hidden = false;
+          setSendReady(false);
+          return;
+        }
+
+        if (question.inputType === "email" && !isValidEmail(value)) {
+          error.textContent = "Please enter a valid work email.";
+          error.hidden = false;
+          setSendReady(false);
+          return;
+        }
+
+        qualificationData = {
+          ...qualificationData,
+          [question.field]: value,
+        };
+        markNotStarted();
+        onComplete(value);
+      });
+
+      composerBody.appendChild(input);
+      composer.append(composerBody, sendButton);
+      validate();
+      controls.append(composer, error);
+      return controls;
+    }
+
+    if (question.field === "primaryGoal") {
+      const optionList = document.createElement("div");
+      optionList.className = "nabi-qualification-options nabi-qualification-options-ranked";
+      let draftGoals = [...getOrderedPrimaryGoals(qualificationData)];
+
+      const tokenList = document.createElement("div");
+      tokenList.className = "nabi-qualification-token-list";
+
+      const renderComposerTokens = () => {
+        tokenList.replaceChildren();
+        if (!draftGoals.length) {
+          const placeholder = document.createElement("span");
+          placeholder.className = "nabi-qualification-composer-placeholder";
+          placeholder.textContent = "Select up to 3 priorities";
+          tokenList.appendChild(placeholder);
+        } else {
+          draftGoals.forEach((goal, index) => {
+            const token = document.createElement("span");
+            token.className = "nabi-qualification-token";
+            token.textContent = `${index + 1} ${goal}`;
+            tokenList.appendChild(token);
+          });
+        }
+        setSendReady(draftGoals.length > 0);
+      };
+
+      const renderGoalOptions = () => {
+        optionList.replaceChildren();
+
+        question.options?.forEach((option) => {
+          const rank = draftGoals.indexOf(option) + 1;
+          const button = document.createElement("button");
+          button.className = "nabi-qualification-option";
+          button.type = "button";
+          button.classList.toggle("is-selected", rank > 0);
+          button.setAttribute("aria-pressed", String(rank > 0));
+
+          const label = document.createElement("span");
+          label.textContent = option;
+          button.appendChild(label);
+
+          if (rank > 0) {
+            const badge = document.createElement("span");
+            badge.className = "nabi-qualification-rank";
+            badge.textContent = String(rank);
+            button.appendChild(badge);
+          }
+
+          button.addEventListener("click", () => {
+            const existingIndex = draftGoals.indexOf(option);
+
+            error.hidden = true;
+            if (existingIndex >= 0) {
+              draftGoals = draftGoals.filter((goal) => goal !== option);
+            } else if (draftGoals.length < 3) {
+              draftGoals = [...draftGoals, option];
+            } else {
+              error.textContent = "You can select up to 3 priorities. Deselect one to change the order.";
+              error.hidden = false;
+              controls.dataset.maxGoalsReached = "true";
+              window.setTimeout(() => {
+                delete controls.dataset.maxGoalsReached;
+              }, 420);
+              return;
+            }
+
+            renderGoalOptions();
+            renderComposerTokens();
+          });
+
+          optionList.appendChild(button);
+        });
+      };
+
+      composer.addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (!draftGoals.length) {
+          error.textContent = "Select at least one priority before sending.";
+          error.hidden = false;
+          setSendReady(false);
+          return;
+        }
+
+        qualificationData = {
+          ...qualificationData,
+          primaryGoal: draftGoals[0] ?? "",
+          primaryGoals: draftGoals,
+        };
+        markNotStarted();
+        onComplete(draftGoals.join(" · "));
+      });
+
+      renderGoalOptions();
+      renderComposerTokens();
+      composerBody.appendChild(tokenList);
+      composer.append(composerBody, sendButton);
+      controls.append(optionList, composer, error);
+      return controls;
+    }
+
+    const optionList = document.createElement("div");
+    optionList.className = "nabi-qualification-options";
+    const optionButtons = new Map<string, HTMLButtonElement>();
+    let draftOption = String(qualificationData[question.field] ?? "");
+    let draftOther =
+      question.field === "platform" ? qualificationData.platformOther : qualificationData.businessTypeOther;
+
+    const input = document.createElement("input");
+    input.className = "nabi-qualification-composer-input";
+    input.type = "text";
+    input.setAttribute("aria-label", "Selected answer");
+
+    const syncSingleSelectComposer = () => {
+      const isOther = draftOption === "Other" && (question.field === "businessType" || question.field === "platform");
+      input.readOnly = !isOther;
+      input.placeholder = isOther
+        ? question.field === "platform"
+          ? "Enter your platform"
+          : "Describe your business"
+        : "Choose an answer";
+      input.value = isOther ? draftOther : draftOption;
+      optionButtons.forEach((button, option) => {
+        button.classList.toggle("is-selected", draftOption === option);
+        button.setAttribute("aria-pressed", String(draftOption === option));
+      });
+      setSendReady(isOther ? draftOther.trim().length > 0 : draftOption.length > 0);
+    };
+
+    question.options?.forEach((option) => {
+      const button = document.createElement("button");
+      button.className = "nabi-qualification-option";
+      button.type = "button";
+      button.textContent = option;
+      button.setAttribute("aria-pressed", String(draftOption === option));
+      button.addEventListener("click", () => {
+        draftOption = option;
+        error.hidden = true;
+        if (option === "Other") {
+          draftOther =
+            question.field === "platform" ? qualificationData.platformOther : qualificationData.businessTypeOther;
+        }
+        syncSingleSelectComposer();
+        if (!input.readOnly) {
+          input.focus();
+        }
+      });
+      optionButtons.set(option, button);
+      optionList.appendChild(button);
+    });
+
+    input.addEventListener("input", () => {
+      draftOther = input.value;
+      error.hidden = true;
+      syncSingleSelectComposer();
+    });
+
+    composer.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const isOther = draftOption === "Other" && (question.field === "businessType" || question.field === "platform");
+      const answerLabel = isOther ? draftOther.trim() : draftOption;
+
+      if (!answerLabel) {
+        error.textContent = isOther
+          ? question.field === "platform"
+            ? "Please enter your platform."
+            : "Please describe your business."
+          : "Choose an answer before sending.";
+        error.hidden = false;
+        setSendReady(false);
+        return;
+      }
+
+      qualificationData = {
+        ...qualificationData,
+        [question.field]: draftOption,
+        ...(question.field === "businessType"
+          ? { businessTypeOther: isOther ? answerLabel : "" }
+          : {}),
+        ...(question.field === "platform" ? { platformOther: isOther ? answerLabel : "" } : {}),
+      };
+      markNotStarted();
+      onComplete(answerLabel);
+    });
+
+    syncSingleSelectComposer();
+    composerBody.appendChild(input);
+    composer.append(composerBody, sendButton);
+    controls.append(optionList, composer, error);
+    return controls;
+  };
+
+  const buildPopupQualificationControls = (question: QualificationQuestion, index: number) =>
+    buildQualificationControls(question, () => renderPopupQualificationStep(index + 1, true));
+
+  function renderPopupQualificationStep(index: number, animateCurrentPrompt = false) {
+    if (!isFloatingPopup) {
+      return;
+    }
+
+    flowVersion += 1;
+    clearTimers();
+    removeGeneratedConversation();
+    popupMode = index >= qualificationQuestions.length ? "scheduler" : "booking";
+    popupBookingStepIndex = Math.min(index, qualificationQuestions.length);
+    syncPopupNavigationState();
+    section.dataset.nabiMode = "qualification";
+    section.classList.add("has-conversation");
+    promptList!.hidden = true;
+    if (entryChoices) {
+      entryChoices.hidden = true;
+    }
+    resetButton!.hidden = true;
+    historyNav!.hidden = true;
+    setBusy(false);
+    updatePopupBackControl();
+
+    appendVisibleNode(buildMessage("user", "Book a meeting"));
+    appendVisibleNode(buildMessage("nabi", "I’ll need a few details before we book."));
+
+    qualificationQuestions.slice(0, index).forEach((previousQuestion) => {
+      const answer = getQualificationAnswerLabel(previousQuestion);
+      if (!answer) {
+        return;
+      }
+      appendVisibleNode(buildMessage("nabi", previousQuestion.prompt));
+      appendVisibleNode(buildMessage("user", answer));
+    });
+
+    const question = qualificationQuestions[index];
+    if (!question) {
+      setBusy(true);
+      completeQualification();
+      updatePopupBackControl();
+      return;
+    }
+
+    const showControls = () => {
+      revealNode(buildPopupQualificationControls(question, index));
+      setBusy(false);
+      syncPopupNavigationState();
+    };
+
+    if (animateCurrentPrompt) {
+      setBusy(true);
+      revealWithTyping(question.prompt, showControls);
+    } else {
+      appendVisibleNode(buildMessage("nabi", question.prompt));
+      appendVisibleNode(buildPopupQualificationControls(question, index));
+      syncPopupNavigationState();
+    }
+  }
 
   const renderQualificationQuestion = (index: number) => {
     const question = qualificationQuestions[index];
@@ -2535,102 +3153,12 @@ function setupNabiQuestionExperience(section: HTMLElement) {
     }
 
     revealWithTyping(question.prompt, () => {
-      const controls = document.createElement("div");
-      controls.className = "nabi-qualification-controls";
-
-      if (question.inputType === "text" || question.inputType === "email") {
-        const form = document.createElement("form");
-        form.className = "nabi-qualification-form";
-
-        const input = document.createElement("input");
-        input.className = "nabi-qualification-input";
-        input.type = question.inputType === "email" ? "email" : "text";
-        input.name = question.field;
-        input.autocomplete =
-          question.field === "firstName"
-            ? "given-name"
-            : question.field === "lastName"
-              ? "family-name"
-              : question.field === "email"
-                ? "email"
-                : "organization";
-        input.placeholder =
-          question.field === "firstName"
-            ? "Enter first name"
-            : question.field === "lastName"
-              ? "Enter last name"
-              : question.field === "email"
-                ? "name@company.com"
-                : "Enter brand or store name";
-        input.setAttribute("aria-label", question.prompt);
-
-        const submit = document.createElement("button");
-        submit.className = "nabi-qualification-submit";
-        submit.type = "submit";
-        submit.textContent = "Continue";
-
-        const error = document.createElement("p");
-        error.className = "nabi-qualification-error";
-        error.hidden = true;
-        error.textContent =
-          question.inputType === "email"
-            ? "Please enter a valid work email."
-            : question.field === "firstName"
-              ? "Please enter your first name."
-              : question.field === "lastName"
-                ? "Please enter your last name."
-                : "Please enter a store or brand name.";
-
-        form.append(input, submit, error);
-        form.addEventListener("submit", (event) => {
-          event.preventDefault();
-          const value = input.value.trim();
-
-          if (!value) {
-            error.hidden = false;
-            return;
-          }
-
-          if (question.inputType === "email" && !isValidEmail(value)) {
-            error.hidden = false;
-            return;
-          }
-
-          setBusy(true);
-          qualificationData = {
-            ...qualificationData,
-            [question.field]: value,
-          };
-          controls.remove();
-          revealNode(buildMessage("user", value));
-          renderQualificationQuestion(index + 1);
-        });
-
-        controls.appendChild(form);
-      } else {
-        const optionList = document.createElement("div");
-        optionList.className = "nabi-qualification-options";
-
-        question.options?.forEach((option) => {
-          const button = document.createElement("button");
-          button.className = "nabi-qualification-option";
-          button.type = "button";
-          button.textContent = option;
-          button.addEventListener("click", () => {
-            setBusy(true);
-            qualificationData = {
-              ...qualificationData,
-              [question.field]: option,
-            };
-            controls.remove();
-            revealNode(buildMessage("user", option));
-            renderQualificationQuestion(index + 1);
-          });
-          optionList.appendChild(button);
-        });
-
-        controls.appendChild(optionList);
-      }
+      const controls = buildQualificationControls(question, (answerLabel) => {
+        setBusy(true);
+        controls.remove();
+        revealNode(buildMessage("user", answerLabel));
+        renderQualificationQuestion(index + 1);
+      });
 
       revealNode(controls);
       setBusy(false);
@@ -2639,6 +3167,16 @@ function setupNabiQuestionExperience(section: HTMLElement) {
 
   function startQualification() {
     if (isResponding) {
+      return;
+    }
+
+    if (isFloatingPopup) {
+      qualificationData = createEmptyQualificationData();
+      bookingState = createEmptyBookingState();
+      availableDates = [];
+      schedulerMonthKey = null;
+      syncLeadBookingState();
+      renderPopupQualificationStep(0, true);
       return;
     }
 
@@ -2660,13 +3198,13 @@ function setupNabiQuestionExperience(section: HTMLElement) {
     availableDates = [];
     syncLeadBookingState();
 
-    revealNode(buildMessage("user", "See if Skin ID fits your store"));
+    revealNode(buildMessage("user", "Check my store"));
 
     const startTimer = window.setTimeout(() => {
       if (currentFlowVersion !== flowVersion) {
         return;
       }
-      revealWithTyping("Let's see if Skin ID makes sense for your store.", () => {
+      revealWithTyping("I’ll need a few details about your store.", () => {
         if (currentFlowVersion !== flowVersion) {
           return;
         }
@@ -2689,7 +3227,12 @@ function setupNabiQuestionExperience(section: HTMLElement) {
     button.className = "nabi-qualification-start";
     button.type = "button";
     button.textContent = "See if Skin ID fits your store";
-    button.addEventListener("click", startQualification);
+    button.addEventListener("click", () => {
+      if (isFloatingPopup) {
+        popupBookingSource = "ask-nabi";
+      }
+      startQualification();
+    });
 
     wrap.append(note, button);
     return wrap;
@@ -2699,6 +3242,13 @@ function setupNabiQuestionExperience(section: HTMLElement) {
     const wrap = document.createElement("div");
     wrap.className = "nabi-follow-ups";
     wrap.setAttribute("aria-label", "Suggested follow-up questions");
+    let draftItem: NabiQuestionItem | null = null;
+    const buttons = new Map<NabiQuestionItem, HTMLButtonElement>();
+    const qnaComposer = buildQnaComposer(() => {
+      if (draftItem) {
+        askQuestion(draftItem, depth);
+      }
+    }, "Select a follow-up question");
 
     followUps.forEach((followUp) => {
       const pill = document.createElement("button");
@@ -2707,10 +3257,20 @@ function setupNabiQuestionExperience(section: HTMLElement) {
       pill.textContent = followUp.question;
       pill.dataset.nabiFollowUpId = followUp.id;
       pill.dataset.nabiDepth = String(depth);
-      pill.addEventListener("click", () => askQuestion(followUp, depth));
+      pill.setAttribute("aria-pressed", "false");
+      pill.addEventListener("click", () => {
+        draftItem = followUp;
+        buttons.forEach((button, item) => {
+          button.classList.toggle("is-selected", item === followUp);
+          button.setAttribute("aria-pressed", String(item === followUp));
+        });
+        qnaComposer.setDraftText(followUp.question);
+      });
+      buttons.set(followUp, pill);
       wrap.appendChild(pill);
     });
 
+    wrap.appendChild(qnaComposer.composer);
     return wrap;
   };
 
@@ -2725,6 +3285,10 @@ function setupNabiQuestionExperience(section: HTMLElement) {
     setBusy(true);
     section.classList.add("has-conversation");
     section.dataset.nabiMode = "qa";
+    if (isFloatingPopup) {
+      popupMode = "qa";
+      syncPopupNavigationState();
+    }
     promptList.hidden = true;
     if (entryChoices) {
       entryChoices.hidden = true;
@@ -2732,6 +3296,7 @@ function setupNabiQuestionExperience(section: HTMLElement) {
     resetButton.hidden = false;
     resetButton.textContent = "Back to topics";
     clearActiveControls();
+    clearPromptDraft();
 
     revealNode(buildMessage("user", item.question));
 
@@ -2758,12 +3323,33 @@ function setupNabiQuestionExperience(section: HTMLElement) {
     activeTimers.push(typingTimer);
   };
 
+  promptList.querySelectorAll<HTMLElement>(".nabi-qna-composer").forEach((composer) => {
+    composer.remove();
+  });
+
+  let draftPromptItem: NabiQuestionItem | null = null;
+  const promptComposer = buildQnaComposer(() => {
+    if (draftPromptItem) {
+      askQuestion(draftPromptItem);
+    }
+  }, "Select a topic");
+  resetPromptComposerDraft = () => {
+    draftPromptItem = null;
+    promptComposer.setDraftText("");
+  };
+  promptList.appendChild(promptComposer.composer);
+
   const promptCleanups = promptButtons.map((button) => {
     const onClick = () => {
       const item = questionMap.get(button.dataset.nabiQuestion ?? "");
 
       if (item) {
-        askQuestion(item);
+        draftPromptItem = item;
+        promptButtons.forEach((promptButton) => {
+          promptButton.classList.toggle("is-selected", promptButton === button);
+          promptButton.setAttribute("aria-pressed", String(promptButton === button));
+        });
+        promptComposer.setDraftText(item.question);
       }
     };
 
@@ -2775,11 +3361,42 @@ function setupNabiQuestionExperience(section: HTMLElement) {
   const onHistoryForwardClick = () => restoreQnaHistoryState(qnaHistoryIndex + 1);
   const onResetClick = () => resetConversation(false);
   const onAskEntryClick = () => resetConversation(false);
-  const onBookEntryClick = () => startQualification();
+  const onBookEntryClick = () => {
+    if (isFloatingPopup) {
+      popupBookingSource = "direct";
+    }
+    startQualification();
+  };
+  const onPopupBackClick = () => {
+    if (!isFloatingPopup || isResponding || bookingState.bookingStatus === "booked") {
+      return;
+    }
+
+    const currentStepIndex = getPopupBookingStepIndex();
+
+    if (popupMode === "topics") {
+      resetConversation(true);
+      return;
+    }
+
+    if (popupMode === "scheduler") {
+      renderPopupQualificationStep(Math.max(qualificationQuestions.length - 1, 0), false);
+      return;
+    }
+
+    if (popupMode === "booking") {
+      if (currentStepIndex <= 0) {
+        resetConversation(true);
+      } else {
+        renderPopupQualificationStep(currentStepIndex - 1, false);
+      }
+    }
+  };
 
   resetButton.addEventListener("click", onResetClick);
   historyBackButton.addEventListener("click", onHistoryBackClick);
   historyForwardButton.addEventListener("click", onHistoryForwardClick);
+  popupBackButton?.addEventListener("click", onPopupBackClick);
   askEntryButton?.addEventListener("click", onAskEntryClick);
   bookEntryButton?.addEventListener("click", onBookEntryClick);
   resetConversation(Boolean(entryChoices));
@@ -2790,9 +3407,11 @@ function setupNabiQuestionExperience(section: HTMLElement) {
     resetButton.removeEventListener("click", onResetClick);
     historyBackButton.removeEventListener("click", onHistoryBackClick);
     historyForwardButton.removeEventListener("click", onHistoryForwardClick);
+    popupBackButton?.removeEventListener("click", onPopupBackClick);
     askEntryButton?.removeEventListener("click", onAskEntryClick);
     bookEntryButton?.removeEventListener("click", onBookEntryClick);
     promptCleanups.forEach((cleanup) => cleanup());
+    promptComposer.composer.remove();
   };
 }
 
@@ -7034,6 +7653,7 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
 
       <div class="nabi-chat-panel" aria-label="Guided Nabi questions">
         <div class="nabi-chat-top">
+          <button class="nabi-floating-back" type="button" aria-label="Back" hidden><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5 8 12l6.5 6.5"/><path d="M9 12h9"/></svg></button>
           <div class="nabi-assistant-id">
             <div class="nabi-assistant-avatar" aria-hidden="true"><img src="/nabi-logo-cropped.png" alt="" /></div>
             <div>
@@ -7095,6 +7715,7 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
     <div class="nabi-floating-panel" id="nabiFloatingPanel" aria-label="Ask Nabi floating panel">
       <div class="nabi-chat-panel" aria-label="Guided Nabi questions">
         <div class="nabi-chat-top">
+          <button class="nabi-floating-back" type="button" aria-label="Back" hidden><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5 8 12l6.5 6.5"/><path d="M9 12h9"/></svg></button>
           <div class="nabi-assistant-id">
             <div class="nabi-assistant-avatar" aria-hidden="true"><img src="/nabi-logo-cropped.png" alt="" /></div>
             <div>

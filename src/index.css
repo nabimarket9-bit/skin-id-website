@@ -1531,14 +1531,16 @@
     .nabi-typing-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,231,163,.78);animation:nabiTypingDot 1s ease-in-out infinite}
     .nabi-typing-dot:nth-child(2){animation-delay:.14s}.nabi-typing-dot:nth-child(3){animation-delay:.28s}
     @keyframes nabiTypingDot{0%,100%{opacity:.32;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
-    .nabi-prompt-list,.nabi-follow-ups{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:10px}
+    .nabi-prompt-list,.nabi-follow-ups{position:relative;z-index:1;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;max-width:88%;margin-left:auto}
     .nabi-prompt,.nabi-follow-up-pill{appearance:none;border:1px solid rgba(255,255,255,.16);border-radius:18px;background:#0b0d11;color:#f9f4ea;font:inherit;font-size:13px;font-weight:760;line-height:1.32;padding:13px 15px;cursor:pointer;transition:transform .22s ease,border-color .22s ease,background .22s ease,color .22s ease,opacity .22s ease,box-shadow .22s ease;min-width:0}
     .nabi-prompt:hover:not(:disabled),.nabi-follow-up-pill:hover{transform:translateY(-2px);border-color:rgba(255,231,163,.42);background:#111319;color:#fff7df;box-shadow:0 12px 28px rgba(0,0,0,.22),inset 3px 0 0 rgba(255,231,163,.72)}
+    .nabi-prompt.is-selected,.nabi-follow-up-pill.is-selected{border-color:rgba(255,231,163,.62);background:linear-gradient(180deg,rgba(255,231,163,.12),rgba(255,255,255,.045));color:#fffaf0;box-shadow:0 14px 34px rgba(212,175,55,.12),inset 3px 0 0 rgba(255,231,163,.62)}
     .nabi-prompt:disabled{opacity:.48;cursor:wait}
     .nabi-prompt-list[hidden],.nabi-chat-reset[hidden]{display:none}
-    .nabi-follow-ups{justify-self:start;max-width:82%;opacity:0;transform:translateY(10px);transition:opacity .34s ease,transform .34s cubic-bezier(.22,1,.36,1)}
+    .nabi-follow-ups{justify-self:end;max-width:88%;opacity:0;transform:translateY(10px);transition:opacity .34s ease,transform .34s cubic-bezier(.22,1,.36,1)}
     .nabi-follow-up-pill{font-size:12px;color:#dff4ff;border-color:rgba(184,242,255,.22);cursor:pointer;background:#090d12}
-    .nabi-qualification-cta,.nabi-qualification-controls,.nabi-scheduler,.nabi-booking-confirmation{position:relative;z-index:1;justify-self:start;max-width:82%;opacity:0;transform:translateY(10px);transition:opacity .34s ease,transform .34s cubic-bezier(.22,1,.36,1)}
+    .nabi-qualification-cta,.nabi-scheduler,.nabi-booking-confirmation{position:relative;z-index:1;justify-self:start;max-width:82%;opacity:0;transform:translateY(10px);transition:opacity .34s ease,transform .34s cubic-bezier(.22,1,.36,1)}
+    .nabi-qualification-controls{position:relative;z-index:1;justify-self:end;max-width:88%;opacity:0;transform:translateY(10px);transition:opacity .34s ease,transform .34s cubic-bezier(.22,1,.36,1)}
     .nabi-qualification-cta.is-visible,.nabi-qualification-controls.is-visible,.nabi-scheduler.is-visible,.nabi-booking-confirmation.is-visible{opacity:1;transform:translateY(0)}
     .nabi-qualification-cta{display:grid;gap:12px;padding:16px;border:1px solid rgba(255,231,163,.16);border-radius:22px;background:linear-gradient(180deg,#0e0d0b,#08090b);box-shadow:0 18px 44px rgba(0,0,0,.2)}
     .nabi-qualification-cta p,.nabi-qualification-error,.nabi-scheduler-slots p{margin:0;color:rgba(247,241,232,.72);font-size:13px;line-height:1.5}
@@ -1551,9 +1553,30 @@
     .nabi-qualification-input:focus{border-color:rgba(255,231,163,.42);box-shadow:0 0 0 3px rgba(255,231,163,.08)}
     .nabi-qualification-error{grid-column:1/-1;color:#ffc7c7}
     .nabi-qualification-error[hidden]{display:none}
-    .nabi-qualification-options{display:flex;flex-wrap:wrap;gap:10px}
+    .nabi-qualification-options{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px}
     .nabi-qualification-option{background:#0b0d11;color:#f9f4ea;border-color:rgba(255,255,255,.16);text-align:left}
     .nabi-qualification-option:hover{border-color:rgba(255,231,163,.42);background:#111319;color:#fff7df}
+    .nabi-qualification-option.is-selected{border-color:rgba(255,231,163,.62);background:linear-gradient(180deg,rgba(255,231,163,.12),rgba(255,255,255,.045));color:#fffaf0;box-shadow:0 14px 34px rgba(212,175,55,.12),inset 3px 0 0 rgba(255,231,163,.62)}
+    .nabi-qualification-options-ranked .nabi-qualification-option{display:inline-flex;align-items:center;justify-content:space-between;gap:10px}
+    .nabi-qualification-rank{display:grid;place-items:center;min-width:22px;height:22px;border-radius:999px;background:rgba(255,231,163,.16);border:1px solid rgba(255,231,163,.3);color:#ffe7a3;font-size:11px;font-weight:950;line-height:1}
+    .nabi-qualification-composer{display:grid;grid-template-columns:minmax(0,1fr) 44px;align-items:center;gap:10px;width:min(100%,520px);margin:14px 0 0 auto;padding:8px;border:1px solid rgba(255,255,255,.14);border-radius:22px;background:linear-gradient(180deg,#0b0c10,#050608);box-shadow:0 18px 44px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.045);transition:border-color .22s ease,box-shadow .22s ease,background .22s ease}
+    .nabi-qualification-composer.is-ready{border-color:rgba(255,231,163,.34);box-shadow:0 20px 50px rgba(0,0,0,.26),0 0 26px rgba(212,175,55,.08),inset 0 1px 0 rgba(255,255,255,.06)}
+    .nabi-qualification-composer-body{min-width:0;display:flex;align-items:center;min-height:44px}
+    .nabi-qualification-composer-input{width:100%;min-width:0;border:0;background:transparent;color:#fffaf0;font:inherit;font-size:14px;line-height:1.35;padding:0 6px;outline:none}
+    .nabi-qualification-composer-input::placeholder,.nabi-qualification-composer-placeholder{color:rgba(247,241,232,.48)}
+    .nabi-qualification-composer-input:read-only{cursor:default}
+    .nabi-qualification-send{appearance:none;display:grid;place-items:center;width:44px;height:44px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:#0e1015;color:rgba(247,241,232,.42);cursor:pointer;transition:transform .2s ease,border-color .2s ease,color .2s ease,background .2s ease,box-shadow .2s ease,opacity .2s ease}
+    .nabi-qualification-send:not(:disabled){border-color:rgba(255,231,163,.5);background:linear-gradient(135deg,#fff1aa,#d4af37);color:#08090b;box-shadow:0 10px 24px rgba(212,175,55,.18)}
+    .nabi-qualification-send:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 14px 30px rgba(212,175,55,.23)}
+    .nabi-qualification-send:active:not(:disabled){transform:translateY(0) scale(.96)}
+    .nabi-qualification-send:disabled{opacity:.55;cursor:not-allowed}
+    .nabi-qualification-token-list{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0;padding:3px 2px}
+    .nabi-qualification-token{display:inline-flex;align-items:center;min-width:0;max-width:100%;border:1px solid rgba(255,231,163,.18);border-radius:999px;background:rgba(255,255,255,.055);color:#fffaf0;font-size:12px;font-weight:850;line-height:1.25;padding:7px 9px;overflow-wrap:anywhere}
+    .nabi-qna-composer{flex:0 1 min(100%,520px)}
+    .nabi-qualification-other-form{margin-top:12px}
+    .nabi-qualification-other-form[hidden]{display:none}
+    .nabi-qualification-controls[data-max-goals-reached="true"] .nabi-qualification-options-ranked{animation:nabiGoalLimit .32s ease}
+    @keyframes nabiGoalLimit{25%{transform:translateX(-3px)}50%{transform:translateX(3px)}75%{transform:translateX(-2px)}}
     .nabi-scheduler{display:grid;gap:18px;width:min(100%,640px);padding:18px;border:1px solid rgba(255,231,163,.18);border-radius:26px;background:linear-gradient(180deg,#11100d,#060708);box-shadow:0 20px 56px rgba(0,0,0,.24),inset 3px 0 0 rgba(255,231,163,.4)}
     .nabi-scheduler-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
     .nabi-scheduler-header>strong{color:#fffaf0;font-size:18px;letter-spacing:-.025em}
@@ -1613,6 +1636,10 @@
     .nabi-floating-panel .nabi-chat-panel{width:100%;max-height:min(680px,calc(100vh - 118px));padding:18px;border-radius:28px;overflow:hidden}
     .nabi-floating-panel .nabi-chat-panel:before{left:18px;right:18px;top:72px}
     .nabi-floating-panel .nabi-chat-top{margin:0 0 20px;padding:0 0 18px;gap:12px}
+    .nabi-floating-back{appearance:none;display:grid;place-items:center;width:38px;height:38px;flex:0 0 auto;border:1px solid rgba(255,231,163,.18);border-radius:14px;background:#090a0d;color:rgba(244,221,176,.88);cursor:pointer;transition:transform .22s ease,border-color .22s ease,color .22s ease,background .22s ease}
+    .nabi-floating-back:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(255,231,163,.42);color:#fff2bf;background:#101114}
+    .nabi-floating-back[hidden]{display:none}
+    .nabi-floating-back:disabled{opacity:.42;cursor:not-allowed;transform:none}
     .nabi-floating-panel .nabi-assistant-avatar{width:42px;height:42px;border-radius:15px}
     .nabi-floating-panel .nabi-assistant-id strong{font-size:15px}
     .nabi-floating-panel .nabi-chat-thread{max-height:min(390px,calc(100vh - 372px));min-height:118px;overflow-y:auto;overscroll-behavior:contain;padding-right:3px;-webkit-overflow-scrolling:touch}
@@ -1620,9 +1647,10 @@
     .nabi-floating-panel .nabi-message-user{max-width:88%}
     .nabi-floating-panel .nabi-message-bubble{font-size:13px;line-height:1.52;padding:12px 14px}
     .nabi-floating-panel .nabi-message-avatar{width:34px;height:34px;border-radius:13px}
-    .nabi-floating-panel .nabi-prompt-list,.nabi-floating-panel .nabi-follow-ups{display:grid;grid-template-columns:1fr;gap:8px;width:100%;max-width:100%}
+    .nabi-floating-panel .nabi-prompt-list,.nabi-floating-panel .nabi-follow-ups{display:grid;grid-template-columns:1fr;justify-items:stretch;gap:8px;width:100%;max-width:92%;margin-left:auto}
     .nabi-floating-panel .nabi-prompt-list[hidden],.nabi-floating-panel .nabi-chat-reset[hidden],.nabi-floating-panel .nabi-chat-history-nav[hidden]{display:none}
     .nabi-floating-panel .nabi-prompt,.nabi-floating-panel .nabi-follow-up-pill{width:100%;font-size:12px;text-align:left;padding:11px 12px}
+    .nabi-floating-panel .nabi-qualification-option.is-selected{border-color:rgba(255,231,163,.62);background:linear-gradient(180deg,rgba(255,231,163,.12),rgba(255,255,255,.045));color:#fffaf0;box-shadow:0 14px 34px rgba(212,175,55,.12),inset 3px 0 0 rgba(255,231,163,.62)}
     .nabi-widget-entry{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .nabi-widget-entry[hidden]{display:none}
     .nabi-widget-entry-choice{appearance:none;border:1px solid rgba(255,231,163,.24);border-radius:18px;background:linear-gradient(180deg,#101116,#08090c);color:#fffaf0;font:inherit;font-size:13px;font-weight:900;letter-spacing:.02em;padding:14px 13px;cursor:pointer;box-shadow:0 14px 32px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.06);transition:transform .22s ease,border-color .22s ease,background .22s ease,color .22s ease,box-shadow .22s ease,opacity .22s ease}
@@ -3893,10 +3921,11 @@
       .nabi-message-bubble{font-size:14px;line-height:1.56;padding:14px 15px;border-radius:22px}
       .nabi-message-nabi .nabi-message-bubble{border-radius:22px;border-bottom-left-radius:8px}
       .nabi-message-avatar{width:38px;height:38px;border-radius:14px}
-      .nabi-prompt-list{display:grid;grid-template-columns:1fr;gap:9px}
+      .nabi-prompt-list{display:grid;grid-template-columns:1fr;justify-items:stretch;gap:9px;max-width:92%;margin-left:auto}
       .nabi-prompt,.nabi-follow-up-pill{width:100%;text-align:left;justify-content:flex-start;font-size:13px;padding:12px 14px}
-      .nabi-follow-ups{max-width:94%;display:grid;grid-template-columns:1fr;width:100%}
-      .nabi-qualification-cta,.nabi-qualification-controls,.nabi-scheduler,.nabi-booking-confirmation{max-width:94%;width:100%}
+      .nabi-follow-ups{max-width:92%;display:grid;grid-template-columns:1fr;width:100%;margin-left:auto}
+      .nabi-qualification-cta,.nabi-scheduler,.nabi-booking-confirmation{max-width:94%;width:100%}
+      .nabi-qualification-controls{max-width:92%;width:100%;justify-self:end}
       .nabi-qualification-form{grid-template-columns:1fr}
       .nabi-qualification-submit{width:100%;min-height:44px}
       .nabi-qualification-options{display:grid;grid-template-columns:1fr;gap:9px}
