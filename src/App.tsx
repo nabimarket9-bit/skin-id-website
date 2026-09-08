@@ -1878,6 +1878,15 @@ function setupNabiQuestionExperience(section: HTMLElement) {
     return typing;
   };
 
+  const buildSchedulerLoading = () => {
+    const loading = buildTyping();
+    loading.classList.add("nabi-scheduler-loading");
+    loading.setAttribute("role", "status");
+    loading.setAttribute("aria-live", "polite");
+    loading.setAttribute("aria-label", "Loading available times");
+    return loading;
+  };
+
   const revealNode = (node: HTMLElement) => {
     thread.appendChild(node);
     const revealTimer = window.setTimeout(() => {
@@ -2704,6 +2713,12 @@ function setupNabiQuestionExperience(section: HTMLElement) {
       return;
     }
 
+    const schedulerLoading = buildSchedulerLoading();
+    revealNode(schedulerLoading);
+    const removeSchedulerLoading = () => {
+      schedulerLoading.remove();
+    };
+
     bookingState = {
       ...bookingState,
       bookingStatus: "selecting",
@@ -2725,6 +2740,7 @@ function setupNabiQuestionExperience(section: HTMLElement) {
           bookingStatus: "failed",
         };
         syncLeadBookingState();
+        removeSchedulerLoading();
         revealNode(buildMessage("nabi", "I couldn't save the lead right now. Check the Supabase connection, then try again."));
         revealNode(buildLeadRetryCta());
         setBusy(false);
@@ -2733,15 +2749,18 @@ function setupNabiQuestionExperience(section: HTMLElement) {
     }
 
     if (currentFlowVersion !== flowVersion) {
+      removeSchedulerLoading();
       return;
     }
 
     try {
       await refreshAvailabilityForTimezone(bookingState.timezone ?? detectVisitorTimezone());
       if (currentFlowVersion !== flowVersion) {
+        removeSchedulerLoading();
         return;
       }
 
+      removeSchedulerLoading();
       if (!availableDates.length) {
         revealNode(buildMessage("nabi", "I don't see available demo times right now. Try again shortly and I'll check the calendar again."));
       } else {
@@ -2758,6 +2777,7 @@ function setupNabiQuestionExperience(section: HTMLElement) {
         bookingStatus: "failed",
       };
       syncLeadBookingState();
+      removeSchedulerLoading();
       revealNode(buildMessage("nabi", "I couldn't load available times right now. Try again shortly and I'll check the calendar again."));
     }
     setBusy(false);
