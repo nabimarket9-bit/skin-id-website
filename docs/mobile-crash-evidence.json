@@ -1,0 +1,3696 @@
+{
+  "date": "2026-09-08",
+  "commit": "6a94aeb30162eccf744d46441408ae4cb69b59ec",
+  "device": "Windows headless Chrome 152.0.7977.82, 402x874 CSS px, DPR 3, touch emulation; not an iPhone",
+  "gpu": "ANGLE NVIDIA GeForce RTX 3050 D3D11",
+  "backend": "CDP fixtures; 30 dates x 12 slots; no external writes",
+  "deployedParity": [
+    {
+      "path": "assets/index-CTi69SBj.js",
+      "bytes": 624279,
+      "identical": true,
+      "sha256": "df221396ab68de68b0c67671c424bd7f6244b5ce108a9ecc246a0c73b79de306"
+    },
+    {
+      "path": "assets/index-CdtBNB1R.css",
+      "bytes": 299431,
+      "identical": true,
+      "sha256": "d9706e034a58c0ca80384938ea467b5dad46365aa8287187983c43a9a564364a"
+    }
+  ],
+  "notes": [
+    "Primary start through idle3 remained in the same emulated mobile session.",
+    "Follow-up before-reset through after-reset used a reattached session; emulation was reapplied, but launcher drawing buffer changed to 75x75. These samples support listener/DOM cleanup only.",
+    "Heap samples followed CDP garbage collection and include diagnostics, runtime caches, and dev tooling; they are not total GPU/WebKit memory.",
+    "Observer/listener totals include the probe and Vite/React; compare deltas. RAF start/stop events are sampled, whereas outstanding callback counts are tracked directly.",
+    "Only the completed run is exported; a preliminary fixture CORS failure and a reattached desktop-metrics trial were excluded."
+  ],
+  "samples": [
+    {
+      "name": "start",
+      "time": 10149,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 4,
+        "renderer created": 3,
+        "RAF started": 5,
+        "RAF stopped": 3,
+        "renderer disposed": 1,
+        "context lost": 1
+      },
+      "intlCount": 0,
+      "intlMs": 0,
+      "nodes": 1422,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at startAnimation (http://127.0.0.1:5178/src/App.tsx:4411:27)": 1,
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1
+      },
+      "timers": {
+        "library": 1,
+        "at scheduleShake (http://127.0.0.1:5178/src/App.tsx:2772:23)": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 11
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 1,
+        "document:keydown": 2,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 0,
+      "schedulers": 0,
+      "heap": 40573768,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": [
+        {
+          "method": "Page.frameNavigated",
+          "params": {
+            "frame": {
+              "id": "768500621CBBA9A2315EEB0EFF954837",
+              "loaderId": "A393E8F607E79C439E95EB9599F3B25F",
+              "url": "http://127.0.0.1:5178/",
+              "domainAndRegistry": "",
+              "securityOrigin": "http://127.0.0.1:5178",
+              "securityOriginDetails": {
+                "isLocalhost": true
+              },
+              "mimeType": "text/html",
+              "adFrameStatus": {
+                "adFrameType": "none"
+              },
+              "secureContextType": "SecureLocalhost",
+              "crossOriginIsolatedContextType": "NotIsolated",
+              "gatedAPIFeatures": []
+            },
+            "type": "Navigation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "scrolled",
+      "time": 20380,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 4,
+        "renderer created": 3,
+        "RAF started": 6,
+        "RAF stopped": 5,
+        "renderer disposed": 1,
+        "context lost": 1
+      },
+      "intlCount": 0,
+      "intlMs": 0,
+      "nodes": 1422,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1
+      },
+      "timers": {
+        "library": 1,
+        "at scheduleShake (http://127.0.0.1:5178/src/App.tsx:2772:23)": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 10
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 1,
+        "document:keydown": 2,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 0,
+      "schedulers": 0,
+      "heap": 40759653,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": [
+        {
+          "method": "Page.frameNavigated",
+          "params": {
+            "frame": {
+              "id": "768500621CBBA9A2315EEB0EFF954837",
+              "loaderId": "A393E8F607E79C439E95EB9599F3B25F",
+              "url": "http://127.0.0.1:5178/",
+              "domainAndRegistry": "",
+              "securityOrigin": "http://127.0.0.1:5178",
+              "securityOriginDetails": {
+                "isLocalhost": true
+              },
+              "mimeType": "text/html",
+              "adFrameStatus": {
+                "adFrameType": "none"
+              },
+              "secureContextType": "SecureLocalhost",
+              "crossOriginIsolatedContextType": "NotIsolated",
+              "gatedAPIFeatures": []
+            },
+            "type": "Navigation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "popup10",
+      "time": 24022,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 14,
+        "renderer created": 3,
+        "RAF started": 6,
+        "RAF stopped": 5,
+        "renderer disposed": 1,
+        "context lost": 1,
+        "popup opened": 10
+      },
+      "intlCount": 0,
+      "intlMs": 0,
+      "nodes": 1422,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1
+      },
+      "timers": {
+        "library": 1,
+        "at scheduleShake (http://127.0.0.1:5178/src/App.tsx:2772:23)": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 10
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 1,
+        "document:keydown": 2,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 0,
+      "schedulers": 0,
+      "heap": 40808861,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": [
+        {
+          "method": "Page.frameNavigated",
+          "params": {
+            "frame": {
+              "id": "768500621CBBA9A2315EEB0EFF954837",
+              "loaderId": "A393E8F607E79C439E95EB9599F3B25F",
+              "url": "http://127.0.0.1:5178/",
+              "domainAndRegistry": "",
+              "securityOrigin": "http://127.0.0.1:5178",
+              "securityOriginDetails": {
+                "isLocalhost": true
+              },
+              "mimeType": "text/html",
+              "adFrameStatus": {
+                "adFrameType": "none"
+              },
+              "secureContextType": "SecureLocalhost",
+              "crossOriginIsolatedContextType": "NotIsolated",
+              "gatedAPIFeatures": []
+            },
+            "type": "Navigation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "popup20",
+      "time": 27650,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 24,
+        "renderer created": 3,
+        "RAF started": 6,
+        "RAF stopped": 5,
+        "renderer disposed": 1,
+        "context lost": 1,
+        "popup opened": 20
+      },
+      "intlCount": 0,
+      "intlMs": 0,
+      "nodes": 1422,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1
+      },
+      "timers": {
+        "library": 1,
+        "at scheduleShake (http://127.0.0.1:5178/src/App.tsx:2772:23)": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 10
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 1,
+        "document:keydown": 2,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 0,
+      "schedulers": 0,
+      "heap": 40812005,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": [
+        {
+          "method": "Page.frameNavigated",
+          "params": {
+            "frame": {
+              "id": "768500621CBBA9A2315EEB0EFF954837",
+              "loaderId": "A393E8F607E79C439E95EB9599F3B25F",
+              "url": "http://127.0.0.1:5178/",
+              "domainAndRegistry": "",
+              "securityOrigin": "http://127.0.0.1:5178",
+              "securityOriginDetails": {
+                "isLocalhost": true
+              },
+              "mimeType": "text/html",
+              "adFrameStatus": {
+                "adFrameType": "none"
+              },
+              "secureContextType": "SecureLocalhost",
+              "crossOriginIsolatedContextType": "NotIsolated",
+              "gatedAPIFeatures": []
+            },
+            "type": "Navigation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "qna-l3",
+      "time": 32425,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 24,
+        "renderer created": 3,
+        "RAF started": 6,
+        "RAF stopped": 5,
+        "renderer disposed": 1,
+        "context lost": 1,
+        "popup opened": 21,
+        "auto-scroll triggered": 12
+      },
+      "intlCount": 0,
+      "intlMs": 0,
+      "nodes": 1443,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1
+      },
+      "timers": {
+        "library": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 10
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 1,
+        "document:keydown": 2,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 0,
+      "schedulers": 0,
+      "heap": 40847539,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": [
+        {
+          "method": "Page.frameNavigated",
+          "params": {
+            "frame": {
+              "id": "768500621CBBA9A2315EEB0EFF954837",
+              "loaderId": "A393E8F607E79C439E95EB9599F3B25F",
+              "url": "http://127.0.0.1:5178/",
+              "domainAndRegistry": "",
+              "securityOrigin": "http://127.0.0.1:5178",
+              "securityOriginDetails": {
+                "isLocalhost": true
+              },
+              "mimeType": "text/html",
+              "adFrameStatus": {
+                "adFrameType": "none"
+              },
+              "secureContextType": "SecureLocalhost",
+              "crossOriginIsolatedContextType": "NotIsolated",
+              "gatedAPIFeatures": []
+            },
+            "type": "Navigation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "history10",
+      "time": 36068,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 24,
+        "renderer created": 3,
+        "RAF started": 7,
+        "RAF stopped": 6,
+        "renderer disposed": 1,
+        "context lost": 1,
+        "popup opened": 21,
+        "auto-scroll triggered": 32
+      },
+      "intlCount": 0,
+      "intlMs": 0,
+      "nodes": 1443,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1
+      },
+      "timers": {
+        "library": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 10
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 1,
+        "document:keydown": 2,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 0,
+      "schedulers": 0,
+      "heap": 40873361,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": [
+        {
+          "method": "Page.frameNavigated",
+          "params": {
+            "frame": {
+              "id": "768500621CBBA9A2315EEB0EFF954837",
+              "loaderId": "A393E8F607E79C439E95EB9599F3B25F",
+              "url": "http://127.0.0.1:5178/",
+              "domainAndRegistry": "",
+              "securityOrigin": "http://127.0.0.1:5178",
+              "securityOriginDetails": {
+                "isLocalhost": true
+              },
+              "mimeType": "text/html",
+              "adFrameStatus": {
+                "adFrameType": "none"
+              },
+              "secureContextType": "SecureLocalhost",
+              "crossOriginIsolatedContextType": "NotIsolated",
+              "gatedAPIFeatures": []
+            },
+            "type": "Navigation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "goals-before",
+      "time": 42695,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 24,
+        "renderer created": 3,
+        "RAF started": 7,
+        "RAF stopped": 6,
+        "renderer disposed": 1,
+        "context lost": 1,
+        "popup opened": 21,
+        "auto-scroll triggered": 47
+      },
+      "intlCount": 0,
+      "intlMs": 0,
+      "nodes": 1477,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1
+      },
+      "timers": {
+        "library": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 10
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 1,
+        "document:keydown": 2,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 0,
+      "schedulers": 0,
+      "heap": 40929509,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": [
+        {
+          "method": "Page.frameNavigated",
+          "params": {
+            "frame": {
+              "id": "768500621CBBA9A2315EEB0EFF954837",
+              "loaderId": "A393E8F607E79C439E95EB9599F3B25F",
+              "url": "http://127.0.0.1:5178/",
+              "domainAndRegistry": "",
+              "securityOrigin": "http://127.0.0.1:5178",
+              "securityOriginDetails": {
+                "isLocalhost": true
+              },
+              "mimeType": "text/html",
+              "adFrameStatus": {
+                "adFrameType": "none"
+              },
+              "secureContextType": "SecureLocalhost",
+              "crossOriginIsolatedContextType": "NotIsolated",
+              "gatedAPIFeatures": []
+            },
+            "type": "Navigation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "goals-after",
+      "time": 46374,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 24,
+        "renderer created": 3,
+        "RAF started": 7,
+        "RAF stopped": 6,
+        "renderer disposed": 1,
+        "context lost": 1,
+        "popup opened": 21,
+        "auto-scroll triggered": 47
+      },
+      "intlCount": 0,
+      "intlMs": 0,
+      "nodes": 1477,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1
+      },
+      "timers": {
+        "library": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 10
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 1,
+        "document:keydown": 2,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 1,
+      "schedulers": 0,
+      "heap": 40982560,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": [
+        {
+          "method": "Page.frameNavigated",
+          "params": {
+            "frame": {
+              "id": "768500621CBBA9A2315EEB0EFF954837",
+              "loaderId": "A393E8F607E79C439E95EB9599F3B25F",
+              "url": "http://127.0.0.1:5178/",
+              "domainAndRegistry": "",
+              "securityOrigin": "http://127.0.0.1:5178",
+              "securityOriginDetails": {
+                "isLocalhost": true
+              },
+              "mimeType": "text/html",
+              "adFrameStatus": {
+                "adFrameType": "none"
+              },
+              "secureContextType": "SecureLocalhost",
+              "crossOriginIsolatedContextType": "NotIsolated",
+              "gatedAPIFeatures": []
+            },
+            "type": "Navigation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "scheduler-first",
+      "time": 53686,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 24,
+        "renderer created": 3,
+        "RAF started": 8,
+        "RAF stopped": 6,
+        "renderer disposed": 1,
+        "context lost": 1,
+        "popup opened": 21,
+        "auto-scroll triggered": 62,
+        "availability fetch started": 1,
+        "availability fetch completed": 1,
+        "scheduler mounted": 1
+      },
+      "intlCount": 428,
+      "intlMs": 17,
+      "nodes": 1570,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1
+      },
+      "timers": {
+        "library": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 10
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 1,
+        "document:keydown": 2,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 0,
+      "schedulers": 1,
+      "heap": 41161222,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": [
+        {
+          "method": "Page.frameNavigated",
+          "params": {
+            "frame": {
+              "id": "768500621CBBA9A2315EEB0EFF954837",
+              "loaderId": "A393E8F607E79C439E95EB9599F3B25F",
+              "url": "http://127.0.0.1:5178/",
+              "domainAndRegistry": "",
+              "securityOrigin": "http://127.0.0.1:5178",
+              "securityOriginDetails": {
+                "isLocalhost": true
+              },
+              "mimeType": "text/html",
+              "adFrameStatus": {
+                "adFrameType": "none"
+              },
+              "secureContextType": "SecureLocalhost",
+              "crossOriginIsolatedContextType": "NotIsolated",
+              "gatedAPIFeatures": []
+            },
+            "type": "Navigation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "months20",
+      "time": 57778,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 24,
+        "renderer created": 3,
+        "RAF started": 8,
+        "RAF stopped": 7,
+        "renderer disposed": 1,
+        "context lost": 1,
+        "popup opened": 21,
+        "auto-scroll triggered": 62,
+        "availability fetch started": 1,
+        "availability fetch completed": 1,
+        "scheduler mounted": 21,
+        "scheduler unmounted": 20
+      },
+      "intlCount": 8868,
+      "intlMs": 315,
+      "nodes": 1570,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1
+      },
+      "timers": {
+        "library": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 10
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 1,
+        "document:keydown": 2,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 0,
+      "schedulers": 1,
+      "heap": 41509974,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": [
+        {
+          "method": "Page.frameNavigated",
+          "params": {
+            "frame": {
+              "id": "768500621CBBA9A2315EEB0EFF954837",
+              "loaderId": "A393E8F607E79C439E95EB9599F3B25F",
+              "url": "http://127.0.0.1:5178/",
+              "domainAndRegistry": "",
+              "securityOrigin": "http://127.0.0.1:5178",
+              "securityOriginDetails": {
+                "isLocalhost": true
+              },
+              "mimeType": "text/html",
+              "adFrameStatus": {
+                "adFrameType": "none"
+              },
+              "secureContextType": "SecureLocalhost",
+              "crossOriginIsolatedContextType": "NotIsolated",
+              "gatedAPIFeatures": []
+            },
+            "type": "Navigation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "timezone-open",
+      "time": 58032,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 24,
+        "renderer created": 3,
+        "RAF started": 8,
+        "RAF stopped": 7,
+        "renderer disposed": 1,
+        "context lost": 1,
+        "popup opened": 21,
+        "auto-scroll triggered": 62,
+        "availability fetch started": 1,
+        "availability fetch completed": 1,
+        "scheduler mounted": 21,
+        "scheduler unmounted": 20
+      },
+      "intlCount": 8868,
+      "intlMs": 315,
+      "nodes": 2827,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1
+      },
+      "timers": {
+        "library": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 10
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 2,
+        "document:keydown": 3,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 0,
+      "schedulers": 1,
+      "heap": 41785312,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": [
+        {
+          "method": "Page.frameNavigated",
+          "params": {
+            "frame": {
+              "id": "768500621CBBA9A2315EEB0EFF954837",
+              "loaderId": "A393E8F607E79C439E95EB9599F3B25F",
+              "url": "http://127.0.0.1:5178/",
+              "domainAndRegistry": "",
+              "securityOrigin": "http://127.0.0.1:5178",
+              "securityOriginDetails": {
+                "isLocalhost": true
+              },
+              "mimeType": "text/html",
+              "adFrameStatus": {
+                "adFrameType": "none"
+              },
+              "secureContextType": "SecureLocalhost",
+              "crossOriginIsolatedContextType": "NotIsolated",
+              "gatedAPIFeatures": []
+            },
+            "type": "Navigation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "timezone-changed",
+      "time": 59337,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 24,
+        "renderer created": 3,
+        "RAF started": 8,
+        "RAF stopped": 7,
+        "renderer disposed": 1,
+        "context lost": 1,
+        "popup opened": 21,
+        "auto-scroll triggered": 62,
+        "availability fetch started": 2,
+        "availability fetch completed": 2,
+        "scheduler mounted": 22,
+        "scheduler unmounted": 21
+      },
+      "intlCount": 9294,
+      "intlMs": 334,
+      "nodes": 1570,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1
+      },
+      "timers": {
+        "library": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 10
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 1,
+        "document:keydown": 2,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 0,
+      "schedulers": 1,
+      "heap": 41797522,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": [
+        {
+          "method": "Page.frameNavigated",
+          "params": {
+            "frame": {
+              "id": "768500621CBBA9A2315EEB0EFF954837",
+              "loaderId": "A393E8F607E79C439E95EB9599F3B25F",
+              "url": "http://127.0.0.1:5178/",
+              "domainAndRegistry": "",
+              "securityOrigin": "http://127.0.0.1:5178",
+              "securityOriginDetails": {
+                "isLocalhost": true
+              },
+              "mimeType": "text/html",
+              "adFrameStatus": {
+                "adFrameType": "none"
+              },
+              "secureContextType": "SecureLocalhost",
+              "crossOriginIsolatedContextType": "NotIsolated",
+              "gatedAPIFeatures": []
+            },
+            "type": "Navigation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "scheduler-reopen10",
+      "time": 82597,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 24,
+        "renderer created": 3,
+        "RAF started": 9,
+        "RAF stopped": 8,
+        "renderer disposed": 1,
+        "context lost": 1,
+        "popup opened": 21,
+        "auto-scroll triggered": 122,
+        "availability fetch started": 2,
+        "availability fetch completed": 2,
+        "scheduler mounted": 32,
+        "scheduler unmounted": 31
+      },
+      "intlCount": 13564,
+      "intlMs": 480,
+      "nodes": 1570,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1
+      },
+      "timers": {
+        "library": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 10
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 1,
+        "document:keydown": 2,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 0,
+      "schedulers": 1,
+      "heap": 42041031,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": [
+        {
+          "method": "Page.frameNavigated",
+          "params": {
+            "frame": {
+              "id": "768500621CBBA9A2315EEB0EFF954837",
+              "loaderId": "A393E8F607E79C439E95EB9599F3B25F",
+              "url": "http://127.0.0.1:5178/",
+              "domainAndRegistry": "",
+              "securityOrigin": "http://127.0.0.1:5178",
+              "securityOriginDetails": {
+                "isLocalhost": true
+              },
+              "mimeType": "text/html",
+              "adFrameStatus": {
+                "adFrameType": "none"
+              },
+              "secureContextType": "SecureLocalhost",
+              "crossOriginIsolatedContextType": "NotIsolated",
+              "gatedAPIFeatures": []
+            },
+            "type": "Navigation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "direct-scheduler",
+      "time": 96740,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 24,
+        "renderer created": 3,
+        "RAF started": 11,
+        "RAF stopped": 10,
+        "renderer disposed": 1,
+        "context lost": 1,
+        "popup opened": 21,
+        "auto-scroll triggered": 157,
+        "availability fetch started": 2,
+        "availability fetch completed": 2,
+        "scheduler mounted": 33,
+        "scheduler unmounted": 32
+      },
+      "intlCount": 13992,
+      "intlMs": 496,
+      "nodes": 1566,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1
+      },
+      "timers": {
+        "library": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 10
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 1,
+        "document:keydown": 2,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 0,
+      "schedulers": 1,
+      "heap": 42132941,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": [
+        {
+          "method": "Page.frameNavigated",
+          "params": {
+            "frame": {
+              "id": "768500621CBBA9A2315EEB0EFF954837",
+              "loaderId": "A393E8F607E79C439E95EB9599F3B25F",
+              "url": "http://127.0.0.1:5178/",
+              "domainAndRegistry": "",
+              "securityOrigin": "http://127.0.0.1:5178",
+              "securityOriginDetails": {
+                "isLocalhost": true
+              },
+              "mimeType": "text/html",
+              "adFrameStatus": {
+                "adFrameType": "none"
+              },
+              "secureContextType": "SecureLocalhost",
+              "crossOriginIsolatedContextType": "NotIsolated",
+              "gatedAPIFeatures": []
+            },
+            "type": "Navigation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "idle1",
+      "time": 158660,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 25,
+        "renderer created": 3,
+        "RAF started": 13,
+        "RAF stopped": 11,
+        "renderer disposed": 1,
+        "context lost": 1,
+        "popup opened": 21,
+        "auto-scroll triggered": 157,
+        "availability fetch started": 2,
+        "availability fetch completed": 2,
+        "scheduler mounted": 33,
+        "scheduler unmounted": 32
+      },
+      "intlCount": 13992,
+      "intlMs": 496,
+      "nodes": 1566,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1,
+        "at startAnimation (http://127.0.0.1:5178/src/App.tsx:4411:27)": 1
+      },
+      "timers": {
+        "library": 1,
+        "at scheduleShake (http://127.0.0.1:5178/src/App.tsx:2772:23)": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 10
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 1,
+        "document:keydown": 2,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 0,
+      "schedulers": 1,
+      "heap": 42457441,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": [
+        {
+          "method": "Page.frameNavigated",
+          "params": {
+            "frame": {
+              "id": "768500621CBBA9A2315EEB0EFF954837",
+              "loaderId": "A393E8F607E79C439E95EB9599F3B25F",
+              "url": "http://127.0.0.1:5178/",
+              "domainAndRegistry": "",
+              "securityOrigin": "http://127.0.0.1:5178",
+              "securityOriginDetails": {
+                "isLocalhost": true
+              },
+              "mimeType": "text/html",
+              "adFrameStatus": {
+                "adFrameType": "none"
+              },
+              "secureContextType": "SecureLocalhost",
+              "crossOriginIsolatedContextType": "NotIsolated",
+              "gatedAPIFeatures": []
+            },
+            "type": "Navigation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "idle2",
+      "time": 218968,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 25,
+        "renderer created": 3,
+        "RAF started": 14,
+        "RAF stopped": 12,
+        "renderer disposed": 1,
+        "context lost": 1,
+        "popup opened": 21,
+        "auto-scroll triggered": 157,
+        "availability fetch started": 2,
+        "availability fetch completed": 2,
+        "scheduler mounted": 33,
+        "scheduler unmounted": 32
+      },
+      "intlCount": 13992,
+      "intlMs": 496,
+      "nodes": 1566,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1,
+        "at startAnimation (http://127.0.0.1:5178/src/App.tsx:4411:27)": 1
+      },
+      "timers": {
+        "library": 1,
+        "at http://127.0.0.1:5178/src/App.tsx:2780:27": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 10
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 1,
+        "document:keydown": 2,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 0,
+      "schedulers": 1,
+      "heap": 42458399,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": [
+        {
+          "method": "Page.frameNavigated",
+          "params": {
+            "frame": {
+              "id": "768500621CBBA9A2315EEB0EFF954837",
+              "loaderId": "A393E8F607E79C439E95EB9599F3B25F",
+              "url": "http://127.0.0.1:5178/",
+              "domainAndRegistry": "",
+              "securityOrigin": "http://127.0.0.1:5178",
+              "securityOriginDetails": {
+                "isLocalhost": true
+              },
+              "mimeType": "text/html",
+              "adFrameStatus": {
+                "adFrameType": "none"
+              },
+              "secureContextType": "SecureLocalhost",
+              "crossOriginIsolatedContextType": "NotIsolated",
+              "gatedAPIFeatures": []
+            },
+            "type": "Navigation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "idle3",
+      "time": 279266,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 25,
+        "renderer created": 3,
+        "RAF started": 15,
+        "RAF stopped": 13,
+        "renderer disposed": 1,
+        "context lost": 1,
+        "popup opened": 21,
+        "auto-scroll triggered": 157,
+        "availability fetch started": 2,
+        "availability fetch completed": 2,
+        "scheduler mounted": 33,
+        "scheduler unmounted": 32
+      },
+      "intlCount": 13992,
+      "intlMs": 496,
+      "nodes": 1566,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1,
+        "at startAnimation (http://127.0.0.1:5178/src/App.tsx:4411:27)": 1
+      },
+      "timers": {
+        "library": 1,
+        "at scheduleShake (http://127.0.0.1:5178/src/App.tsx:2772:23)": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 10
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 1,
+        "document:keydown": 2,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 0,
+      "schedulers": 1,
+      "heap": 42185371,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": [
+        {
+          "method": "Page.frameNavigated",
+          "params": {
+            "frame": {
+              "id": "768500621CBBA9A2315EEB0EFF954837",
+              "loaderId": "A393E8F607E79C439E95EB9599F3B25F",
+              "url": "http://127.0.0.1:5178/",
+              "domainAndRegistry": "",
+              "securityOrigin": "http://127.0.0.1:5178",
+              "securityOriginDetails": {
+                "isLocalhost": true
+              },
+              "mimeType": "text/html",
+              "adFrameStatus": {
+                "adFrameType": "none"
+              },
+              "secureContextType": "SecureLocalhost",
+              "crossOriginIsolatedContextType": "NotIsolated",
+              "gatedAPIFeatures": []
+            },
+            "type": "Navigation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "before-reset",
+      "time": 289406,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 25,
+        "renderer created": 3,
+        "RAF started": 16,
+        "RAF stopped": 14,
+        "renderer disposed": 1,
+        "context lost": 1,
+        "popup opened": 22,
+        "auto-scroll triggered": 157,
+        "availability fetch started": 2,
+        "availability fetch completed": 2,
+        "scheduler mounted": 33,
+        "scheduler unmounted": 32
+      },
+      "intlCount": 13992,
+      "intlMs": 496,
+      "nodes": 1566,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            75,
+            75
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1,
+        "at startAnimation (http://127.0.0.1:5178/src/App.tsx:4411:27)": 1
+      },
+      "timers": {
+        "library": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 10
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 1,
+        "document:keydown": 2,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 0,
+      "schedulers": 1,
+      "heap": 42199411,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": []
+    },
+    {
+      "name": "keyboard-detach",
+      "time": 290030,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 25,
+        "renderer created": 3,
+        "RAF started": 16,
+        "RAF stopped": 14,
+        "renderer disposed": 1,
+        "context lost": 1,
+        "popup opened": 22,
+        "auto-scroll triggered": 158,
+        "availability fetch started": 2,
+        "availability fetch completed": 2,
+        "scheduler mounted": 33,
+        "scheduler unmounted": 33
+      },
+      "intlCount": 13992,
+      "intlMs": 496,
+      "nodes": 1483,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            75,
+            75
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1,
+        "at startAnimation (http://127.0.0.1:5178/src/App.tsx:4411:27)": 1
+      },
+      "timers": {
+        "library": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 10
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 2,
+        "document:keydown": 3,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 453,
+      "schedulers": 0,
+      "heap": 42473443,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": []
+    },
+    {
+      "name": "after-reset",
+      "time": 292921,
+      "counts": {
+        "document loaded": 1,
+        "popup closed": 26,
+        "renderer created": 3,
+        "RAF started": 16,
+        "RAF stopped": 14,
+        "renderer disposed": 1,
+        "context lost": 1,
+        "popup opened": 22,
+        "auto-scroll triggered": 165,
+        "availability fetch started": 2,
+        "availability fetch completed": 2,
+        "scheduler mounted": 33,
+        "scheduler unmounted": 33
+      },
+      "intlCount": 13992,
+      "intlMs": 496,
+      "nodes": 1422,
+      "contexts": [
+        {
+          "label": "loaderLogoCanvas",
+          "alive": true,
+          "lost": true,
+          "forced": true,
+          "size": [
+            1,
+            1
+          ]
+        },
+        {
+          "label": "nabi-floating-logo-canvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            75,
+            75
+          ]
+        },
+        {
+          "label": "faceModelCanvas",
+          "alive": true,
+          "lost": false,
+          "forced": false,
+          "size": [
+            348,
+            261
+          ]
+        }
+      ],
+      "rafs": {
+        "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)": 1,
+        "at startAnimation (http://127.0.0.1:5178/src/App.tsx:4411:27)": 1
+      },
+      "timers": {
+        "library": 1,
+        "at scheduleShake (http://127.0.0.1:5178/src/App.tsx:2772:23)": 1
+      },
+      "observers": {
+        "MutationObserver": 2,
+        "ResizeObserver": 4,
+        "IntersectionObserver": 10
+      },
+      "globalListeners": {
+        "window:beforeunload": 1,
+        "window:error": 1,
+        "window:unhandledrejection": 1,
+        "window:pagehide": 1,
+        "window:pageshow": 1,
+        "window:visibilitychange": 2,
+        "document:selectionchange": 1,
+        "document:visibilitychange": 11,
+        "document:pointerdown": 1,
+        "document:keydown": 2,
+        "window:scroll": 2,
+        "window:resize": 3
+      },
+      "detachedListeners": 0,
+      "schedulers": 0,
+      "heap": 42362543,
+      "nav": [
+        {
+          "type": "navigate",
+          "name": "http://127.0.0.1:5178/"
+        }
+      ],
+      "mobile": true,
+      "protocolEvents": []
+    }
+  ],
+  "events": [
+    {
+      "t": 46,
+      "event": "document loaded",
+      "origin": "http://127.0.0.1:5178"
+    },
+    {
+      "t": 252,
+      "event": "popup closed"
+    },
+    {
+      "t": 252,
+      "event": "popup closed"
+    },
+    {
+      "t": 252,
+      "event": "popup closed"
+    },
+    {
+      "t": 252,
+      "event": "popup closed"
+    },
+    {
+      "t": 342,
+      "event": "renderer created",
+      "label": "loaderLogoCanvas"
+    },
+    {
+      "t": 391,
+      "event": "renderer created",
+      "label": "nabi-floating-logo-canvas"
+    },
+    {
+      "t": 1068,
+      "event": "RAF started",
+      "label": "at startAnimation (http://127.0.0.1:5178/src/App.tsx:4411:27)"
+    },
+    {
+      "t": 1068,
+      "event": "RAF started",
+      "label": "at render (http://127.0.0.1:5178/src/App.tsx:810:26)"
+    },
+    {
+      "t": 1068,
+      "event": "RAF started",
+      "label": "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:225:20)"
+    },
+    {
+      "t": 1068,
+      "event": "RAF started",
+      "label": "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:347:20)"
+    },
+    {
+      "t": 2051,
+      "event": "RAF stopped",
+      "label": "at render (http://127.0.0.1:5178/src/App.tsx:810:26)"
+    },
+    {
+      "t": 4049,
+      "event": "RAF stopped",
+      "label": "at animate (http://127.0.0.1:5178/src/lib/setupLogoIntro.ts:225:20)"
+    },
+    {
+      "t": 4768,
+      "event": "renderer disposed",
+      "label": "loaderLogoCanvas"
+    },
+    {
+      "t": 4771,
+      "event": "context lost",
+      "label": "loaderLogoCanvas",
+      "forced": true
+    },
+    {
+      "t": 4776,
+      "event": "renderer created",
+      "label": "faceModelCanvas"
+    },
+    {
+      "t": 5051,
+      "event": "RAF started",
+      "label": "at startAnimation (http://127.0.0.1:5178/src/lib/setupFaceScanModel.ts:153:20)"
+    },
+    {
+      "t": 10149,
+      "event": "RAF stopped",
+      "label": "at startAnimation (http://127.0.0.1:5178/src/lib/setupFaceScanModel.ts:153:20)"
+    },
+    {
+      "t": 13049,
+      "event": "RAF stopped",
+      "label": "at startAnimation (http://127.0.0.1:5178/src/App.tsx:4411:27)"
+    },
+    {
+      "t": 15048,
+      "event": "RAF started",
+      "label": "at animateFrame (http://127.0.0.1:5178/src/App.tsx:3362:27)"
+    },
+    {
+      "t": 16053,
+      "event": "RAF stopped",
+      "label": "at animateFrame (http://127.0.0.1:5178/src/App.tsx:3362:27)"
+    },
+    {
+      "t": 20451,
+      "event": "popup opened"
+    },
+    {
+      "t": 20637,
+      "event": "popup closed"
+    },
+    {
+      "t": 20803,
+      "event": "popup opened"
+    },
+    {
+      "t": 20985,
+      "event": "popup closed"
+    },
+    {
+      "t": 21168,
+      "event": "popup opened"
+    },
+    {
+      "t": 21353,
+      "event": "popup closed"
+    },
+    {
+      "t": 21538,
+      "event": "popup opened"
+    },
+    {
+      "t": 21720,
+      "event": "popup closed"
+    },
+    {
+      "t": 21900,
+      "event": "popup opened"
+    },
+    {
+      "t": 22084,
+      "event": "popup closed"
+    },
+    {
+      "t": 22268,
+      "event": "popup opened"
+    },
+    {
+      "t": 22435,
+      "event": "popup closed"
+    },
+    {
+      "t": 22600,
+      "event": "popup opened"
+    },
+    {
+      "t": 22786,
+      "event": "popup closed"
+    },
+    {
+      "t": 22969,
+      "event": "popup opened"
+    },
+    {
+      "t": 23153,
+      "event": "popup closed"
+    },
+    {
+      "t": 23336,
+      "event": "popup opened"
+    },
+    {
+      "t": 23504,
+      "event": "popup closed"
+    },
+    {
+      "t": 23673,
+      "event": "popup opened"
+    },
+    {
+      "t": 23852,
+      "event": "popup closed"
+    },
+    {
+      "t": 24101,
+      "event": "popup opened"
+    },
+    {
+      "t": 24286,
+      "event": "popup closed"
+    },
+    {
+      "t": 24468,
+      "event": "popup opened"
+    },
+    {
+      "t": 24653,
+      "event": "popup closed"
+    },
+    {
+      "t": 24818,
+      "event": "popup opened"
+    },
+    {
+      "t": 25002,
+      "event": "popup closed"
+    },
+    {
+      "t": 25185,
+      "event": "popup opened"
+    },
+    {
+      "t": 25368,
+      "event": "popup closed"
+    },
+    {
+      "t": 25534,
+      "event": "popup opened"
+    },
+    {
+      "t": 25701,
+      "event": "popup closed"
+    },
+    {
+      "t": 25885,
+      "event": "popup opened"
+    },
+    {
+      "t": 26071,
+      "event": "popup closed"
+    },
+    {
+      "t": 26249,
+      "event": "popup opened"
+    },
+    {
+      "t": 26418,
+      "event": "popup closed"
+    },
+    {
+      "t": 26604,
+      "event": "popup opened"
+    },
+    {
+      "t": 26784,
+      "event": "popup closed"
+    },
+    {
+      "t": 26969,
+      "event": "popup opened"
+    },
+    {
+      "t": 27152,
+      "event": "popup closed"
+    },
+    {
+      "t": 27319,
+      "event": "popup opened"
+    },
+    {
+      "t": 27485,
+      "event": "popup closed"
+    },
+    {
+      "t": 27716,
+      "event": "popup opened"
+    },
+    {
+      "t": 28312,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 28546,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 29312,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 29495,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 29780,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 30012,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 30779,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 30962,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 31212,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 31429,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 32196,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 32422,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 32529,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 32715,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 32896,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 33049,
+      "event": "RAF started",
+      "label": "at http://127.0.0.1:5178/src/App.tsx:1284:31"
+    },
+    {
+      "t": 33064,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 33246,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 33429,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 33615,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 33780,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 33946,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 34049,
+      "event": "RAF stopped",
+      "label": "at http://127.0.0.1:5178/src/App.tsx:1284:31"
+    },
+    {
+      "t": 34129,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 34312,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 34496,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 34664,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 34830,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 35013,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 35195,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 35379,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 35547,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 35731,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 35912,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 36178,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 36946,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 37129,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 37528,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 38295,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 38480,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 38878,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 39645,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 39828,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 40246,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 41028,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 41212,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 41578,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 42344,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 42529,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 46678,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 47445,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 47629,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 48045,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 48811,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 48994,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 49412,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 50195,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 50378,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 50778,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 51546,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 51728,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 52496,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 52678,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 53000,
+      "event": "availability fetch started"
+    },
+    {
+      "t": 53005,
+      "event": "availability fetch completed",
+      "status": 200
+    },
+    {
+      "t": 53031,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 53052,
+      "event": "RAF started",
+      "label": "at scrollPopupToElement (http://127.0.0.1:5178/src/App.tsx:1283:29)"
+    },
+    {
+      "t": 53078,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 53771,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 53771,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 53974,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 53974,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 54050,
+      "event": "RAF stopped",
+      "label": "at scrollPopupToElement (http://127.0.0.1:5178/src/App.tsx:1283:29)"
+    },
+    {
+      "t": 54170,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 54170,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 54369,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 54369,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 54570,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 54571,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 54769,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 54769,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 54973,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 54973,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 55172,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 55172,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 55376,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 55377,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 55571,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 55572,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 55775,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 55775,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 55987,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 55987,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 56176,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 56176,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 56388,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 56388,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 56592,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 56592,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 56788,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 56788,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 56990,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 56990,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 57186,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 57186,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 57373,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 57373,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 57591,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 57591,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 58647,
+      "event": "availability fetch started"
+    },
+    {
+      "t": 58651,
+      "event": "availability fetch completed",
+      "status": 200
+    },
+    {
+      "t": 58679,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 58679,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 59421,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 59444,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 59645,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 60411,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 60595,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 61361,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 61519,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 61560,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 61735,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 61761,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 61962,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 62729,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 62912,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 63680,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 63839,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 63896,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 64054,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 64064,
+      "event": "RAF started",
+      "label": "at http://127.0.0.1:5178/src/App.tsx:1284:31"
+    },
+    {
+      "t": 64080,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 64278,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 65045,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 65047,
+      "event": "RAF stopped",
+      "label": "at http://127.0.0.1:5178/src/App.tsx:1284:31"
+    },
+    {
+      "t": 65228,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 65994,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 66152,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 66194,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 66367,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 66394,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 66595,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 67362,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 67545,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 68314,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 68472,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 68511,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 68686,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 68712,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 68911,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 69677,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 69861,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 70627,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 70786,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 70828,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 71000,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 71028,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 71211,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 71977,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 72161,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 72929,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 73083,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 73127,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 73301,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 73327,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 73528,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 74295,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 74478,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 75244,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 75405,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 75460,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 75634,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 75650,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 75861,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 76627,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 76811,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 77578,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 77734,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 77777,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 77967,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 77994,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 78194,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 78960,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 79145,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 79912,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 80068,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 80110,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 80286,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 80312,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 80510,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 81277,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 81461,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 82227,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 82382,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 82427,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 82666,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 82694,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 82877,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 83050,
+      "event": "RAF started",
+      "label": "at http://127.0.0.1:5178/src/App.tsx:1284:31"
+    },
+    {
+      "t": 83061,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 83245,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 83411,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 83593,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 83777,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 83962,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 84051,
+      "event": "RAF stopped",
+      "label": "at http://127.0.0.1:5178/src/App.tsx:1284:31"
+    },
+    {
+      "t": 84328,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 85094,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 85278,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 85677,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 86443,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 86627,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 87028,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 87794,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 87993,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 88377,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 89143,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 89327,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 89743,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 90511,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 90693,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 91064,
+      "event": "RAF started",
+      "label": "at http://127.0.0.1:5178/src/App.tsx:1284:31"
+    },
+    {
+      "t": 91093,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 91861,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 92044,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 92047,
+      "event": "RAF stopped",
+      "label": "at http://127.0.0.1:5178/src/App.tsx:1284:31"
+    },
+    {
+      "t": 92460,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 93228,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 93410,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 93810,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 94577,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 94760,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 95143,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 95910,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 96074,
+      "event": "scheduler mounted"
+    },
+    {
+      "t": 96128,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 96816,
+      "event": "popup closed"
+    },
+    {
+      "t": 98047,
+      "event": "RAF started",
+      "label": "at startAnimation (http://127.0.0.1:5178/src/App.tsx:4411:27)"
+    },
+    {
+      "t": 137047,
+      "event": "RAF started",
+      "label": "at startAnimation (http://127.0.0.1:5178/src/lib/setupFaceScanModel.ts:153:20)"
+    },
+    {
+      "t": 143046,
+      "event": "RAF stopped",
+      "label": "at startAnimation (http://127.0.0.1:5178/src/lib/setupFaceScanModel.ts:153:20)"
+    },
+    {
+      "t": 185052,
+      "event": "RAF started",
+      "label": "at startAnimation (http://127.0.0.1:5178/src/lib/setupFaceScanModel.ts:153:20)"
+    },
+    {
+      "t": 191061,
+      "event": "RAF stopped",
+      "label": "at startAnimation (http://127.0.0.1:5178/src/lib/setupFaceScanModel.ts:153:20)"
+    },
+    {
+      "t": 232053,
+      "event": "RAF started",
+      "label": "at startAnimation (http://127.0.0.1:5178/src/lib/setupFaceScanModel.ts:153:20)"
+    },
+    {
+      "t": 238049,
+      "event": "RAF stopped",
+      "label": "at startAnimation (http://127.0.0.1:5178/src/lib/setupFaceScanModel.ts:153:20)"
+    },
+    {
+      "t": 280047,
+      "event": "RAF started",
+      "label": "at startAnimation (http://127.0.0.1:5178/src/lib/setupFaceScanModel.ts:153:20)"
+    },
+    {
+      "t": 286050,
+      "event": "RAF stopped",
+      "label": "at startAnimation (http://127.0.0.1:5178/src/lib/setupFaceScanModel.ts:153:20)"
+    },
+    {
+      "t": 288862,
+      "event": "popup opened"
+    },
+    {
+      "t": 289633,
+      "event": "scheduler unmounted"
+    },
+    {
+      "t": 289656,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 290140,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 290307,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 290507,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 290690,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 290874,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 291057,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 291239,
+      "event": "auto-scroll triggered",
+      "label": "nabi-chat-thread"
+    },
+    {
+      "t": 291562,
+      "event": "popup closed"
+    }
+  ]
+}

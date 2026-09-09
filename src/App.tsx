@@ -14,8 +14,9 @@ import {
 } from "./schedulingService";
 import { buildQualificationMessage } from "./qualificationMessage";
 
-const calendlyUrl = "https://calendly.com/nabi_";
 const heroModelSceneEvent = "nabi:hero-model-scene";
+const nabiFloatingPopupEvent = "nabi:open-floating-popup";
+type NabiFloatingPopupMode = "home" | "booking";
 
 type HeroModelSceneDetail = {
   sceneIndex: number | null;
@@ -1562,16 +1563,67 @@ function setupBusinessImpactSection() {
   }
 
   const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const metricCounters = Array.from(section.querySelectorAll<HTMLElement>("[data-impact-low][data-impact-high]"));
   let activeTimeouts: number[] = [];
+  let counterFrames: number[] = [];
   let sectionVisible = false;
+
+  const formatMetricValue = (sign: string, low: number, high: number) => {
+    const displaySign = sign === "-" ? "\u2212" : "+";
+    return `${displaySign}${Math.round(low)}\u2013${Math.round(high)}%`;
+  };
+
+  const setCounterValues = (progress: number) => {
+    metricCounters.forEach((node) => {
+      const low = Number(node.dataset.impactLow ?? 0);
+      const high = Number(node.dataset.impactHigh ?? 0);
+      const sign = node.dataset.impactSign ?? "+";
+      node.textContent = formatMetricValue(sign, low * progress, high * progress);
+    });
+  };
 
   const clearSequence = () => {
     activeTimeouts.forEach((timeout) => window.clearTimeout(timeout));
     activeTimeouts = [];
+    counterFrames.forEach((frame) => window.cancelAnimationFrame(frame));
+    counterFrames = [];
+  };
+
+  const animateCounter = (node: HTMLElement) => {
+    const low = Number(node.dataset.impactLow ?? 0);
+    const high = Number(node.dataset.impactHigh ?? 0);
+    const sign = node.dataset.impactSign ?? "+";
+    const duration = Number(node.dataset.impactDuration ?? 920);
+    const start = performance.now();
+
+    const tick = (now: number) => {
+      const rawProgress = Math.min(1, (now - start) / duration);
+      const progress = 1 - Math.pow(1 - rawProgress, 3);
+      node.textContent = formatMetricValue(sign, low * progress, high * progress);
+
+      if (rawProgress < 1) {
+        counterFrames.push(window.requestAnimationFrame(tick));
+      } else {
+        node.textContent = formatMetricValue(sign, low, high);
+      }
+    };
+
+    node.textContent = formatMetricValue(sign, 0, 0);
+    counterFrames.push(window.requestAnimationFrame(tick));
+  };
+
+  const runCounters = () => {
+    counterFrames.forEach((frame) => window.cancelAnimationFrame(frame));
+    counterFrames = [];
+    metricCounters.forEach((node) => {
+      const delay = Number(node.dataset.impactCounterDelay ?? 0);
+      activeTimeouts.push(window.setTimeout(() => animateCounter(node), delay));
+    });
   };
 
   const resetSequence = () => {
     clearSequence();
+    setCounterValues(0);
     section.classList.remove("is-active", "act-activation", "act-impact", "is-complete");
   };
 
@@ -1581,14 +1633,18 @@ function setupBusinessImpactSection() {
 
     if (reduceMotionQuery.matches) {
       section.classList.add("is-active", "act-activation", "act-impact", "is-complete");
+      setCounterValues(1);
       return;
     }
 
     section.classList.add("is-active");
     activeTimeouts = [
-      window.setTimeout(() => section.classList.add("act-activation"), 760),
-      window.setTimeout(() => section.classList.add("act-impact"), 1540),
-      window.setTimeout(() => section.classList.add("is-complete"), 3900),
+      window.setTimeout(() => section.classList.add("act-activation"), 1400),
+      window.setTimeout(() => {
+        section.classList.add("act-impact");
+        runCounters();
+      }, 3300),
+      window.setTimeout(() => section.classList.add("is-complete"), 6500),
     ];
   };
 
@@ -3164,6 +3220,21 @@ function setupNabiQuestionExperience(section: HTMLElement) {
     }
   }
 
+  const startFloatingDirectBooking = () => {
+    if (!isFloatingPopup) {
+      return;
+    }
+
+    popupBookingSource = "direct";
+    isResponding = false;
+    qualificationData = createEmptyQualificationData();
+    bookingState = createEmptyBookingState();
+    availableDates = [];
+    schedulerMonthKey = null;
+    syncLeadBookingState();
+    renderPopupQualificationStep(0, true);
+  };
+
   const renderQualificationQuestion = (index: number) => {
     const question = qualificationQuestions[index];
 
@@ -3383,9 +3454,23 @@ function setupNabiQuestionExperience(section: HTMLElement) {
   const onAskEntryClick = () => resetConversation(false);
   const onBookEntryClick = () => {
     if (isFloatingPopup) {
-      popupBookingSource = "direct";
+      startFloatingDirectBooking();
+      return;
     }
     startQualification();
+  };
+  const onFloatingPopupRequest = (event: Event) => {
+    if (!isFloatingPopup) {
+      return;
+    }
+
+    const mode = (event as CustomEvent<{ mode?: NabiFloatingPopupMode }>).detail?.mode;
+    if (mode === "booking") {
+      startFloatingDirectBooking();
+      return;
+    }
+
+    resetConversation(true);
   };
   const onPopupBackClick = () => {
     if (!isFloatingPopup || isResponding || bookingState.bookingStatus === "booked") {
@@ -3419,6 +3504,7 @@ function setupNabiQuestionExperience(section: HTMLElement) {
   popupBackButton?.addEventListener("click", onPopupBackClick);
   askEntryButton?.addEventListener("click", onAskEntryClick);
   bookEntryButton?.addEventListener("click", onBookEntryClick);
+  document.addEventListener(nabiFloatingPopupEvent, onFloatingPopupRequest);
   resetConversation(Boolean(entryChoices));
 
   return () => {
@@ -3430,6 +3516,7 @@ function setupNabiQuestionExperience(section: HTMLElement) {
     popupBackButton?.removeEventListener("click", onPopupBackClick);
     askEntryButton?.removeEventListener("click", onAskEntryClick);
     bookEntryButton?.removeEventListener("click", onBookEntryClick);
+    document.removeEventListener(nabiFloatingPopupEvent, onFloatingPopupRequest);
     promptCleanups.forEach((cleanup) => cleanup());
     promptComposer.composer.remove();
   };
@@ -3534,6 +3621,10 @@ function setupNabiFloatingLauncher() {
     setOpen(widget.dataset.open !== "true");
   };
 
+  const onFloatingPopupRequest = () => {
+    setOpen(true);
+  };
+
   const onCloseClick = () => {
     setOpen(false);
     launcher.focus();
@@ -3587,6 +3678,7 @@ function setupNabiFloatingLauncher() {
   launcher.addEventListener("mouseenter", onLauncherMouseEnter);
   launcher.addEventListener("mouseleave", onLauncherMouseLeave);
   closeButton.addEventListener("click", onCloseClick);
+  document.addEventListener(nabiFloatingPopupEvent, onFloatingPopupRequest);
   document.addEventListener("keydown", onKeyDown);
   document.addEventListener("visibilitychange", onVisibilityChange);
   reducedMotionQuery.addEventListener("change", onReducedMotionChange);
@@ -3617,6 +3709,7 @@ function setupNabiFloatingLauncher() {
     launcher.removeEventListener("mouseenter", onLauncherMouseEnter);
     launcher.removeEventListener("mouseleave", onLauncherMouseLeave);
     closeButton.removeEventListener("click", onCloseClick);
+    document.removeEventListener(nabiFloatingPopupEvent, onFloatingPopupRequest);
     document.removeEventListener("keydown", onKeyDown);
     document.removeEventListener("visibilitychange", onVisibilityChange);
     reducedMotionQuery.removeEventListener("change", onReducedMotionChange);
@@ -5781,6 +5874,50 @@ function setupLandingInteractions() {
   const diagnosticMode = touchDevice && document.body.classList.contains("mobile-diagnostic");
   const cleanupHandlers: Array<() => void> = [];
 
+  const getNabiPopupCtaMode = (cta: HTMLElement): NabiFloatingPopupMode | null => {
+    const label = cta.textContent?.replace(/\s+/g, " ").trim().toLowerCase();
+
+    if (label === "request a demo") {
+      return "booking";
+    }
+    if (label === "discover skin id") {
+      return "home";
+    }
+    if (cta.dataset.nabiPopupCta === "booking") {
+      return "booking";
+    }
+    if (cta.dataset.nabiPopupCta === "home") {
+      return "home";
+    }
+    return null;
+  };
+
+  document.querySelectorAll<HTMLElement>("a, button, [data-nabi-popup-cta]").forEach((cta) => {
+    const ctaMode = getNabiPopupCtaMode(cta);
+
+    if (!ctaMode) {
+      return;
+    }
+
+    const onClick = (event: MouseEvent) => {
+      event.preventDefault();
+      const mode = getNabiPopupCtaMode(cta);
+
+      if (!mode) {
+        return;
+      }
+
+      document.dispatchEvent(
+        new CustomEvent<{ mode: NabiFloatingPopupMode }>(nabiFloatingPopupEvent, {
+          detail: { mode },
+        }),
+      );
+    };
+
+    cta.addEventListener("click", onClick);
+    cleanupHandlers.push(() => cta.removeEventListener("click", onClick));
+  });
+
   if (!touchDevice) {
     document.querySelectorAll<HTMLElement>(".problem-card,.depth-card").forEach((card) => {
       const onMouseMove = (event: MouseEvent) => {
@@ -6303,7 +6440,7 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
   <nav class="nav">
     <div class="logo" aria-label="NABI"><img class="logo-img" src="/nabi-logo-cropped.png" alt="NABI" /></div>
     <div class="nav-links"><a href="#problem">Problem</a><a href="#journey">Journey</a><a href="#simulator">Why Skin ID</a></div>
-    <a class="cta magnetic" href="${calendlyUrl}" target="_blank" rel="noreferrer"><span class="btn-text">Request a Demo</span></a>
+    <a class="cta magnetic" href="#ask-nabi" data-nabi-popup-cta="booking"><span class="btn-text">Request a Demo</span></a>
   </nav>
 
   <section class="hero">
@@ -6312,7 +6449,7 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
         <div class="eyebrow"><span class="dot"></span>Enterprise ready</div>
         <h1>Skincare Shouldn't Be <span class="gradient-text">Generic.</span></h1>
         <p class="hero-statement"><span class="hero-statement-accessible">Personalized routines. Better decisions. More conversions.</span><span class="hero-slot" aria-hidden="true"><span class="hero-slot-reel"><span class="hero-slot-item hero-routines">Personalized routines.</span><span class="hero-slot-item hero-decisions">Better decisions.</span><span class="hero-slot-item hero-conversions">More conversions.</span><span class="hero-slot-item hero-routines">Personalized routines.</span></span></span></p>
-        <div class="hero-actions"><a class="cta magnetic" href="${calendlyUrl}" target="_blank" rel="noreferrer"><span class="btn-text">Discover Skin ID</span></a><a class="cta ghost magnetic" href="#simulator"><span class="btn-text">See why brands choose it</span></a></div>
+        <div class="hero-actions"><a class="cta magnetic" href="#ask-nabi" data-nabi-popup-cta="home"><span class="btn-text">Discover Skin ID</span></a><a class="cta ghost magnetic" href="#simulator"><span class="btn-text">See why brands choose it</span></a></div>
         <div class="hero-platforms" data-open="false">
           <button class="hero-platform-toggle" type="button" aria-expanded="false" aria-controls="heroPlatformPanel">
             <span class="hero-platform-toggle-text">Supported Platforms</span>
@@ -7637,24 +7774,61 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
 
         <div class="impact-metrics">
           <article class="impact-measure impact-measure-conversion" style="--impact-delay:0ms;--impact-start:46%;--impact-end:70%">
-            <div class="impact-measure-top"><span>Baseline</span><strong>100</strong></div>
+            <div class="impact-measure-top">
+              <span class="impact-icon-badge" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M4 18.5h16" />
+                  <path d="M6 15l4.2-4.2 3.2 3.2L19 8.4" />
+                  <path d="M15 8.4h4v4" />
+                </svg>
+              </span>
+              <span class="impact-measure-heading">CONVERSION</span>
+            </div>
             <div class="impact-measure-track"><span class="impact-baseline-bar"></span><span class="impact-lift-bar"></span></div>
-            <div class="impact-measure-result"><strong>+8&ndash;15%</strong><span>CONVERSION</span></div>
+            <div class="impact-measure-result"><strong class="impact-metric-value" data-impact-low="8" data-impact-high="15" data-impact-sign="+" data-impact-counter-delay="120" data-impact-duration="920">+8&ndash;15%</strong><span class="impact-measure-support">More visitors reaching purchase</span></div>
           </article>
-          <article class="impact-measure impact-measure-aov" style="--impact-delay:260ms;--impact-start:44%;--impact-end:74%">
-            <div class="impact-measure-top"><span>Baseline</span><strong>100</strong></div>
+          <article class="impact-measure impact-measure-aov" style="--impact-delay:420ms;--impact-start:44%;--impact-end:74%">
+            <div class="impact-measure-top">
+              <span class="impact-icon-badge" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M6.5 8.5h11l-1.1 9H7.6z" />
+                  <path d="M9 8.5a3 3 0 0 1 6 0" />
+                  <path d="M14 14h4.5" />
+                  <path d="M16.25 11.75L18.5 14l-2.25 2.25" />
+                </svg>
+              </span>
+              <span class="impact-measure-heading">AVERAGE ORDER VALUE</span>
+            </div>
             <div class="impact-measure-track"><span class="impact-baseline-bar"></span><span class="impact-lift-bar"></span></div>
-            <div class="impact-measure-result"><strong>+10&ndash;20%</strong><span>AVERAGE ORDER VALUE</span></div>
+            <div class="impact-measure-result"><strong class="impact-metric-value" data-impact-low="10" data-impact-high="20" data-impact-sign="+" data-impact-counter-delay="280" data-impact-duration="980">+10&ndash;20%</strong><span class="impact-measure-support">Higher-value product combinations</span></div>
           </article>
-          <article class="impact-measure impact-measure-returns" style="--impact-delay:520ms;--impact-start:56%;--impact-end:39%">
-            <div class="impact-measure-top"><span>Baseline</span><strong>100</strong></div>
+          <article class="impact-measure impact-measure-returns" style="--impact-delay:840ms;--impact-start:56%;--impact-end:39%">
+            <div class="impact-measure-top">
+              <span class="impact-icon-badge" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M19 6.5v4.75h-4.75" />
+                  <path d="M18.4 11.25A6.7 6.7 0 1 0 16 17" />
+                  <path d="M9.5 13.1l2 2 4-4" />
+                </svg>
+              </span>
+              <span class="impact-measure-heading">PRODUCT RETURNS</span>
+            </div>
             <div class="impact-measure-track"><span class="impact-baseline-bar"></span><span class="impact-lift-bar"></span></div>
-            <div class="impact-measure-result"><strong>&minus;5&ndash;10%</strong><span>PRODUCT-RELATED RETURNS</span></div>
+            <div class="impact-measure-result"><strong class="impact-metric-value" data-impact-low="5" data-impact-high="10" data-impact-sign="-" data-impact-counter-delay="440" data-impact-duration="1040">&minus;5&ndash;10%</strong><span class="impact-measure-support">Fewer mismatched purchases</span></div>
           </article>
-          <article class="impact-measure impact-measure-benchmark" style="--impact-delay:780ms">
-            <div class="impact-benchmark-label">Market signal</div>
-            <div class="impact-benchmark-orbit" aria-hidden="true"><span></span><span></span><span></span></div>
-            <div class="impact-measure-result"><strong>71%</strong><span>EXPECT PERSONALIZATION</span></div>
+          <article class="impact-measure impact-measure-benchmark" style="--impact-delay:1260ms">
+            <div class="impact-measure-top">
+              <span class="impact-icon-badge" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
+                  <path d="M5.5 20a6.5 6.5 0 0 1 13 0" />
+                  <path d="M18.5 4.5l.45 1.2 1.2.45-1.2.45-.45 1.2-.45-1.2-1.2-.45 1.2-.45z" />
+                </svg>
+              </span>
+              <span class="impact-measure-heading">GUIDANCE</span>
+            </div>
+            <div class="impact-demand-visual" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+            <div class="impact-measure-result"><strong>Clearer choices</strong><span class="impact-measure-support">SHOPPERS EXPECT CLEAR PRODUCT DIRECTION</span></div>
           </article>
         </div>
 
@@ -7728,7 +7902,7 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
   </section>
 
   <section class="blackout" id="apply">
-    <div class="blackout-pin"><canvas class="final-canvas" id="finalCanvas"></canvas><div class="blackout-bg" id="blackoutBg"></div><div class="final-word"><h2><span class="final-line" id="f1">Your <span class="highlight-word highlight-gold">visitors</span> already have questions.</span><span class="final-line" id="f2">Your store needs to <span class="highlight-word highlight-blue">answer</span> them.</span></h2><p class="final-line" id="f3">Skin ID turns <span class="highlight-word highlight-gold">product confusion</span> into a <span class="highlight-word highlight-cyan">personalized buying path</span> configured around your catalog, UX and growth goals.</p><a class="cta magnetic final-line" id="f4" href="${calendlyUrl}" target="_blank" rel="noreferrer"><span class="btn-text">Discover Skin ID</span></a></div></div>
+    <div class="blackout-pin"><canvas class="final-canvas" id="finalCanvas"></canvas><div class="blackout-bg" id="blackoutBg"></div><div class="final-word"><h2><span class="final-line" id="f1">Your <span class="highlight-word highlight-gold">visitors</span> already have questions.</span><span class="final-line" id="f2">Your store needs to <span class="highlight-word highlight-blue">answer</span> them.</span></h2><p class="final-line" id="f3">Skin ID turns <span class="highlight-word highlight-gold">product confusion</span> into a <span class="highlight-word highlight-cyan">personalized buying path</span> configured around your catalog, UX and growth goals.</p><a class="cta magnetic final-line" id="f4" href="#ask-nabi" data-nabi-popup-cta="home"><span class="btn-text">Discover Skin ID</span></a></div></div>
   </section>
 
   <aside class="nabi-floating-assistant nabi-qa" aria-label="Floating Ask Nabi assistant" data-open="false">
