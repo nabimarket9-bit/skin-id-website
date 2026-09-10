@@ -7764,10 +7764,39 @@ const landingHtml = `<div class="loader" id="loader"><canvas id="loaderLogoCanva
 
         <div class="impact-state-row">
           <span class="impact-state impact-state-before">WITHOUT SKIN ID</span>
-          <div class="impact-core">
-            <span class="impact-core-ring"></span>
-            <strong>SKIN ID</strong>
-            <small>activated</small>
+          <div class="impact-activation-node" aria-label="Personalization on">
+            <span class="impact-electric-arcs" aria-hidden="true">
+              <svg viewBox="0 0 324 96" preserveAspectRatio="none" focusable="false">
+                <path class="impact-electric-arc impact-electric-halo impact-electric-hero" d="M0 48 L18 42 L31 50 L47 39 L63 46 L78 37 L94 46 L111 40" />
+                <path class="impact-electric-arc impact-electric-core impact-electric-hero" d="M0 48 L18 42 L31 50 L47 39 L63 46 L78 37 L94 46 L111 40" />
+                <path class="impact-electric-arc impact-electric-halo impact-electric-arc-a" d="M48 16 L62 6 L74 17 L89 9 L102 20 L118 10 L132 19" />
+                <path class="impact-electric-arc impact-electric-core impact-electric-arc-a" d="M48 16 L62 6 L74 17 L89 9 L102 20 L118 10 L132 19" />
+                <path class="impact-electric-arc impact-electric-halo impact-electric-arc-b" d="M190 13 L205 22 L218 8 L232 23 L249 11 L265 21 L281 15" />
+                <path class="impact-electric-arc impact-electric-core impact-electric-arc-b" d="M190 13 L205 22 L218 8 L232 23 L249 11 L265 21 L281 15" />
+                <path class="impact-electric-arc impact-electric-halo impact-electric-arc-c" d="M90 80 L108 67 L121 79 L138 68 L153 81 L170 70" />
+                <path class="impact-electric-arc impact-electric-core impact-electric-arc-c" d="M90 80 L108 67 L121 79 L138 68 L153 81 L170 70" />
+                <path class="impact-electric-arc impact-electric-halo impact-electric-arc-d" d="M247 48 L263 39 L275 47 L290 38 L307 44 L322 37" />
+                <path class="impact-electric-arc impact-electric-core impact-electric-arc-d" d="M247 48 L263 39 L275 47 L290 38 L307 44 L322 37" />
+                <path class="impact-electric-arc impact-electric-halo impact-electric-arc-e" d="M134 4 L146 18 L156 8 L169 21 L181 12" />
+                <path class="impact-electric-arc impact-electric-core impact-electric-arc-e" d="M134 4 L146 18 L156 8 L169 21 L181 12" />
+                <path class="impact-electric-arc impact-electric-halo impact-electric-arc-f" d="M172 88 L186 78 L199 88 L214 76 L227 84" />
+                <path class="impact-electric-arc impact-electric-core impact-electric-arc-f" d="M172 88 L186 78 L199 88 L214 76 L227 84" />
+              </svg>
+            </span>
+            <span class="impact-activation-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path d="M12 4.5v3" />
+                <path d="M12 16.5v3" />
+                <path d="M4.5 12h3" />
+                <path d="M16.5 12h3" />
+                <path d="M8.4 8.4l2.1 2.1" />
+                <path d="M15.6 8.4l-2.1 2.1" />
+                <path d="M8.4 15.6l2.1-2.1" />
+                <path d="M15.6 15.6l-2.1-2.1" />
+                <path d="M12 10.2a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6z" />
+              </svg>
+            </span>
+            <strong>PERSONALIZATION ON</strong>
           </div>
           <span class="impact-state impact-state-after">WITH SKIN ID</span>
         </div>

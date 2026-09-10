@@ -1466,14 +1466,37 @@
     .business-impact.act-activation .impact-state-before{opacity:.88;color:rgba(255,231,163,.82)}
     .business-impact.act-impact .impact-state-before{opacity:.34;transform:translateX(-5px)}
     .business-impact.act-impact .impact-state-after{opacity:1;color:rgba(255,231,163,.9);transform:translateX(0)}
-    .impact-core{position:relative;width:132px;height:132px;border-radius:50%;display:grid;grid-template-rows:1fr auto 1fr;place-items:center;text-align:center;background:radial-gradient(circle at 50% 42%,rgba(255,231,163,.15),rgba(115,169,255,.08) 46%,rgba(255,255,255,.025) 72%);border:1px solid rgba(255,255,255,.13);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 22px 58px rgba(0,0,0,.26);transform:scale(.88);opacity:.62;transition:transform .9s cubic-bezier(.22,1,.36,1),opacity .7s ease,border-color .7s ease,box-shadow .7s ease}
-    .impact-core strong,.impact-core small{grid-column:1;line-height:1;text-align:center}
-    .impact-core strong{grid-row:2;display:block;font-size:18px;letter-spacing:.16em;color:#fff4c8;margin:0}
-    .impact-core small{grid-row:3;align-self:start;display:block;margin-top:7px;color:rgba(184,242,255,.62);font-size:10px;letter-spacing:.18em;text-transform:uppercase;opacity:0;transform:translateY(6px);transition:opacity .58s ease .32s,transform .58s ease .32s}
-    .impact-core-ring{position:absolute;inset:12px;border-radius:inherit;border:1px solid rgba(255,231,163,.16);transform:scale(.82);opacity:.2;transition:transform .65s cubic-bezier(.22,1,.36,1),opacity .45s ease,border-color .45s ease}
-    .business-impact.act-activation .impact-core{transform:scale(1);opacity:1;border-color:rgba(255,231,163,.32);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 28px 78px rgba(0,0,0,.3),0 0 54px rgba(255,231,163,.12)}
-    .business-impact.act-activation .impact-core small{opacity:1;transform:translateY(0)}
-    .business-impact.act-activation .impact-core-ring{transform:scale(1.08);opacity:1;border-color:rgba(184,242,255,.28)}
+    .impact-activation-node{position:relative;width:min(258px,28vw);min-width:218px;height:52px;border-radius:18px;display:flex;align-items:center;justify-content:center;gap:11px;padding:0 18px;background:linear-gradient(180deg,rgba(10,13,18,.9),rgba(4,6,9,.76));border:1px solid rgba(255,255,255,.11);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 18px 44px rgba(0,0,0,.24);opacity:.58;transform:translateY(4px) scale(.96);transition:opacity .7s ease,transform .85s cubic-bezier(.22,1,.36,1),border-color .72s ease,box-shadow .72s ease,background .72s ease}
+    .impact-activation-node:before{content:"";position:absolute;inset:0;border-radius:inherit;background:radial-gradient(ellipse at 18% 40%,rgba(255,231,163,.14),transparent 48%),radial-gradient(ellipse at 88% 52%,rgba(143,244,203,.1),transparent 48%);opacity:.18;transition:opacity .72s ease;pointer-events:none}
+    .impact-electric-arcs{position:absolute;inset:-22px -30px -20px;z-index:2;pointer-events:none;opacity:0;background:transparent}
+    .impact-electric-arcs svg{display:block;width:100%;height:100%;overflow:visible}
+    .impact-electric-arc{fill:none;stroke-linecap:round;stroke-linejoin:miter;opacity:0;stroke-dasharray:96;stroke-dashoffset:96}
+    .impact-electric-halo{stroke:#169cff;stroke-width:7;stroke-opacity:.48}
+    .impact-electric-core{stroke:#f3feff;stroke-width:2.5;stroke-opacity:1}
+    .impact-electric-hero.impact-electric-halo{stroke-width:9;stroke:#007bff;stroke-opacity:.62}
+    .impact-electric-hero.impact-electric-core{stroke-width:3.25;stroke:#fff}
+    .impact-electric-arc-b.impact-electric-halo,.impact-electric-arc-d.impact-electric-halo{stroke:#22c8ff;stroke-opacity:.56}
+    .impact-electric-arc-e.impact-electric-core{stroke:#ffffff;stroke-width:2.8}
+    .business-impact.act-activation .impact-electric-arcs{animation:impactElectricBloom 1.05s linear both}
+    .business-impact.act-activation .impact-electric-hero{animation:impactElectricHero 1.05s linear .1s both}
+    .business-impact.act-activation .impact-electric-arc-a{animation:impactElectricArc 1.05s linear both}
+    .business-impact.act-activation .impact-electric-arc-b{animation:impactElectricArc 1.05s linear .18s both}
+    .business-impact.act-activation .impact-electric-arc-c{animation:impactElectricArc 1.05s linear .38s both}
+    .business-impact.act-activation .impact-electric-arc-d{animation:impactElectricArc 1.05s linear .48s both}
+    .business-impact.act-activation .impact-electric-arc-e{animation:impactElectricArc 1.05s linear .28s both}
+    .business-impact.act-activation .impact-electric-arc-f{animation:impactElectricArc 1.05s linear .64s both}
+    .impact-activation-icon{position:relative;z-index:1;flex:0 0 auto;width:25px;height:25px;border-radius:9px;display:grid;place-items:center;color:rgba(247,241,232,.42);background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);transition:color .58s ease,border-color .58s ease,background .58s ease,box-shadow .58s ease,transform .58s cubic-bezier(.22,1,.36,1)}
+    .impact-activation-icon svg{width:16px;height:16px;display:block;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;fill:none}
+    .impact-activation-node strong{position:relative;z-index:1;color:rgba(247,241,232,.48);font-size:12px;font-weight:950;line-height:1;letter-spacing:.15em;text-transform:uppercase;white-space:nowrap;transition:color .58s ease,text-shadow .58s ease,opacity .58s ease}
+    .business-impact.act-activation .impact-activation-node,.business-impact.act-impact .impact-activation-node{opacity:1;transform:translateY(0) scale(1);border-color:rgba(255,231,163,.26);background:linear-gradient(180deg,rgba(13,17,22,.94),rgba(5,8,12,.82));box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 20px 54px rgba(0,0,0,.25),0 0 38px rgba(255,231,163,.08),0 0 30px rgba(143,244,203,.06)}
+    .business-impact.act-activation .impact-activation-node{animation:impactElectricNodeBloom 1.05s linear both}
+    .business-impact.act-activation .impact-activation-node:before,.business-impact.act-impact .impact-activation-node:before{opacity:1}
+    .business-impact.act-activation .impact-activation-icon,.business-impact.act-impact .impact-activation-icon{color:#fff1aa;border-color:rgba(184,242,255,.26);background:radial-gradient(circle at 35% 20%,rgba(255,231,163,.2),rgba(143,244,203,.08));box-shadow:0 0 20px rgba(255,231,163,.15)}
+    .business-impact.act-activation .impact-activation-node strong,.business-impact.act-impact .impact-activation-node strong{color:#fff;text-shadow:0 0 18px rgba(255,231,163,.14),0 0 16px rgba(184,242,255,.08)}
+    @keyframes impactElectricHero{0%{opacity:0;stroke-dashoffset:96}8%{opacity:.72;stroke-dashoffset:74}17%{opacity:1;stroke-dashoffset:34}28%{opacity:.18;stroke-dashoffset:0}42%{opacity:0;stroke-dashoffset:96}51%{opacity:.78;stroke-dashoffset:48}62%{opacity:.12;stroke-dashoffset:0}78%,100%{opacity:0;stroke-dashoffset:0}}
+    @keyframes impactElectricArc{0%{opacity:0;stroke-dashoffset:96}6%{opacity:.88;stroke-dashoffset:58}13%{opacity:.16;stroke-dashoffset:22}20%{opacity:0;stroke-dashoffset:0}34%{opacity:0;stroke-dashoffset:96}42%{opacity:.95;stroke-dashoffset:46}50%{opacity:.14;stroke-dashoffset:14}58%{opacity:0;stroke-dashoffset:0}74%{opacity:0;stroke-dashoffset:96}81%{opacity:.7;stroke-dashoffset:42}91%,100%{opacity:0;stroke-dashoffset:0}}
+    @keyframes impactElectricBloom{0%,5%{opacity:0}9%{opacity:1}24%{opacity:.25}36%{opacity:0}46%{opacity:1}60%{opacity:.22}72%{opacity:.04}82%{opacity:.82}94%,100%{opacity:0}}
+    @keyframes impactElectricNodeBloom{0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 20px 54px rgba(0,0,0,.25),0 0 38px rgba(255,231,163,.08),0 0 30px rgba(143,244,203,.06)}15%{box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 20px 54px rgba(0,0,0,.25),0 0 22px rgba(255,255,255,.28),0 0 36px rgba(191,247,255,.44),0 0 68px rgba(0,123,255,.28)}26%{box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 20px 54px rgba(0,0,0,.25),0 0 18px rgba(184,242,255,.18),0 0 34px rgba(56,154,255,.14)}48%{box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 20px 54px rgba(0,0,0,.25),0 0 28px rgba(232,253,255,.34),0 0 62px rgba(56,154,255,.24)}82%{box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 20px 54px rgba(0,0,0,.25),0 0 22px rgba(184,242,255,.24),0 0 44px rgba(35,118,255,.16)}}
     .impact-metrics{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
     .impact-measure{--impact-accent:255,231,163;--impact-accent-soft:184,242,255;position:relative;min-height:188px;border:1px solid rgba(255,255,255,.09);border-radius:26px;background:radial-gradient(circle at 18% 12%,rgba(var(--impact-accent),.08),transparent 38%),linear-gradient(180deg,rgba(255,255,255,.052),rgba(255,255,255,.018));padding:20px 18px 18px;overflow:hidden;opacity:.38;transform:translateY(18px);transition:opacity .78s ease,transform .78s cubic-bezier(.22,1,.36,1),border-color .78s ease,box-shadow .78s ease,background .78s ease}
     .impact-measure:before{content:"";position:absolute;inset:auto -20% -34% -20%;height:120px;background:radial-gradient(ellipse at center,rgba(var(--impact-accent),.2),transparent 68%);opacity:0;transition:opacity .7s ease;pointer-events:none}
@@ -3914,8 +3937,11 @@
       .impact-system-rail{height:54px;margin-bottom:10px}
       .impact-state-row{grid-template-columns:1fr;justify-items:center;gap:12px;margin-bottom:18px;text-align:center}
       .impact-state-before,.impact-state-after{justify-self:center;font-size:10px}
-      .impact-core{order:-1;width:106px;height:106px}
-      .impact-core strong{font-size:15px}
+      .impact-activation-node{width:min(100%,258px);min-width:0;height:48px;padding:0 15px;border-radius:16px}
+      .impact-activation-node strong{font-size:11px;letter-spacing:.13em}
+      .impact-activation-icon{width:24px;height:24px;border-radius:8px}
+      .impact-activation-icon svg{width:15px;height:15px}
+      .impact-electric-arcs{inset:-16px -16px -14px}
       .impact-metrics{grid-template-columns:1fr;gap:10px}
       .impact-measure{min-height:0;padding:16px;border-radius:22px}
       .impact-measure-top{min-height:44px}
@@ -3983,6 +4009,9 @@
       .impact-header{max-width:100%;margin-bottom:26px;padding-inline:4px}
       .impact-header .lead{font-size:15px;line-height:1.58}
       .impact-system{padding:16px;border-radius:24px}
+      .impact-activation-node{height:46px;padding:0 13px;gap:9px}
+      .impact-activation-node strong{font-size:10px;letter-spacing:.11em}
+      .impact-electric-arcs{inset:-13px -12px -12px}
       .impact-measure-top{min-height:44px;margin-bottom:12px}
       .impact-measure-heading{font-size:14px;letter-spacing:.085em;line-height:1.14}
       .impact-icon-badge{width:52px;height:52px;border-radius:18px}
@@ -4006,9 +4035,12 @@
       .impact-signal,
       .impact-node,
       .impact-state,
-      .impact-core,
-      .impact-core small,
-      .impact-core-ring,
+      .impact-activation-node,
+      .impact-activation-node:before,
+      .impact-electric-arcs,
+      .impact-electric-arc,
+      .impact-activation-icon,
+      .impact-activation-node strong,
       .impact-measure,
       .impact-measure:before,
       .impact-icon-badge,
@@ -4017,6 +4049,7 @@
       .impact-measure-result span,
       .impact-demand-visual span {
         transition: none !important;
+        animation: none !important;
       }
       .nabi-floating-panel,
       .nabi-floating-launcher {
