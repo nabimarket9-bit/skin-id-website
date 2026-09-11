@@ -4168,6 +4168,42 @@
         animation: brandStoryTitleShift 9s linear infinite, brandStoryTitleGlow 5.2s ease-in-out infinite !important;
       }
 
+      body.mobile-diagnostic .business-impact.act-activation .impact-electric-arcs {
+        animation: impactElectricBloom 1.05s linear both !important;
+      }
+
+      body.mobile-diagnostic .business-impact.act-activation .impact-electric-hero {
+        animation: impactElectricHero 1.05s linear .1s both !important;
+      }
+
+      body.mobile-diagnostic .business-impact.act-activation .impact-electric-arc-a {
+        animation: impactElectricArc 1.05s linear both !important;
+      }
+
+      body.mobile-diagnostic .business-impact.act-activation .impact-electric-arc-b {
+        animation: impactElectricArc 1.05s linear .18s both !important;
+      }
+
+      body.mobile-diagnostic .business-impact.act-activation .impact-electric-arc-c {
+        animation: impactElectricArc 1.05s linear .38s both !important;
+      }
+
+      body.mobile-diagnostic .business-impact.act-activation .impact-electric-arc-d {
+        animation: impactElectricArc 1.05s linear .48s both !important;
+      }
+
+      body.mobile-diagnostic .business-impact.act-activation .impact-electric-arc-e {
+        animation: impactElectricArc 1.05s linear .28s both !important;
+      }
+
+      body.mobile-diagnostic .business-impact.act-activation .impact-electric-arc-f {
+        animation: impactElectricArc 1.05s linear .64s both !important;
+      }
+
+      body.mobile-diagnostic .business-impact.act-activation .impact-activation-node {
+        animation: impactElectricNodeBloom 1.05s linear both !important;
+      }
+
       body.mobile-diagnostic .nabi-qa-header h2 {
         animation: brandStoryTitleShift 9s linear infinite, brandStoryTitleGlow 5.2s ease-in-out infinite !important;
       }
@@ -4888,6 +4924,18 @@
       .decision-summary-board,
       .nabi-floating-launcher-shell,
       body.mobile-diagnostic .nabi-floating-launcher-shell.is-shaking {
+        animation: none !important;
+      }
+
+      body.mobile-diagnostic .business-impact.act-activation .impact-electric-arcs,
+      body.mobile-diagnostic .business-impact.act-activation .impact-electric-hero,
+      body.mobile-diagnostic .business-impact.act-activation .impact-electric-arc-a,
+      body.mobile-diagnostic .business-impact.act-activation .impact-electric-arc-b,
+      body.mobile-diagnostic .business-impact.act-activation .impact-electric-arc-c,
+      body.mobile-diagnostic .business-impact.act-activation .impact-electric-arc-d,
+      body.mobile-diagnostic .business-impact.act-activation .impact-electric-arc-e,
+      body.mobile-diagnostic .business-impact.act-activation .impact-electric-arc-f,
+      body.mobile-diagnostic .business-impact.act-activation .impact-activation-node {
         animation: none !important;
       }
     }
